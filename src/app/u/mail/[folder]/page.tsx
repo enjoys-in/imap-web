@@ -31,8 +31,8 @@ export default async function EmailInterface({ params }: any) {
 async function ServerMailList({ folder }: { folder: string }) {
   try {
 
-    const { data } = await serverAxios.get<ApiResponse<SingleEmailResponse>>("/imap/fetch-emails?folder=" + folder) // server-side fetching
-
+    const { data } = await serverAxios.get<ApiResponse<SingleEmailResponse>>("/api/v1/imap/fetch-emails?folder=" + folder) // server-side fetching
+ 
     if (!data.success) {
       throw data.message
     }

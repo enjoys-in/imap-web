@@ -360,27 +360,25 @@ function WizardThankYou() {
         description: "Your email settings have been successfully configured.",
         variant: "default",
       })
-      await cacheStorage.addItem("fetch-mailboxes", data)
-      await airsendDB.bulkPutItems("mailboxes", data.result)
-      // store in redux
+      if (data.result) {
+        // set mailboxes null and fetch on login
+        await airsendDB.bulkPutItems("mailboxes", data.result)
+      }
 
-
-      //Todo : set cookies token
       setIsSuccess(true)
-    } catch (error: any) {  
-         if (error.message.includes("SMTMP")) {         
-      
-          return setError("SMTP connection failed")
-         }
+    } catch (error: any) {
+      console.log(error)
+
       setError("Failed to save email configuration. Please try again.")
-      
+
     } finally {
       setIsLoading(false)
     }
   }
   const handleClose = () => {
     try {
-      router.push("/v2/mail")
+      router.push("/u/mail/inbox")
+
       setOpenConfigDialog(false)
       reset()
       setIsSuccess(false)
@@ -484,14 +482,15 @@ function WizardThankYou() {
             Configure Again
           </button>
         )}
-        <button
-          disabled={isLoading}
-          onClick={isSuccess ? handleClose : handleUserConfiguration}
-          className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          {isSuccess ? "Close" : "Save Configuration"}
-        </button>
+        {!isLoading && (
+          <button
+            disabled={isLoading}
+            onClick={isSuccess ? handleClose : handleUserConfiguration}
+            className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            {isSuccess ? "Close" : "Save Configuration"}
+          </button>)}
       </div>
     </div>
   )

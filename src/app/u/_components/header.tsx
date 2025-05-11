@@ -33,7 +33,7 @@ export const HeaderV2 = () => {
                 <div className="flex items-center gap-2">
                     <SidebarTrigger className="-ml-1 dark:hover:bg-gray-700 bg-gray-50 dark:bg-slate-800 " />
                     <Separator orientation="vertical" className="mr-2 h-4" />
-                     <BreadcrumbInfo />                   
+                     <BreadcrumbInfo /> 
                 </div>
                 <div className="flex items-center mx-auto w-1/2">
                     <SidebarInput placeholder="Type to search in mails ..." />

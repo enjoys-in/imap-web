@@ -58,6 +58,7 @@ import { FileAttachmentInterface, MailData } from "@/lib/types/mail.interface";
 import { ApiResponse } from '@/lib/types';
 import { MailIframe } from '@/components/common/mail-iframe';
 import MailDisplay2 from '@/components/common/mail-display2';
+import { simpleParser } from 'mailparser';
 
 const page = async ({ params }: any) => {
   const { folder, uid_message_id } = await params
@@ -71,7 +72,9 @@ const page = async ({ params }: any) => {
 }
 const MailDisplay = async ({ folder, uid, message_id }: any) => {
   try {
-    const { data } = await serverAxios.get<ApiResponse<MailData>>(`/imap/fetch-email-body?folder=${folder}&uid=${uid}&message_id=${message_id}`)
+    const { data } = await serverAxios.get<ApiResponse<MailData>>(`/api/v1/imap/fetch-email-body?folder=${folder}&uid=${uid}&message_id=${message_id}`)
+
+
     //   const handleReplyBtnClicked = () => {
     //   if (!replyTextAreaRef.current || !data.result) return;
     //   replyTextAreaRef.current.focus();
@@ -79,7 +82,7 @@ const MailDisplay = async ({ folder, uid, message_id }: any) => {
     //     replyTextAreaRef.current.value = "@" + data.result.from + " ";
     //   }
     // };
-
+    
     return (
       <div
         className="flex-1 md:flex-none flex flex-col overflow-auto"
@@ -256,22 +259,22 @@ const MailDisplay = async ({ folder, uid, message_id }: any) => {
             </DropdownMenu>
           </div>
         </div>
-                <MailDisplay2 
-                isMuted
-                emailData={{
-                  id: data.result.message_id,
-                  from: data.result.from,
-                  cc:[],
-                  bcc:[],
-                attachments: [],
-                  sender: {
-                    name:"Mullayam"
-                  },
-                  receivedOn:data.result.timestamp,
-                  email: data.result.to,
-                  subject: data.result.title,
-                  decodedBody: data.result.contents! || data.result.shortContent
-                }} demo={""} index={1} totalEmails={4} />
+        <MailDisplay2
+          isMuted
+          emailData={{
+            id: data.result.message_id,
+            from: data.result.from,
+            cc: [],
+            bcc: [],
+            attachments: [],
+            sender: {
+              name: "Mullayam"
+            },
+            receivedOn: data.result.timestamp,
+            email: data.result.to,
+            subject: data.result.title,
+            decodedBody: data.result.contents! || data.result.shortContent
+          }} demo={""} index={1} totalEmails={4} />
         <ScrollArea className="flex-1 flex flex-col overflow-auto border-t border-gray-300 dark:border-gray-800">
           <h2 className="pl-4 text-2xl font-bold mt-4">{data.result.title}</h2>
           {/* {Array.isArray(data.result.hasAttachment) && data.result.hasAttachment.length > 0 && (<FileAttachment attachments={data.result.hasAttachment} messageId={data.result.message_id} />)} */}

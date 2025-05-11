@@ -8,27 +8,23 @@ const security = new Security();
 
 
 export const instance = axios.create({
-    baseURL: __config.APP.API_URL,
+    baseURL: __config.APP.BASE_URL,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': __config.APP.API_URL,
+        // 'Access-Control-Allow-Origin': __config.APP.APP_URL,
     },
 })
 instance.defaults.headers["common"] = {
     "Accept": "application/json",
     "Content-Type": "application/json",
     'X-App-Version': '1.0.0',
-    'X-App-Name': 'AirSend',
+    'X-App-Name': 'AirSend IMAP Client',
+    'X-Powered-By': 'ENJOYS',
     'x-api-key': __config.APP.API_KEY,
 }
 
 instance.interceptors.request.use(async (config) => {
-    const toGet = (config.url as string).includes('/admin') ? 'admin_access_token' : 'access_token';
-    const token = localStorage.getItem(toGet);
-    if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-    }
 
     security.GenerateSignature((config.method as string).toUpperCase(), `${config.baseURL}${config.url}` as string, config?.data,).then((signature) => {
         config.headers['X-Signature'] = signature
@@ -45,8 +41,10 @@ instance.interceptors.response.use(
             window.location.href = '/auth';
         }
         // if (response.data.message = "Login required") {
-        //     await instance.get("/imap/relogin")
+        //     await instance.get("/api/v1/imap/relogin")
         //     await manualDelay(3000)
+        //     const originalRequest = response.config;
+        //     return instance(originalRequest);
         // }
         return response;
     },

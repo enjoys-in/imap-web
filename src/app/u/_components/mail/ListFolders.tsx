@@ -11,7 +11,7 @@ import { RefreshCcw } from "lucide-react"
 
 import { sentenceCase } from 'change-case'
 import { MailBoxIcon } from "./MailboxIcons"
-import { useCacheStorage } from "@/hooks/useCacheStorage"
+
 import { API } from "@/lib/api/handler"
 import { airsendDB } from "@/db"
 import { useMailStore } from "@/store/mails"
@@ -20,7 +20,7 @@ import { usePathname } from "next/navigation"
 export function ListFolders() {
 
     const pathname = usePathname()
-    const { getItem, addItem } = useCacheStorage()
+
     const [hoveredPath, setHoveredPath] = useState<string | null>(null);
     const { all_mailbox, selected_mailbox, setSelectedMailbox, setAllMailbox, setError } = useMailStore()
 
@@ -32,7 +32,6 @@ export function ListFolders() {
             if (!data.success) {
                 return setError(data.message)
             }
-            await addItem(`fetch-mailbox?folder=${current_mailbox}`, data)
             await airsendDB.updateItem("mailboxes", current_mailbox, data.result)
             const index = all_mailbox.findIndex(box => box.path === current_mailbox);
             if (index !== -1) {
@@ -50,23 +49,17 @@ export function ListFolders() {
             const MailBoxes = await airsendDB.getAllItems("mailboxes")
 
             if (MailBoxes?.length === 0) {
-                const item = await getItem("fetch-mailboxes" as const)
-
-                if (item && item.success) {
-                    setAllMailbox(item.result as any)
-                    return await airsendDB.bulkAddItems("mailboxes", item.result as any)
-                }
 
                 const { data } = await API.fetchMailboxes()
                 if (!data.success) {
                     return setError(data.message)
                 }
-                await addItem("fetch-mailboxes", data)
+
                 await airsendDB.bulkAddItems("mailboxes", data.result)
                 return setAllMailbox(data.result as any)
 
             }
-            setAllMailbox(MailBoxes)
+            setAllMailbox(MailBoxes as any)
         } catch (error) {
 
 
@@ -78,7 +71,7 @@ export function ListFolders() {
             fetchMailboxes()
         }
     }, [])
-    return (
+    return all_mailbox.length > 0 ? (
         <Suspense fallback={<SkeletonMenuItem />}>
             {all_mailbox.map((folder) => {
                 const isSelected = selected_mailbox === folder.path;
@@ -127,17 +120,29 @@ export function ListFolders() {
                 );
             })}
         </Suspense>
-    );
+    ) : Array(6).fill(0).map((_, i) => <SkeletonMenuItem key={i} />)
 }
+
 
 function SkeletonMenuItem() {
     return (
-        <div className={`flex items-center justify-between p-2 rounded  "bg-gray-800"`}>
-            <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 bg-gray-700 rounded animate-pulse" />
-                <div className="w-16 h-4 bg-gray-700 rounded animate-pulse" />
+        <div className="flex justify-between items-center px-2 py-2 bg-neutral-800 rounded-none border-none animate-pulse">
+
+            <div className="flex items-center gap-2 w-3/4">
+
+                <div className="w-5 h-5 bg-zinc-600 rounded-full" />
+
+
+                <div className="h-4 bg-zinc-600 rounded w-3/5" />
             </div>
-            <div className="w-4 h-4 bg-gray-700 rounded-full animate-pulse" />
+
+            {/* Right side: Refresh icon and badge */}
+            <div className="flex items-center gap-2 w-1/4 justify-end">
+
+
+                <div className="w-6 h-6 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center" />
+            </div>
         </div>
+
     )
 }

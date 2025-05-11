@@ -12,18 +12,17 @@ import { useToast } from "@/components/ui/use-toast"
 import { ConfigForm } from "./config-form"
 import { API } from "@/lib/api/handler"
 import { LogoImage } from "@/components/logo-image"
- 
+
 import { useRouter } from "next/navigation"
 import { useIndexDb } from "@/hooks/useIndexDb"
 import { useCacheStorage } from "@/hooks/useCacheStorage"
 import { useMailStore } from "@/store/mails"
- 
+
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
     const { toast } = useToast()
     const { airsendDB } = useIndexDb()
     const [email, setEmail] = useState("")
-    const cacheStorage = useCacheStorage()
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const { openConfigDialog, setOpenConfigDialog } = useMailStore()
@@ -56,15 +55,15 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             if (!data.success) {
                 throw new Error(data.message)
             }
-            await cacheStorage.addItem("fetch-mailboxes", data)
+
             await airsendDB.bulkAddItems("mailboxes", data.result)
-         
+
             toast({
                 title: "Success",
-                description: "You have been logged in successfully",duration:2000
+                description: "You have been logged in successfully", duration: 2000
             })
-            router.push("/v2/mail")
-        } catch (error) {
+            router.push("/u/mail/inbox")
+        } catch (error: any) {
 
             toast({
                 title: "Error",

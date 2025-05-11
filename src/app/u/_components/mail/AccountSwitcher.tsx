@@ -21,20 +21,11 @@ import {
 import { FavIcon } from "@/components/logo-image"
 const teams = [
   {
-    name: "Acme Inc",
+    name: "Airsend",
     logo: GalleryVerticalEnd,
     plan: "Enterprise",
   },
-  {
-    name: "Acme Corp.",
-    logo: AudioWaveform,
-    plan: "Startup",
-  },
-  {
-    name: "Evil Corp.",
-    logo: Command,
-    plan: "Free",
-  },
+  
 ]
 
 export function AccountSwitcherV2() {
@@ -80,7 +71,7 @@ export function AccountSwitcherV2() {
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Teams
+              Accounts
             </DropdownMenuLabel>
             {teams.map((team, index) => (
               <DropdownMenuItem
@@ -100,7 +91,7 @@ export function AccountSwitcherV2() {
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <Plus className="size-4" />
               </div>
-              <div className="font-medium text-muted-foreground">Add team</div>
+              <div className="font-medium text-muted-foreground">Add Account</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

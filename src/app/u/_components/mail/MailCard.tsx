@@ -136,13 +136,8 @@ export const MailCard = ({ item }: { item: EmailOnly }) => {
                                         :
                                         <>
                                             <div className="flex items-center gap-2">
-                                                <Badge className="flex items-center text-gray-500 text-xs border border-gray-200 rounded-full px-2 py-0.5">
-                                                    <span>Group</span>
-                                                    <span className="mr-1">3</span>
-                                                </Badge>
-                                                <Badge className="bg-yellow-100 text-yellow-800 rounded-full text-xs">Applications</Badge>
-                                                <Badge className="text-xs font-bold">personal</Badge>
-                                                <Badge className="bg-purple-100 text-purple-800 rounded-full text-xs">Work</Badge>
+
+
                                                 <Badge className="flex items-center text-gray-500 text-xs border border-gray-200 rounded-full px-2 py-0.5">
                                                     <span className="mr-1">📨</span>
                                                     <span>inbox</span>
@@ -156,8 +151,6 @@ export const MailCard = ({ item }: { item: EmailOnly }) => {
                         </div>
                     </div>
                 </div>
-
-
             </div>
         </EmailContextMenu>
     )

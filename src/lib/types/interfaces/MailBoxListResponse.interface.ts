@@ -17,8 +17,8 @@ export interface ListResponse {
     subscribed: boolean;
     status?: StatusObject;
 }
-export type MailBoxListResponse  ={
+export type MailBoxListResponse = {
     total_count: number;
     unseen_count: number;
-   
+
 } & ListResponse

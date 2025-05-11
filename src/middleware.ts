@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!access_token && pathname.startsWith('/u/')) {
-        return NextResponse.redirect(new URL('/auth', request.nextUrl));
+        return NextResponse.redirect(new URL('/', request.nextUrl));
     }
     if (access_token && regex.test(pathname)) {
         return NextResponse.next();
