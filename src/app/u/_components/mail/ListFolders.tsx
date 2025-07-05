@@ -13,7 +13,7 @@ import { sentenceCase } from 'change-case'
 import { MailBoxIcon } from "./MailboxIcons"
 
 import { API } from "@/lib/api/handler"
-import { airsendDB } from "@/db"
+import { idbInstance } from "@/db"
 import { useMailStore } from "@/store/mails"
 import { usePathname } from "next/navigation"
 
@@ -32,7 +32,7 @@ export function ListFolders() {
             if (!data.success) {
                 return setError(data.message)
             }
-            await airsendDB.updateItem("mailboxes", current_mailbox, data.result)
+            await idbInstance.updateItem("mailboxes", current_mailbox, data.result)
             const index = all_mailbox.findIndex(box => box.path === current_mailbox);
             if (index !== -1) {
                 all_mailbox[index] = data.result
@@ -42,22 +42,18 @@ export function ListFolders() {
 
         }
     }, [])
-    // write func to fetch from index db and cache storage and then api if not exist
-
+    // write func to fetch from index db and then api if not exist
     const fetchMailboxes = useCallback(async () => {
         try {
-            const MailBoxes = await airsendDB.getAllItems("mailboxes")
+            const MailBoxes = await idbInstance.getAllItems("mailboxes")
 
             if (MailBoxes?.length === 0) {
-
                 const { data } = await API.fetchMailboxes()
                 if (!data.success) {
                     return setError(data.message)
                 }
-
-                await airsendDB.bulkAddItems("mailboxes", data.result)
+                await idbInstance.bulkPutItems("mailboxes", data.result)
                 return setAllMailbox(data.result as any)
-
             }
             setAllMailbox(MailBoxes as any)
         } catch (error) {
@@ -89,7 +85,7 @@ export function ListFolders() {
                         onMouseLeave={() => setHoveredPath(null)}
                     >
 
-                        <Link href={`${folder.path}`} className="flex items-center gap-2" onClick={() => setSelectedMailbox(folder.path)}>
+                        <Link href={`/u/mail/${folder.path}`} className="flex items-center gap-2" onClick={() => setSelectedMailbox(folder.path)}>
                             <MailBoxIcon name={folder.name} key={folder.specialUse} />
                             <span
                                 className={cn(

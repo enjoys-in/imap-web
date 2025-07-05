@@ -32,7 +32,12 @@ export class API {
 
         })
     }
-
+    static userLogout() {
+        return instance.post(imapRoutes(`/logout`))
+    }
+    static userProfile() {
+        return instance.get(imapRoutes(`/user-profile`))
+    }
     static fetchMailboxes() {
         return instance.get(imapRoutes(`/fetch-mailboxes`))
     }

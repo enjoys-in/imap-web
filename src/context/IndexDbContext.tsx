@@ -1,9 +1,9 @@
 import React, { createContext } from 'react';
-import { db, airsendDB } from '@/db';
+import { db, idbInstance } from '@/db';
 
 interface IndexDbContextProps {
     db: typeof db
-    airsendDB: typeof airsendDB
+    idbInstance: typeof idbInstance
 }
 
 export const IndexDbContext = createContext<IndexDbContextProps | undefined>(undefined);
@@ -13,7 +13,7 @@ export const IndexDbProvider: React.FC<{ children: React.ReactNode }> = ({ child
   
     // The MailContext provider with optimistic updates
     return (
-        <IndexDbContext.Provider value={{ db, airsendDB }}>
+        <IndexDbContext.Provider value={{ db, idbInstance }}>
             {children}
         </IndexDbContext.Provider>
     );

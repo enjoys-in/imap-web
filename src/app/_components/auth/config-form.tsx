@@ -340,7 +340,7 @@ function WizardThankYou() {
   const { reset, submittedData } = useWizard()
   const router = useRouter()
   const cacheStorage = useCacheStorage()
-  const { airsendDB } = useIndexDb()
+  const { idbInstance } = useIndexDb()
 
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isSuccess, setIsSuccess] = useState<boolean>(false)
@@ -362,7 +362,7 @@ function WizardThankYou() {
       })
       if (data.result) {
         // set mailboxes null and fetch on login
-        await airsendDB.bulkPutItems("mailboxes", data.result)
+        await idbInstance.bulkPutItems("mailboxes", data.result)
       }
 
       setIsSuccess(true)

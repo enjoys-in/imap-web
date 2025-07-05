@@ -8,7 +8,7 @@ import { SocketEventConstants } from "@/lib/sockets/socket-constants";
 import { Loader2 } from "lucide-react";
 import useAudio from "@/hooks/useAudio";
 import { triggerNotification } from "@/lib/helper";
-import { airsendDB } from "@/db";
+import { idbInstance } from "@/db";
 import { MailData } from "@/lib/types/mail.interface";
 import { IUser } from "@/lib/types/user.interface";
 
@@ -32,7 +32,7 @@ const NewMailRecived = ({ currAcc }: { currAcc: IUser | null }) => {
             if (document.hidden) {
                 triggerNotification("New Mail", { body: `You recieved a new mail from ${obj.from}`, })
             }
-            await airsendDB.addItem("imap_mails",obj as any)
+            await idbInstance.addItem("imap_mails",obj as any)
         })
         const handleChangeToDefault = () => {
             if (document.visibilityState === 'visible') {

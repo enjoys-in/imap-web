@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 9502",
+    "dev": "next dev -p 9550",
     "build": "next build",
     "start": "next start -p 9502",
     "lint": "next lint"
@@ -15,7 +15,7 @@
   "author": "ENJOYS",
   "repository": "https://github.com/Mullayam/smtp-server-with-mailbox.git",
   "bugs": "https://github.com/Mullayam/smtp-server-with-mailbox.git",
-  "homepage": "https://nexus-mail.enjoys.in",
+  "homepage": "https://imap.airsend.in",
   "dependencies": {
     "@ai-sdk/openai": "^1.2.5",
     "@ariakit/react": "^0.4.15",
@@ -59,6 +59,7 @@
     "@scaleway/random-name": "^5.1.1",
     "@types/crypto-js": "^4.2.2",
     "@types/dompurify": "^3.2.0",
+    "@types/dot-object": "^2.1.6",
     "@types/mailparser": "^3.4.6",
     "@types/prismjs": "^1.26.5",
     "ai": "^4.1.61",
@@ -71,8 +72,10 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "dexie": "^4.0.11",
+    "dexie-observable": "^4.0.1-beta.13",
     "dexie-react-hooks": "^1.1.7",
     "dompurify": "^3.2.4",
+    "dot-object": "^2.1.5",
     "email-addresses": "^5.0.0",
     "embla-carousel-react": "^8.5.2",
     "framer-motion": "^11.18.2",

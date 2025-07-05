@@ -1,25 +1,31 @@
 "use client"
-import React, { ReactNode, Suspense, } from "react";
-import { useRouter } from "next/navigation";
+import React, { ReactNode, useLayoutEffect, } from "react";
 
-import { Spinner } from "@/components/common/spinner";
-import { IndexDbProvider } from "@/context/IndexDbContext";
 import SocketContextProvider from "@/context/SocketContext";
-import NewMailRecived from "@/components/common/new-mail-recived";
 
-import PermissionNotification from "@/components/common/permissionNotification";
 import { EditorContextProvider } from "@/context/EditorContext";
 import DesktopLayoutV2 from "./_components/desktop-layout";
 import { CalendarProvider } from "./calender/_components/event-calendar/calendar-context";
 import { MobileLayoutV2 } from "./_components/mobile-layout";
+import { API } from "@/lib/api/handler";
+import { useProfileStore } from "@/store/account";
 
 function MainLayout({ children }: { children: ReactNode }) {
-  const router = useRouter()
-  // const currAcc = useAppSelector((state) => state.accounts.currAccount)
-  // if (!currAcc) {
-  //   return router.push("/auth")
-  // }
+  const { setCurrentAccount } = useProfileStore()
 
+  const fetchUserProfile = React.useCallback(async () => {
+    try {
+      const { data } = await API.userProfile()
+      if (data.success) {
+        setCurrentAccount(data.result)
+      }
+    } catch (error) {
+      setCurrentAccount(null)
+    }
+  }, [])
+  useLayoutEffect(() => {
+    fetchUserProfile()
+  }, [])
   return (
     <EditorContextProvider>
       <SocketContextProvider>

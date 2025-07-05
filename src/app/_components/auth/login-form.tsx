@@ -15,13 +15,12 @@ import { LogoImage } from "@/components/logo-image"
 
 import { useRouter } from "next/navigation"
 import { useIndexDb } from "@/hooks/useIndexDb"
-import { useCacheStorage } from "@/hooks/useCacheStorage"
 import { useMailStore } from "@/store/mails"
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const router = useRouter()
     const { toast } = useToast()
-    const { airsendDB } = useIndexDb()
+    const { idbInstance } = useIndexDb()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [isLoading, setIsLoading] = useState(false)
@@ -51,12 +50,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             })
             if (!data.success && data.message === "Not Authencticated") {
                 return setOpenConfigDialog(true)
-            }
+            }            
             if (!data.success) {
                 throw new Error(data.message)
             }
 
-            await airsendDB.bulkAddItems("mailboxes", data.result)
+            await idbInstance.bulkPutItems("mailboxes", data.result)
 
             toast({
                 title: "Success",
@@ -64,7 +63,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             })
             router.push("/u/mail/inbox")
         } catch (error: any) {
-
+                console.log(error)
             toast({
                 title: "Error",
                 description: "Something went wrong. Please try again.",

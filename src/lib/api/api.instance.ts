@@ -19,7 +19,7 @@ instance.defaults.headers["common"] = {
     "Accept": "application/json",
     "Content-Type": "application/json",
     'X-App-Version': '1.0.0',
-    'X-App-Name': 'AirSend IMAP Client',
+    'X-App-Name': 'Airmail IMAP Client',
     'X-Powered-By': 'ENJOYS',
     'x-api-key': __config.APP.API_KEY,
 }

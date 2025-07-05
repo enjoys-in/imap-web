@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react'
 
 
-import { airsendDB } from '@/db'
+import { idbInstance } from '@/db'
 import { useParams } from 'next/navigation'
 import { useMailStore } from "@/store/mails"
 import { ApiResponse } from '@/lib/types'
@@ -17,7 +17,7 @@ const ClientMailCard = ({ data }: { data?: ApiResponse<SingleEmailResponse> }) =
     const storeInDB = async () => {
 
         try {
-          await airsendDB.bulkPutItems("imap_mails", data?.result.emails as any)
+          await idbInstance.bulkPutItems("imap_mails", data?.result.emails as any)
           setAllEmails(data?.result as any)
         } catch (error) {
 

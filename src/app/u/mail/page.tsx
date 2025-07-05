@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 
 const page = () => {
-  return  redirect("/mail/inbox")
+  return  redirect("/u/mail/inbox")
 }
 
 export default page

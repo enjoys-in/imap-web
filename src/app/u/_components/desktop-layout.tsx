@@ -4,7 +4,7 @@ import {
     SidebarInset,
     SidebarProvider,
 } from "@/components/ui/sidebar"
-import { AppSidebarV2 } from "./sidebar"
+import AppSidebarV2 from "./sidebar"
 import { SidebarRightV2 } from "./sidebar-right"
 import { HeaderV2 } from "./header";
 

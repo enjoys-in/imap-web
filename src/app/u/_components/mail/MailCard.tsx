@@ -33,6 +33,7 @@ export const MailCard = ({ item }: { item: EmailOnly }) => {
     )
     const anyChecked = checkedItems.length > 0;
     const handleClick = () => {
+        setCheckedItems([])
         router.push(`${params?.folder}/${item.uid}$${encryptData(item.message_id)}`,)
     }
     const handleHoveredIconClick = (action: string) => {
@@ -55,6 +56,7 @@ export const MailCard = ({ item }: { item: EmailOnly }) => {
                                 <Checkbox
                                     className="mr-3 rounded-none transition-all duration-300 ease-in-out "
                                     checked={checkedItems.includes(item.uid)}
+                                    onClick={(e) => e.stopPropagation()}
                                     onCheckedChange={(isChecked) => handleCheckChange(item.uid, !!isChecked)}
                                 />
                             )}

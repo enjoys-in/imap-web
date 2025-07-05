@@ -9,7 +9,7 @@ import { API } from '@/lib/api/handler';
 import { AxiosResponse } from 'axios';
 import { useMailStore } from "@/store/mails"
 import { QuotaResponse } from '@/lib/types/interfaces/QuotaResponse';
-import { airsendDB } from '@/db';
+import { idbInstance } from '@/db';
 
 const QuotaComponent = () => {
     const { quota, setQuota } = useMailStore();
@@ -20,7 +20,7 @@ const QuotaComponent = () => {
             const { data } = await API.getQuota() as AxiosResponse<ApiResponse<QuotaResponse>>;
 
             if (data.success && data.result) {
-                await airsendDB.addNestedItem("settings", "quota", {
+                await idbInstance.addNestedItem("settings", "quota", {
                     "settings.account.quota": data.result
                 })
                 setQuota(data.result);
@@ -33,7 +33,7 @@ const QuotaComponent = () => {
     };
     useEffect(() => {
         if (!quota) {
-            airsendDB.getItemByKey("settings", "quota").then((result) => {
+            idbInstance.getItemByKey("settings", "quota").then((result) => {
                 if (result) {
                     setQuota(result.settings.account.quota);
                 } else {

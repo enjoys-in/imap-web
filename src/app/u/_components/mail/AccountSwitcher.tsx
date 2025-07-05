@@ -1,7 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { AudioWaveform, ChevronsUpDown, Command, GalleryVerticalEnd, Plus } from "lucide-react"
+import * as React from "react";
+import {
+  AudioWaveform,
+  ChevronsUpDown,
+  Command,
+  GalleryVerticalEnd,
+  Plus,
+} from "lucide-react";
 
 import {
   DropdownMenu,
@@ -11,58 +17,71 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { FavIcon } from "@/components/logo-image"
+} from "@/components/ui/sidebar";
+import { FavIcon } from "@/components/logo-image";
+import { useProfileStore } from "@/store/account";
+import { Skeleton } from "@/components/ui/skeleton";
 const teams = [
   {
     name: "Airsend",
     logo: GalleryVerticalEnd,
     plan: "Enterprise",
   },
-  
-]
+];
 
 export function AccountSwitcherV2() {
-  const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
+  const { isMobile } = useSidebar();
+  const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+  const { current_account } = useProfileStore();
 
   if (!activeTeam) {
-    return null
+    return null;
   }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex w-full items-center justify-between py-2 px-1">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-black bg-black flex items-center justify-center" >
-                    <FavIcon w={24} />
-                  </div>
-                  <div className="flex flex-col">
+        <SidebarMenuButton
+          size="lg"
+          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        >
+          <div className="flex w-full items-center justify-between py-2 px-1">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full border border-black bg-black flex items-center justify-center">
+                <FavIcon w={24} />
+              </div>
+              <div className="flex flex-col">
+                {current_account ? (
+                  <>
                     <span className="text-base font-medium text-foreground">
-                      Mullayam Singh
+                      {current_account?.display_name ||
+                        current_account?.email.split("@")[0]}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      airsend.in
+                      {current_account?.email}
                     </span>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <div className="h-4 w-36 bg-muted rounded animate-pulse" />
+                    <div className="h-3 w-56 bg-muted rounded animate-pulse" />
                   </div>
-                </div>
-
+                )}
               </div>
-              <ChevronsUpDown className="ml-auto" />
-            </SidebarMenuButton>
+
+            </div>
+          </div>
+          <ChevronsUpDown className="ml-auto" />
+        </SidebarMenuButton>
+        {/* <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+        
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -94,8 +113,8 @@ export function AccountSwitcherV2() {
               <div className="font-medium text-muted-foreground">Add Account</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

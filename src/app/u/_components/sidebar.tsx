@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Activity, ArchiveX, Calendar, File, Inbox, Send } from "lucide-react"
+import * as React from "react";
+import { Calendar, Inbox } from "lucide-react";
 
-import { NavUser } from "@/components/nav-user"
+import { NavUser } from "@/components/nav-user";
 
 import {
     Sidebar,
@@ -12,28 +12,26 @@ import {
     SidebarGroup,
     SidebarGroupContent,
     SidebarHeader,
-
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarRail,
-    useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-import { FavIcon } from "@/components/logo-image"
-import Link from "next/link"
-import { Mailboxes } from "./mail/mailboxes"
+import { FavIcon } from "@/components/logo-image";
+import Link from "next/link";
+import { Mailboxes } from "./mail/mailboxes";
 
-import SidebarCalendar from "../calender/_components/sidebar-calendar"
+import SidebarCalendar from "../calender/_components/sidebar-calendar";
 
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 // This is sample data
 const navMain = [
     {
         title: "Mailbox",
-        url: "mail",
+        url: "/u/mail",
         icon: Inbox,
         isActive: true,
     },
@@ -43,11 +41,11 @@ const navMain = [
         icon: Calendar,
         isActive: false,
     },
-]
-export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>) {
-
-    const pathname = usePathname()
-
+];
+export default function AppSidebarV2({
+    ...props
+}: React.ComponentProps<typeof Sidebar>) {
+    const pathname = usePathname();
     return (
         <Sidebar
             collapsible="icon"
@@ -79,8 +77,10 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                                             children: item.title,
                                             hidden: false,
                                         }}
-
-                                        className={cn("px-2.5 md:px-2 ", pathname.includes(item.url) && "bg-neutral-800")}
+                                        className={cn(
+                                            "px-2.5 md:px-2 ",
+                                            pathname.includes(item.url) && "bg-neutral-800"
+                                        )}
                                     >
                                         <item.icon />
                                         <span>{item.title}</span>
@@ -92,9 +92,7 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarGroup>
-                        <SidebarGroupContent className="px-1.5 md:px-0">
-
-                        </SidebarGroupContent>
+                        <SidebarGroupContent className="px-1.5 md:px-0"></SidebarGroupContent>
                     </SidebarGroup>
                 </SidebarContent>
                 <SidebarRail />
@@ -103,7 +101,7 @@ export function AppSidebarV2({ ...props }: React.ComponentProps<typeof Sidebar>)
                 </SidebarFooter>
             </Sidebar>
             {pathname.includes("/mail") && <Mailboxes />}
-            {(pathname === "/calender") && <SidebarCalendar />}
+            {pathname === "/calender" && <SidebarCalendar />}
         </Sidebar>
-    )
+    );
 }

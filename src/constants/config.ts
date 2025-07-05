@@ -10,7 +10,7 @@ const config = {
     MODE: process.env.NEXT_PUBLIC_APP_ENV,
     ENCRYPTION_KEY:process.env.NEXT_PUBLIC_ENCRYPTION_KEY,
     APP: {
-        FRONTEND_URL:"https://webmail.airsend.in",
+        FRONTEND_URL:"https://iweb.airsend.in",
         BASE_URL: process.env.NEXT_PUBLIC_APP_URL,
         API_URL: process.env.NEXT_PUBLIC_APP_URL + "/api/v1",
         APP_SECRET: process.env.NEXT_PUBLIC_APP_SECRET,

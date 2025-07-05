@@ -13,7 +13,7 @@ type Props = {
 const MetaTags: React.FC<Props> = ({
   title,
   description,
-  url = __config.APP.APP_URL,
+  url = __config.APP.FRONTEND_URL,
   image,
 }) => {
   const formattedTitle = useMemo(() => {
@@ -27,8 +27,8 @@ const MetaTags: React.FC<Props> = ({
   }, [title]);
 
   const DEFAULT_DESCRIPTION = SiteConfig.description
-  const LOGO_PATH = `${__config.APP.APP_URL}/static/og_image.jpg`;
-  const favicon = `${__config.APP.APP_URL}/static/favicon.ico`;
+  const LOGO_PATH = `${__config.APP.FRONTEND_URL}/static/og_image.jpg`;
+  const favicon = `${__config.APP.FRONTEND_URL}/static/favicon.ico`;
 
   const currentDescription = description ?? DEFAULT_DESCRIPTION;
 
