@@ -1,6 +1,5 @@
 import type React from "react"
 import {
-  ChevronRight,
   Archive,
   Trash2,
   Clock,
@@ -27,167 +26,147 @@ export function EmailContextMenu({ children }: { children: React.ReactNode }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-64">
+      <ContextMenuContent className="w-64 glass-card rounded-xl border-0 shadow-elevated-lg p-1">
         <ContextMenuSub>
-          <ContextMenuSubTrigger className="flex items-center justify-between">
+          <ContextMenuSubTrigger className="flex items-center justify-between rounded-lg">
             <div className="flex items-center gap-2">
-              <MoveRight className="h-4 w-4" />
+              <MoveRight className="h-4 w-4 text-muted-foreground" />
               <span>Move to tab</span>
             </div>
-            <ChevronRight className="h-4 w-4" />
           </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-48">
-            <ContextMenuItem>
+          <ContextMenuSubContent className="w-48 glass-card rounded-xl border-0 shadow-elevated-lg p-1">
+            <ContextMenuItem className="rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 flex items-center justify-center">
-                  <span className="block h-2 w-2 rounded-full bg-blue-500"></span>
-                </div>
+                <span className="block h-2 w-2 rounded-full bg-blue-500"></span>
                 <span>Primary</span>
               </div>
             </ContextMenuItem>
-            <ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 flex items-center justify-center">
-                  <span className="block h-2 w-2 rounded-full bg-green-500"></span>
-                </div>
+                <span className="block h-2 w-2 rounded-full bg-emerald-500"></span>
                 <span>Promotions</span>
               </div>
             </ContextMenuItem>
-            <ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 flex items-center justify-center">
-                  <span className="block h-2 w-2 rounded-full bg-yellow-500"></span>
-                </div>
+                <span className="block h-2 w-2 rounded-full bg-yellow-500"></span>
                 <span>Updates</span>
               </div>
             </ContextMenuItem>
-            <ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 flex items-center justify-center">
-                  <span className="block h-2 w-2 rounded-full bg-purple-500"></span>
-                </div>
+                <span className="block h-2 w-2 rounded-full bg-violet-500"></span>
                 <span>Forums</span>
               </div>
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <MoveRight className="h-4 w-4 rotate-180" />
+            <MoveRight className="h-4 w-4 rotate-180 text-muted-foreground" />
             <span>Reply</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <MoveRight className="h-4 w-4 rotate-180" />
+            <MoveRight className="h-4 w-4 rotate-180 text-muted-foreground" />
             <span>Reply all</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <MoveRight className="h-4 w-4" />
+            <MoveRight className="h-4 w-4 text-muted-foreground" />
             <span>Forward</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
-          <div className="flex items-center gap-2">
-            <MoveRight className="h-4 w-4" />
-            <span>Forward as attachment</span>
-          </div>
-        </ContextMenuItem>
+        <ContextMenuSeparator className="bg-border/30 my-1" />
 
-        <ContextMenuSeparator />
-
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <Archive className="h-4 w-4" />
+            <Archive className="h-4 w-4 text-muted-foreground" />
             <span>Archive</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10">
           <div className="flex items-center gap-2">
             <Trash2 className="h-4 w-4" />
             <span>Delete</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="h-4 w-4 flex items-center justify-center font-bold text-xs">!</span>
-            <span>Mark as unread</span>
-          </div>
-        </ContextMenuItem>
-
-        <ContextMenuItem>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-4 w-4 text-muted-foreground" />
             <span>Snooze</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <CheckSquare className="h-4 w-4" />
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
             <span>Add to Tasks</span>
           </div>
         </ContextMenuItem>
 
+        <ContextMenuSeparator className="bg-border/30 my-1" />
+
         <ContextMenuSub>
-          <ContextMenuSubTrigger className="flex items-center justify-between">
+          <ContextMenuSubTrigger className="flex items-center justify-between rounded-lg">
             <div className="flex items-center gap-2">
-              <MoveRight className="h-4 w-4" />
+              <MoveRight className="h-4 w-4 text-muted-foreground" />
               <span>Move to</span>
             </div>
-            <ChevronRight className="h-4 w-4" />
           </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-48">
-            <ContextMenuItem>Inbox</ContextMenuItem>
-            <ContextMenuItem>Sent</ContextMenuItem>
-            <ContextMenuItem>Drafts</ContextMenuItem>
-            <ContextMenuItem>Spam</ContextMenuItem>
-            <ContextMenuItem>Trash</ContextMenuItem>
+          <ContextMenuSubContent className="w-48 glass-card rounded-xl border-0 shadow-elevated-lg p-1">
+            <ContextMenuItem className="rounded-lg">Inbox</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Sent</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Drafts</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Spam</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Trash</ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
 
         <ContextMenuSub>
-          <ContextMenuSubTrigger className="flex items-center justify-between">
+          <ContextMenuSubTrigger className="flex items-center justify-between rounded-lg">
             <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4" />
+              <Tag className="h-4 w-4 text-muted-foreground" />
               <span>Label as</span>
             </div>
-            <ChevronRight className="h-4 w-4" />
           </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-48">
-            <ContextMenuItem>Important</ContextMenuItem>
-            <ContextMenuItem>Work</ContextMenuItem>
-            <ContextMenuItem>Personal</ContextMenuItem>
-            <ContextMenuItem>To-do</ContextMenuItem>
-            <ContextMenuItem>Create new</ContextMenuItem>
+          <ContextMenuSubContent className="w-48 glass-card rounded-xl border-0 shadow-elevated-lg p-1">
+            <ContextMenuItem className="rounded-lg">Important</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Work</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">Personal</ContextMenuItem>
+            <ContextMenuItem className="rounded-lg">To-do</ContextMenuItem>
+            <ContextMenuSeparator className="bg-border/30" />
+            <ContextMenuItem className="rounded-lg text-primary">Create new</ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
 
-        <ContextMenuItem>
+        <ContextMenuSeparator className="bg-border/30 my-1" />
+
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <BellOff className="h-4 w-4" />
+            <BellOff className="h-4 w-4 text-muted-foreground" />
             <span>Mute</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            <span>Find emails from Swarup Bhise</span>
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <span>Find emails from sender</span>
           </div>
         </ContextMenuItem>
 
-        <ContextMenuItem>
+        <ContextMenuItem className="rounded-lg">
           <div className="flex items-center gap-2">
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
             <span>Open in new window</span>
           </div>
         </ContextMenuItem>

@@ -49,17 +49,17 @@ export function AccountSwitcherV2() {
       <SidebarMenuItem>
         <SidebarMenuButton
           size="lg"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          className="data-[state=open]:bg-primary/5 data-[state=open]:text-primary rounded-xl smooth-transition hover:bg-secondary/50"
         >
           <div className="flex w-full items-center justify-between py-2 px-1">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full border border-black bg-black flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center ring-2 ring-primary/10">
                 <FavIcon w={24} />
               </div>
               <div className="flex flex-col">
                 {current_account ? (
                   <>
-                    <span className="text-base font-medium text-foreground">
+                    <span className="text-sm font-semibold text-foreground">
                       {current_account?.display_name ||
                         current_account?.email.split("@")[0]}
                     </span>
@@ -68,16 +68,16 @@ export function AccountSwitcherV2() {
                     </span>
                   </>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    <div className="h-4 w-36 bg-muted rounded animate-pulse" />
-                    <div className="h-3 w-56 bg-muted rounded animate-pulse" />
+                  <div className="flex flex-col gap-1.5">
+                    <div className="h-4 w-36 bg-muted rounded-lg animate-pulse" />
+                    <div className="h-3 w-48 bg-muted rounded-lg animate-pulse" />
                   </div>
                 )}
               </div>
 
             </div>
           </div>
-          <ChevronsUpDown className="ml-auto" />
+          <ChevronsUpDown className="ml-auto text-muted-foreground" />
         </SidebarMenuButton>
         {/* <DropdownMenu>
           <DropdownMenuTrigger asChild>

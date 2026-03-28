@@ -6,7 +6,6 @@ import { useState } from "react"
 import { cn, encryptData } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { ConfigForm } from "./config-form"
@@ -75,53 +74,62 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     }
 
     return (
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
-            <form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <h1 className="text-xl font-bold dark:text-gray-50">Welcome to</h1>
-                        <div className="flex  items-center justify-center rounded-md">
-                            <LogoImage />
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="m@example.com"
-                                value={email}
-                                className="rounded-none"
-
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                className="rounded-none"
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <Button type="submit" className="w-full rounded-none" disabled={isLoading}>
-                            {isLoading ? "Logging in..." : "Login"}
-                        </Button>
+        <div className={cn("flex w-full flex-col items-center gap-10", className)} {...props}>
+            {/* Logo */}
+            <div className="flex flex-col items-center gap-6">
+                <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 blur-2xl scale-150" />
+                    <div className="relative">
+                        <LogoImage w={400} />
                     </div>
                 </div>
-            </form>
-            <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
-                By clicking continue, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+                <div className="flex flex-col items-center gap-2 text-center">
+                    <h1 className="text-[22px] font-semibold tracking-tight text-foreground">
+                        Sign in to AirSend
+                    </h1>
+                    <p className="text-[13px] text-muted-foreground">
+                        Access your mailbox securely
+                    </p>
+                </div>
             </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
+                <Input
+                    type="email"
+                    placeholder="Email address"
+                    value={email}
+                    className="h-11 rounded-[10px] border-border/60 dark:border-white/[0.08] bg-background dark:bg-white/[0.04] px-4 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus-visible:border-indigo-500/40 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors duration-200"
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                />
+                <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    className="h-11 rounded-[10px] border-border/60 dark:border-white/[0.08] bg-background dark:bg-white/[0.04] px-4 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus-visible:border-indigo-500/40 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors duration-200"
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                />
+                <Button
+                    type="submit"
+                    className="mt-1 h-11 w-full rounded-[10px] bg-foreground text-[13px] font-medium text-background hover:bg-foreground/90 transition-all duration-200 disabled:opacity-40"
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <span className="flex items-center gap-2">
+                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-background/20 border-t-background" />
+                            Signing in...
+                        </span>
+                    ) : "Continue"}
+                </Button>
+            </form>
 
             <Dialog open={openConfigDialog} onOpenChange={setOpenConfigDialog}>
                 <DialogContent
+                    className="border-border/60 dark:border-white/[0.08] bg-background text-foreground rounded-2xl"
                     onEscapeKeyDown={(e) => e.preventDefault()}
                     onInteractOutside={(e) => e.preventDefault()}
                 >

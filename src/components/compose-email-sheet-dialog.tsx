@@ -87,9 +87,9 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger className="w-full">{children}</DialogTrigger>
-        <DialogContent className="w-[1200px] min-w-[1000px] max-h-[900px] flex flex-col">
+        <DialogContent className="w-[1200px] min-w-[1000px] max-h-[900px] flex flex-col glass-card rounded-2xl border-0 shadow-elevated-lg animate-scale-in">
           <DialogHeader className="flex flex-col flex-1">
-            <DialogTitle className="mb-10">New Message</DialogTitle>
+            <DialogTitle className="mb-6 text-xl font-semibold gradient-text">New Message</DialogTitle>
             <Content value={mailOptions} handleInputChange={handleInputChange} />
           </DialogHeader>
           <DialogFooter>
@@ -103,8 +103,8 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
-      <DrawerContent className="p-4 min-h-[85dvh] flex flex-col">
-        <DrawerTitle className="mb-5">New Message</DrawerTitle>
+      <DrawerContent className="p-4 min-h-[85dvh] flex flex-col glass-card rounded-t-3xl border-0">
+        <DrawerTitle className="mb-5 text-xl font-semibold gradient-text">New Message</DrawerTitle>
         <Content value={mailOptions} handleInputChange={handleInputChange} />
         <DrawerFooter className="flex flex-row justify-end">
           <SendButton onClick={sendMail} />
@@ -115,7 +115,7 @@ export function ComposeEmailDrawerSheet({ children }: { children: ReactNode }) {
 }
 const SendButton = ({ onClick }: { onClick: () => void }) => {
   return (
-    <Button className="w-40" onClick={onClick}>
+    <Button className="w-40 h-10 rounded-xl bg-primary text-primary-foreground font-semibold shadow-glow hover:shadow-glow-lg smooth-transition hover-lift shine-effect" onClick={onClick}>
       Send
     </Button>
   );
@@ -126,15 +126,15 @@ const Content = ({ value, handleInputChange }: { value: any, handleInputChange: 
     handleInputChange("to", emails)
   }, [emails])
   return (
-    <form className="flex-1 flex flex-col gap-2">
+    <form className="flex-1 flex flex-col gap-3">
       <div className="flex flex-row gap-4 items-center w-full">
         <InputTags id="to-mail" value={emails} onChange={setEmails} />
       </div>
       <div className="w-full">
-        <Input id="subject" value={value.subject} placeholder="Subject" className="flex-1 focus:outline-none"
+        <Input id="subject" value={value.subject} placeholder="Subject" className="h-11 rounded-xl glass-input border-0 bg-secondary/40 px-4 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
           onChange={(e) => handleInputChange("subject", e.target.value)} />
       </div>
-      <div className="flex-1 flex max-h-[600px] overflow-y-auto rounded-lg focus:!ring-transparent">
+      <div className="flex-1 flex max-h-[600px] overflow-y-auto rounded-xl glass-input border-0 bg-secondary/30 focus:!ring-transparent">
         <RichTextEditor />
       </div>
     </form>

@@ -23,22 +23,23 @@ function RootTab<T extends "Mailbox" | "Settings">({
 
   }, [activeTab]);
   return (
-    <div className="flex-1 py-0">
-      <div className="bg-zinc-300 dark:bg-black rounded-full flex justify-between relative">
+    <div className="flex-1 py-0 px-2">
+      <div className="bg-secondary/50 rounded-xl flex justify-between relative p-0.5">
         <div
-          className={`bg-zinc-400 dark:bg-zinc-800 w-[50%] h-full absolute top-0 ${isActive(leftLabel) ? "left-0" : "left-[100%] translate-x-[-100%]"
-            } transition-all rounded-full border-[3px] border-zinc-300 dark:border-black`}
+          className={`bg-background w-[50%] h-full absolute top-0.5 ${isActive(leftLabel) ? "left-0.5" : "left-[100%] translate-x-[calc(-100%-2px)]"
+            } smooth-transition rounded-[10px] shadow-sm`}
+          style={{ height: "calc(100% - 4px)" }}
         ></div>
         <button
-          className={`flex-1 py-2 text-sm text-center h-fit z-10 ${isActive(leftLabel) ? "dark:text-zinc-200" : "dark:text-zinc-500"
-            } hover:text-zinc-500 hover:dark:text-zinc-300`}
+          className={`flex-1 py-2 text-sm text-center h-fit z-10 rounded-[10px] font-medium smooth-transition ${isActive(leftLabel) ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
           onClick={() => setActiveTab(leftLabel as any)}
         >
           {String(leftLabel)}
         </button>
         <button
-          className={`flex-1 py-2 text-sm text-center h-fit z-10 ${isActive(rightLabel) ? "dark:text-zinc-200" : "dark:text-zinc-500"
-            } hover:text-zinc-500 hover:dark:text-zinc-300`}
+          className={`flex-1 py-2 text-sm text-center h-fit z-10 rounded-[10px] font-medium smooth-transition ${isActive(rightLabel) ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
           onClick={() => setActiveTab(rightLabel as any)}
         >
           {String(rightLabel)}

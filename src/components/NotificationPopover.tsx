@@ -14,24 +14,24 @@ function NotificationPopover() {
           <TooltipTrigger asChild>
             <div
               className={cn(
-                "relative",
-                buttonVariants({ size: "icon", variant: "ghost" })
+                "relative rounded-xl smooth-transition",
+                buttonVariants({ size: "icon", variant: "ghost" }),
+                "hover:bg-primary/10 hover:text-primary"
               )}
             >
               <Bell className="h-4 w-4"  />
-              <div className="absolute right-3 top-3 w-2 h-2 bg-red-500 rounded-full animate-ping"/>
-              <div className="absolute right-3 top-3 w-2 h-2 bg-red-500 rounded-full "/>
+              <div className="absolute right-2.5 top-2.5 w-2 h-2 bg-primary rounded-full animate-ping"/>
+              <div className="absolute right-2.5 top-2.5 w-2 h-2 bg-primary rounded-full"/>
               <span className="sr-only">Notifications</span>
             </div>
           </TooltipTrigger>
           <TooltipContent>Notifications</TooltipContent>
         </Tooltip>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] h-[500px] flex ">
-        <ScrollArea >
+      <PopoverContent className="w-[400px] h-[500px] flex glass-card rounded-2xl border-0 shadow-elevated-lg p-0 overflow-hidden">
+        <ScrollArea className="w-full p-4">
           <Notifications />
         </ScrollArea>
-        {/* <p className="text-center text-muted-foreground">No notifications!</p> */}
       </PopoverContent>
     </Popover>
   );

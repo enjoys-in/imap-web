@@ -47,30 +47,31 @@ export function SidebarRightV2({
   const [openItem, setOpenItem] = React.useState<number | null>(null);
 
   return (
-    <Sidebar collapsible="none" className={cn("sticky hidden lg:flex top-0 h-svh border-l z-20 transition-[width] duration-300", openItem ? "w-[400px]" : "w-[52px]")} {...props}>
-      <SidebarHeader className="h-14 border-b border-sidebar-border">
-        <BsThunderbolt />
+    <Sidebar collapsible="none" className={cn("sticky hidden lg:flex top-0 h-svh border-l border-border/30 z-20 transition-[width] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] glass-subtle", openItem ? "w-[400px]" : "w-[52px]")} {...props}>
+      <SidebarHeader className="h-14 border-b border-border/30 flex items-center justify-center">
+        <BsThunderbolt className="text-primary" />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarSeparator className="ml-1"/>
+        <SidebarSeparator className="ml-1 bg-border/30"/>
         <div className="flex gap-y-2 flex-row">
-          <div className="flex flex-col items-center justify-center ">
+          <div className="flex flex-col items-center justify-center gap-1 pt-2">
             {ITEMS.map((item) => (
               <Tooltip key={item.id}>
                 <TooltipTrigger asChild>
                   <Button
                     size={"icon"}
                     variant={openItem === item.id ? "outline" : "ghost"}
-                    className={
+                    className={cn(
+                      "rounded-xl smooth-transition h-9 w-9",
                       openItem === item.id
-                        ? "text-white"
-                        : "text-muted-foreground"
-                    }
+                        ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
+                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    )}
                     onClick={() =>
                       setOpenItem(openItem === item.id ? null : item.id)
                     }
                   >
-                    <item.icon />
+                    <item.icon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left">

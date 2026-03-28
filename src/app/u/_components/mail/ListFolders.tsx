@@ -72,25 +72,27 @@ export function ListFolders() {
             {all_mailbox.map((folder) => {
                 const isSelected = selected_mailbox === folder.path;
                 const isHovered = hoveredPath === folder.path;
+                const isActive = isSelected || pathname.toLocaleLowerCase().includes(folder.path.toLowerCase());
 
                 return (
                     <div
                         key={folder.name}
                         className={cn(
-                            buttonVariants({ variant: "outline", size: "sm" }),
-                            "flex justify-between items-center px-2 border-none  group rounded-none",
-                            (isSelected || pathname.toLocaleLowerCase().includes(folder.path.toLowerCase())) ? "dark:bg-[#5a62ff4d]" : "bg-neutral-800"
+                            "flex justify-between items-center px-3 py-1.5 group rounded-xl mx-1 mb-0.5 smooth-transition cursor-pointer",
+                            isActive 
+                              ? "bg-primary/10 text-primary shadow-sm" 
+                              : "hover:bg-secondary/60 text-foreground"
                         )}
                         onMouseEnter={() => setHoveredPath(folder.path)}
                         onMouseLeave={() => setHoveredPath(null)}
                     >
 
-                        <Link href={`/u/mail/${folder.path}`} className="flex items-center gap-2" onClick={() => setSelectedMailbox(folder.path)}>
+                        <Link href={`/u/mail/${folder.path}`} className="flex items-center gap-2.5 flex-1" onClick={() => setSelectedMailbox(folder.path)}>
                             <MailBoxIcon name={folder.name} key={folder.specialUse} />
                             <span
                                 className={cn(
-                                    "text-sm truncate hover:text-[#5a61ff] font-bold",
-                                    isSelected ? "dark:text-[#5a61ff] font-bold" : "dark:text-zinc-300"
+                                    "text-sm truncate font-medium smooth-transition",
+                                    isActive ? "text-primary font-semibold" : "text-foreground"
                                 )}
                             >
                                 {sentenceCase(folder.name)}
@@ -122,23 +124,14 @@ export function ListFolders() {
 
 function SkeletonMenuItem() {
     return (
-        <div className="flex justify-between items-center px-2 py-2 bg-neutral-800 rounded-none border-none animate-pulse">
-
-            <div className="flex items-center gap-2 w-3/4">
-
-                <div className="w-5 h-5 bg-zinc-600 rounded-full" />
-
-
-                <div className="h-4 bg-zinc-600 rounded w-3/5" />
+        <div className="flex justify-between items-center px-3 py-2 mx-1 rounded-xl animate-pulse">
+            <div className="flex items-center gap-2.5 w-3/4">
+                <div className="w-5 h-5 bg-muted rounded-lg" />
+                <div className="h-4 bg-muted rounded-lg w-3/5" />
             </div>
-
-            {/* Right side: Refresh icon and badge */}
             <div className="flex items-center gap-2 w-1/4 justify-end">
-
-
-                <div className="w-6 h-6 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center" />
+                <div className="w-6 h-6 bg-primary/20 rounded-full" />
             </div>
         </div>
-
     )
 }

@@ -24,14 +24,17 @@ export const MobileLayoutV2 = ({ children }: { children: ReactNode }) => {
  
     const router = useRouter();
     return (
-        <div className="flex flex-col  w-screen">
+        <div className="flex flex-col w-screen min-h-svh">
             <div className={cn("flex flex-row items-center p-2",)}>
-
             </div>
             <main className="flex-1 flex flex-col overflow-hidden">
-                <ScrollArea className="h-[calc(100vh-65px)]">{children}</ScrollArea>
+                <ScrollArea className="h-[calc(100vh-65px)] px-2">
+                    <div className="glass-card rounded-2xl min-h-full my-2 overflow-hidden">
+                        {children}
+                    </div>
+                </ScrollArea>
             </main>
-            <footer className={cn(" ", mailId && "hidden")}>
+            <footer className={cn("", mailId && "hidden")}>
                 <MobileNavigation />
             </footer>
         </div>

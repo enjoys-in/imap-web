@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { cn } from "@/lib/utils"
 import {
     RotateCcw,
     User,
@@ -66,40 +67,43 @@ export const SettingsMenu = () => {
         }
     }, [activeItem])
     return (
-        <div className="text-white flex flex-col">
+        <div className="flex flex-col">
             <div className="p-4">
-                <h2 className="text-sm font-medium text-gray-400 mb-2">Account</h2>
-                <nav className="space-y-1">
+                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 mb-3">Account</h2>
+                <nav className="space-y-0.5">
                     {accountItems.map((item) => (
                         <button
                             key={item.label}
-                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.label ? "bg-gray-800" : "hover:bg-gray-900"
-                                }`}
+                            className={cn(
+                                "flex items-center w-full px-3 py-2.5 text-sm rounded-xl smooth-transition",
+                                activeItem === item.label 
+                                    ? "bg-primary/10 text-primary font-medium" 
+                                    : "hover:bg-secondary/60 text-foreground"
+                            )}
                             onClick={() => setActiveItem(item.label)}
                         >
-                            <span className="mr-3 text-gray-400">{item.icon}</span>
+                            <span className={cn("mr-3", activeItem === item.label ? "text-primary" : "text-muted-foreground")}>{item.icon}</span>
                             <span>{item.label}</span>
-                            {/* {item.notification && (
-                                <span className="ml-auto">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                </span>
-                            )} */}
                         </button>
                     ))}
                 </nav>
             </div>
 
             <div className="p-4 pt-2">
-                <h2 className="text-sm font-medium text-gray-400 mb-2">Airsend Mail</h2>
-                <nav className="space-y-1">
+                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 mb-3">Airsend Mail</h2>
+                <nav className="space-y-0.5">
                     {mailItems.map((item) => (
                         <button
                             key={item.label}
-                            className={`flex items-center w-full px-3 py-2 text-sm rounded-md ${activeItem === item.label ? "bg-gray-800" : "hover:bg-gray-900"
-                                }`}
+                            className={cn(
+                                "flex items-center w-full px-3 py-2.5 text-sm rounded-xl smooth-transition",
+                                activeItem === item.label 
+                                    ? "bg-primary/10 text-primary font-medium" 
+                                    : "hover:bg-secondary/60 text-foreground"
+                            )}
                             onClick={() => setActiveItem(item.label)}
                         >
-                            <span className="mr-3 text-gray-400">{item.icon}</span>
+                            <span className={cn("mr-3", activeItem === item.label ? "text-primary" : "text-muted-foreground")}>{item.icon}</span>
                             <span>{item.label}</span>
                         </button>
                     ))}

@@ -16,14 +16,18 @@ export default function DesktopLayoutV2({ children }: { children: React.ReactNod
         <SidebarProvider
             style={
                 {
-                    "--sidebar-width": "360px",
+                    "--sidebar-width": "340px",
                 } as React.CSSProperties
             }
         >
             <AppSidebarV2 />
-            <SidebarInset>
+            <SidebarInset className="overflow-hidden">
                 <HeaderV2 />
-                {children}
+                <div className="flex-1 overflow-y-auto p-3">
+                    <div className="glass-card rounded-2xl min-h-full animate-scale-in">
+                        {children}
+                    </div>
+                </div>
             </SidebarInset>
             <SidebarRightV2 />
         </SidebarProvider>

@@ -9,6 +9,7 @@ import { CalendarProvider } from "./calender/_components/event-calendar/calendar
 import { MobileLayoutV2 } from "./_components/mobile-layout";
 import { API } from "@/lib/api/handler";
 import { useProfileStore } from "@/store/account";
+import { AnimatedGradientBg } from "@/components/magicui/animated-gradient-bg";
 
 function MainLayout({ children }: { children: ReactNode }) {
   const { setCurrentAccount } = useProfileStore()
@@ -30,16 +31,16 @@ function MainLayout({ children }: { children: ReactNode }) {
     <EditorContextProvider>
       <SocketContextProvider>
         <CalendarProvider>
-          {/* <PermissionNotification currAcc={currAcc} /> */}
-          <div className="flex md:hidden flex-1 bg-[#111315]">
-            <MobileLayoutV2>{children} </MobileLayoutV2>
-          </div>
-          <div className="hidden md:flex flex-1  bg-[#111315]">
-            <DesktopLayoutV2>{children} </DesktopLayoutV2>
-          </div>
-
-          {/* <NewMailRecived currAcc={currAcc} /> */}
-
+          <AnimatedGradientBg className="min-h-svh">
+            {/* Mobile Layout */}
+            <div className="flex md:hidden flex-1">
+              <MobileLayoutV2>{children}</MobileLayoutV2>
+            </div>
+            {/* Desktop Layout */}
+            <div className="hidden md:flex flex-1">
+              <DesktopLayoutV2>{children}</DesktopLayoutV2>
+            </div>
+          </AnimatedGradientBg>
         </CalendarProvider>
       </SocketContextProvider>
     </EditorContextProvider>

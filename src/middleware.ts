@@ -10,22 +10,22 @@ const hPanelRegex = /^\/h-panel\/(.+)/;
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const PublicPaths = ['/'];
- 
 
-    const access_token = request.cookies.get('access_token')?.value || undefined;
 
-    if (access_token && validateTokenExpiry(access_token) && PublicPaths.includes(pathname)) {
-        (await cookies()).delete('access_token');
-        return NextResponse.redirect(new URL('/u/inbox', request.nextUrl));
-    }
+    // const access_token = request.cookies.get('access_token')?.value || undefined;
 
-    if (!access_token && pathname.startsWith('/u/')) {
-        return NextResponse.redirect(new URL('/', request.nextUrl));
-    }
-    if (access_token && regex.test(pathname)) {
-        return NextResponse.next();
-    }
-     
+    // if (access_token && validateTokenExpiry(access_token) && PublicPaths.includes(pathname)) {
+    //     (await cookies()).delete('access_token');
+    //     return NextResponse.redirect(new URL('/u/inbox', request.nextUrl));
+    // }
+
+    // if (!access_token && pathname.startsWith('/u/')) {
+    //     return NextResponse.redirect(new URL('/', request.nextUrl));
+    // }
+    // if (access_token && regex.test(pathname)) {
+    //     return NextResponse.next();
+    // }
+
 
     return NextResponse.next();
 }

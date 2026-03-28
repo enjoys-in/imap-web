@@ -22,31 +22,27 @@ import SidbarTabs from "./SidbarTabs"
 export function Mailboxes() {
 
   return (
-    <Sidebar collapsible="none" className="hidden flex-1 md:flex ">
-      <SidebarHeader className="gap-2 border-b my-1 p-0">
+    <Sidebar collapsible="none" className="hidden flex-1 md:flex glass-subtle border-r-0">
+      <SidebarHeader className="gap-2 border-b border-border/30 my-1 p-0">
         <AccountSwitcherV2 />
-        <Separator />
+        <Separator className="bg-border/30" />
         <SidbarTabs />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="px-4">
+        <SidebarGroup className="px-3">
           <SidebarGroupContent>
-            {/* <SidebarCollections text="Folder" />
-            <Separator />
-            <SidebarCollections text="Lables" /> */}
           </SidebarGroupContent>
         </SidebarGroup>
-        <div className="flex flex-row items-center justify-between px-2 py-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-row items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2 text-muted-foreground hover:text-primary cursor-pointer smooth-transition rounded-xl px-2 py-1.5 hover:bg-primary/10">
             <Plus className="h-4 w-4" />
-            <span className="text-sm font-medium">New</span>
+            <span className="text-sm font-medium">New folder</span>
           </div>
         </div>
       </SidebarContent>
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t border-border/30 p-3">
         <QuotaComponent />
-        <Separator />
-        {/* <ShowMeetings /> */}
+        <Separator className="bg-border/30" />
       </SidebarFooter>
     </Sidebar>
   )

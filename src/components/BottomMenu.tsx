@@ -16,37 +16,38 @@ function BottomMenu() {
   return (
     <div
       className={cn(
-        "flex flex-row justify-center items-center gap-6 px-6 py-2 dark:bg-[#111315]"
+        "flex flex-row justify-center items-center gap-4 px-4 py-2 glass-subtle border-t border-border/30"
       )}
     >
       <Link
         href={"/"}
-        className={`flex-1 h-full rounded-md  md:hover:bg-zinc-900 py-2  ${
+        className={cn(
+          "flex-1 h-full rounded-xl py-2 smooth-transition",
           pathname === "/"
-            ? "text-zinc-800 dark:text-white  bg-zinc-300 dark:bg-[#222529]"
-            : " text-zinc-400"
-        }`}
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        )}
       >
         <IconButton Icon={FaInbox} label="Inbox" />
       </Link>
       <Link
         href={"sent"}
-        className={`flex-1 h-full rounded-md  md:hover:bg-zinc-900 py-2 ${
+        className={cn(
+          "flex-1 h-full rounded-xl py-2 smooth-transition",
           pathname === "/sent"
-            ? "text-zinc-800 dark:text-white bg-zinc-300 dark:bg-[#222529]"
-            : " text-zinc-400"
-        }`}
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        )}
       >
         <IconButton Icon={FaShare} label="Sent" />
       </Link>
-      <div className={`flex-1 h-full rounded-md text-zinc-300 relative`}>
+      <div className={`flex-1 h-full rounded-xl relative`}>
         <ComposeEmailDrawerSheet>
           <div
             className={cn(
-              buttonVariants({ variant: "outline" }),
-              "absolute left-[50%] translate-x-[-50%] top-[-4rem] p-6 rounded-full w-[70px] h-[70px]",
-              "bg-[#5a61ff] hover:bg-[#5a61ff] shadow-[0_15px_35px_0px#5a61ff77] md:hover:shadow-[0_15px_35px_0px#5a61ff]",
-              "text-white"
+              "absolute left-[50%] translate-x-[-50%] top-[-3.5rem] p-5 rounded-2xl w-[60px] h-[60px]",
+              "bg-primary shadow-glow-lg hover:shadow-glow smooth-transition hover-lift",
+              "text-primary-foreground flex items-center justify-center"
             )}
           >
             <IconButton Icon={FaPenToSquare} label="" />
@@ -55,21 +56,23 @@ function BottomMenu() {
       </div>
       <Link
         href={"starred"}
-        className={`flex-1 h-full rounded-md  md:hover:bg-zinc-900 py-2  ${
+        className={cn(
+          "flex-1 h-full rounded-xl py-2 smooth-transition",
           pathname === "/starred"
-            ? "text-zinc-800 dark:text-white bg-zinc-300 dark:bg-[#222529]"
-            : " text-zinc-400"
-        }`}
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        )}
       >
         <IconButton Icon={BsStars} label="Starred" />
       </Link>
       <Link
         href={"folders"}
-        className={`flex-1 h-full rounded-md  md:hover:bg-zinc-900 py-2  ${
+        className={cn(
+          "flex-1 h-full rounded-xl py-2 smooth-transition",
           pathname === "/folders"
-            ? "text-zinc-800 dark:text-white bg-zinc-300 dark:bg-[#222529]"
-            : " text-zinc-400"
-        }`}
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        )}
       >
         <IconButton Icon={FaFolder} label="Folders" />
       </Link>

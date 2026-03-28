@@ -49,19 +49,19 @@ export default function AppSidebarV2({
     return (
         <Sidebar
             collapsible="icon"
-            className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
+            className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row glass-sidebar"
             {...props}
         >
             <Sidebar
                 collapsible="none"
-                className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r"
+                className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r border-border/30"
             >
                 <SidebarHeader>
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
                                 <Link href="#">
-                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                                    <div className="flex aspect-square size-8 items-center justify-center rounded-xl bg-primary/10 text-primary smooth-transition hover:bg-primary/20 hover:scale-105">
                                         <FavIcon />
                                     </div>
                                 </Link>
@@ -78,11 +78,11 @@ export default function AppSidebarV2({
                                             hidden: false,
                                         }}
                                         className={cn(
-                                            "px-2.5 md:px-2 ",
-                                            pathname.includes(item.url) && "bg-neutral-800"
+                                            "px-2.5 md:px-2 rounded-xl smooth-transition",
+                                            pathname.includes(item.url) && "bg-primary/10 text-primary hover:bg-primary/15"
                                         )}
                                     >
-                                        <item.icon />
+                                        <item.icon className={cn(pathname.includes(item.url) && "text-primary")} />
                                         <span>{item.title}</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
