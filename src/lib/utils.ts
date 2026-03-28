@@ -1,11 +1,9 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import {AES} from 'crypto-js'
 import { jwtDecode } from 'jwt-decode'
 
 import moment from "moment";
 import { DOMAIN_STATUS } from "./types/mail.interface";
-import { __config } from "@/constants/config";
 
 moment.updateLocale('en', {
 
@@ -21,9 +19,6 @@ moment.updateLocale('en', {
 
 
 
-export function encryptData(data: string) { 
-return AES.encrypt(data, __config.ENCRYPTION_KEY|| "987dfdfd44sdfs").toString();
-}
 export const manualDelay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export function html2markdown(html: string): string {
   // Basic HTML to Markdown conversion

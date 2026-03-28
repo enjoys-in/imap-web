@@ -3,7 +3,8 @@
 import type React from "react"
 import { useState } from "react"
 
-import { cn, encryptData } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { encryptDataAction } from "@/lib/actions/crypto.actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, } from "@/components/ui/dialog"
@@ -45,7 +46,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             // Make API call
             const { data } = await API.handleImapLogin({
                 imap_username: email,
-                imap_password: encryptData(password)
+                imap_password: await encryptDataAction(password)
             })
             if (!data.success && data.message === "Not Authencticated") {
                 return setOpenConfigDialog(true)

@@ -27,21 +27,22 @@ export function ListFolders() {
 
     const fetchMailboxData = useCallback(async (current_mailbox: string) => {
         try {
-            // sync with db as well
             const { data } = await API.syncSelectedFolder(current_mailbox)
             if (!data.success) {
                 return setError(data.message)
             }
             await idbInstance.updateItem("mailboxes", current_mailbox, data.result)
-            const index = all_mailbox.findIndex(box => box.path === current_mailbox);
+            const currentMailboxes = useMailStore.getState().all_mailbox
+            const index = currentMailboxes.findIndex(box => box.path === current_mailbox);
             if (index !== -1) {
-                all_mailbox[index] = data.result
-                setAllMailbox(all_mailbox)
+                const updated = [...currentMailboxes]
+                updated[index] = data.result
+                setAllMailbox(updated)
             }
         } catch (error) {
 
         }
-    }, [])
+    }, [setAllMailbox, setError])
     // write func to fetch from index db and then api if not exist
     const fetchMailboxes = useCallback(async () => {
         try {

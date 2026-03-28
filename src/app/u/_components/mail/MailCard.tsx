@@ -1,11 +1,12 @@
 "use client"
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback } from 'react'
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Star, Trash2, Archive, Flag, MoreVertical } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 
-import { cn, dateToFromNowDaily, encryptData, formattedName } from '@/lib/utils';
+import { cn, dateToFromNowDaily, formattedName } from '@/lib/utils';
+import { encryptDataAction } from '@/lib/actions/crypto.actions';
 import { useMailStore } from "@/store/mails"
 
 import { RiAttachment2 } from '@remixicon/react';
@@ -32,15 +33,14 @@ export const MailCard = ({ item }: { item: EmailOnly }) => {
         [checkedItems]
     )
     const anyChecked = checkedItems.length > 0;
-    const handleClick = () => {
+    const handleClick = async () => {
         setCheckedItems([])
-        router.push(`${params?.folder}/${item.uid}$${encryptData(item.message_id)}`,)
+        const encryptedId = await encryptDataAction(item.message_id)
+        router.push(`${params?.folder}/${item.uid}$${encryptedId}`)
     }
     const handleHoveredIconClick = (action: string) => {
         console.log(action)
     }
-    useEffect(() => { }, [checkedItems])
-
     return (
         <EmailContextMenu>
             <div

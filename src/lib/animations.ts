@@ -8,21 +8,21 @@ export const easeOutExpo = [0.16, 1, 0.3, 1] as const
 
 // ========== FADE VARIANTS ==========
 export const fadeInUp: Variants = {
-  initial: { opacity: 0, y: 20, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.5, ease: easeOutExpo } },
-  exit: { opacity: 0, y: -10, filter: "blur(4px)", transition: { duration: 0.3 } }
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: easeOutExpo } },
+  exit: { opacity: 0, y: -10, transition: { duration: 0.3 } }
 }
 
 export const fadeIn: Variants = {
-  initial: { opacity: 0, filter: "blur(4px)" },
-  animate: { opacity: 1, filter: "blur(0px)", transition: { duration: 0.4, ease: easeOutExpo } },
-  exit: { opacity: 0, filter: "blur(4px)", transition: { duration: 0.2 } }
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.4, ease: easeOutExpo } },
+  exit: { opacity: 0, transition: { duration: 0.2 } }
 }
 
 export const fadeInScale: Variants = {
-  initial: { opacity: 0, scale: 0.95, filter: "blur(4px)" },
-  animate: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.4, ease: easeOutExpo } },
-  exit: { opacity: 0, scale: 0.95, filter: "blur(4px)", transition: { duration: 0.2 } }
+  initial: { opacity: 0, scale: 0.95 },
+  animate: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: easeOutExpo } },
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
 }
 
 // ========== STAGGER SYSTEM ==========
@@ -36,8 +36,8 @@ export const staggerChildren: Variants = {
 }
 
 export const staggerItem: Variants = {
-  initial: { opacity: 0, y: 16, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: easeOutExpo } },
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: easeOutExpo } },
 }
 
 export const staggerListItem: Variants = {
@@ -137,13 +137,13 @@ export const glassReveal: Variants = {
 
 // ========== PAGE TRANSITIONS ==========
 export const pageTransition: Variants = {
-  initial: { opacity: 0, y: 12, filter: "blur(8px)" },
+  initial: { opacity: 0, y: 12 },
   animate: { 
-    opacity: 1, y: 0, filter: "blur(0px)", 
+    opacity: 1, y: 0, 
     transition: { duration: 0.5, ease: easeOutExpo, staggerChildren: 0.08 }
   },
   exit: { 
-    opacity: 0, y: -8, filter: "blur(8px)",
+    opacity: 0, y: -8,
     transition: { duration: 0.3 }
   }
 }

@@ -1,4 +1,3 @@
-import { __config } from '@/constants/config';
 import * as crypto from 'crypto'
 export class Security {
     /**
@@ -22,7 +21,7 @@ export class Security {
             decodedString = this.PurifiedString(method, uri, body);
         }
         const hmac = crypto
-            .createHmac("sha512", __config.APP.APP_SECRET as string)
+            .createHmac("sha512", process.env.APP_SECRET as string)
             .update(decodedString);
         return hmac.digest("hex");
     }

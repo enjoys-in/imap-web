@@ -1,9 +1,8 @@
 "use client"
 import { socketAddListeners, socketRemoveListeners } from "@/lib/sockets/listeners";
 import { appSocket } from "@/lib/sockets/socket";
-import { SocketEventConstants } from "@/lib/sockets/socket-constants";
  
-import React, { PropsWithChildren, use } from "react";
+import React, { PropsWithChildren } from "react";
 import { Socket } from "socket.io-client";
 
 export const SocketContext = React.createContext<{ socket: Socket }>({ socket: appSocket });
@@ -11,20 +10,22 @@ const SocketContextProvider = ({ children }: PropsWithChildren) => {
  
     const [isConnected, setIsConnected] = React.useState(false);
     React.useEffect(() => {
-        appSocket.on("connect", () => setIsConnected(true))
-        appSocket.on("disconnect", () => {
-            console.log("disconnected")
-            setIsConnected(false);
-        })
-        appSocket.on("connection_error", () => setIsConnected(false));
-        // if (currAcc?.email) {
-        //     appSocket.emit(SocketEventConstants.REGISTER_CLIENT, currAcc?.email)
-        // }
-        console.log("connected",appSocket.id)
-        // appSocket.connected && setIsConnected(true)
+        const onConnect = () => setIsConnected(true)
+        const onDisconnect = () => setIsConnected(false)
+        const onError = () => setIsConnected(false)
+
+        appSocket.on("connect", onConnect)
+        appSocket.on("disconnect", onDisconnect)
+        appSocket.on("connect_error", onError)
         socketAddListeners(appSocket);
-        return () => socketRemoveListeners(appSocket)
-    }, [isConnected])
+
+        return () => {
+            appSocket.off("connect", onConnect)
+            appSocket.off("disconnect", onDisconnect)
+            appSocket.off("connect_error", onError)
+            socketRemoveListeners(appSocket)
+        }
+    }, [])
     return (
         <SocketContext.Provider value={{ socket: appSocket }}>
             {children}

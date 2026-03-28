@@ -1,7 +1,7 @@
 "use client";
 
 import { useTabStore } from "@/store/layout";
-import React, {   useEffect } from "react";
+import React from "react";
 
 interface IRootTabProps<T> {
   leftLabel: T;
@@ -19,9 +19,7 @@ function RootTab<T extends "Mailbox" | "Settings">({
   const isActive = (label: T) => {
     return activeTab === label;
   };
-  useEffect(() => {
 
-  }, [activeTab]);
   return (
     <div className="flex-1 py-0 px-2">
       <div className="bg-secondary/50 rounded-xl flex justify-between relative p-0.5">

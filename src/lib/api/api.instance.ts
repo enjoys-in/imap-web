@@ -1,10 +1,8 @@
 
 import { __config } from '@/constants/config'
 import axios from 'axios'
-import { Security } from '../security';
+import { generateSignatureAction } from '../actions/crypto.actions';
 import { manualDelay } from '../utils';
-
-const security = new Security();
 
 
 export const instance = axios.create({
@@ -26,9 +24,8 @@ instance.defaults.headers["common"] = {
 
 instance.interceptors.request.use(async (config) => {
 
-    security.GenerateSignature((config.method as string).toUpperCase(), `${config.baseURL}${config.url}` as string, config?.data,).then((signature) => {
-        config.headers['X-Signature'] = signature
-    })
+    const signature = await generateSignatureAction((config.method as string).toUpperCase(), `${config.baseURL}${config.url}` as string, config?.data)
+    config.headers['X-Signature'] = signature
 
 
     return config;
@@ -36,19 +33,11 @@ instance.interceptors.request.use(async (config) => {
     return Promise.reject(error);
 });
 instance.interceptors.response.use(
-    async (response) => {
-        if (response.status === 401) {
-            window.location.href = '/auth';
-        }
-        // if (response.data.message = "Login required") {
-        //     await instance.get("/api/v1/imap/relogin")
-        //     await manualDelay(3000)
-        //     const originalRequest = response.config;
-        //     return instance(originalRequest);
-        // }
-        return response;
-    },
+    (response) => response,
     (error) => {
+        if (error.response?.status === 401) {
+            window.location.href = '/';
+        }
         return Promise.reject(error);
     }
 )

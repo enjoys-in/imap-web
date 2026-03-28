@@ -14,18 +14,26 @@ export function SpotlightCard({
   radius = 350,
   ...props
 }: SpotlightCardProps) {
-  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = React.useState(false);
   const cardRef = React.useRef<HTMLDivElement>(null);
+  const spotlightRef = React.useRef<HTMLDivElement>(null);
+  const rafRef = React.useRef<number>(0);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    setMousePosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+  const handleMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current || !spotlightRef.current) return;
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = cardRef.current!.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      spotlightRef.current!.style.background =
+        `radial-gradient(${radius}px circle at ${x}px ${y}px, hsl(245 82% 67% / 0.08), transparent 60%)`;
     });
-  };
+  }, [radius]);
+
+  React.useEffect(() => {
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <div
@@ -41,11 +49,9 @@ export function SpotlightCard({
     >
       {/* Spotlight gradient */}
       <div
+        ref={spotlightRef}
         className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-500"
-        style={{
-          opacity: isHovered ? 1 : 0,
-          background: `radial-gradient(${radius}px circle at ${mousePosition.x}px ${mousePosition.y}px, hsl(245 82% 67% / 0.08), transparent 60%)`,
-        }}
+        style={{ opacity: isHovered ? 1 : 0 }}
       />
       <div className="relative z-10">{children}</div>
     </div>

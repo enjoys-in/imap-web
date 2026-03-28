@@ -31,6 +31,11 @@ export function ParticleField({ className, count = 30, color }: ParticleFieldPro
     }));
   }, [count]);
 
+  const animateValues = React.useMemo(() => ({
+    y: [0, -30, 0],
+    opacity: [0.2, 0.6, 0.2],
+  }), []);
+
   return (
     <div className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}>
       {particles.map((p) => (
@@ -44,10 +49,7 @@ export function ParticleField({ className, count = 30, color }: ParticleFieldPro
             height: p.size,
             background: color || "hsl(245 82% 67% / 0.3)",
           }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.2, 0.6, 0.2],
-          }}
+          animate={animateValues}
           transition={{
             duration: p.duration,
             delay: p.delay,

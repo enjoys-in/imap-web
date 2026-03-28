@@ -9,12 +9,13 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/use-toast"
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Check, CheckCircle, Loader2Icon, RefreshCw } from "lucide-react"
 import { useMailStore } from "@/store/mails"
 
 import { API } from "@/lib/api/handler"
-import { encryptData, manualDelay } from "@/lib/utils"
+import { encryptDataAction } from "@/lib/actions/crypto.actions"
+import { manualDelay } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useCacheStorage } from "@/hooks/useCacheStorage"
 import { useIndexDb } from "@/hooks/useIndexDb"
@@ -89,8 +90,8 @@ export function ConfigForm() {
     defaultValue: false,
   })
 
-  const imapUsername = form.getValues("imapConfig.username")
-  const imapPassword = form.getValues("imapConfig.password")
+  const imapUsername = useWatch({ control: form.control, name: "imapConfig.username", defaultValue: "" })
+  const imapPassword = useWatch({ control: form.control, name: "imapConfig.password", defaultValue: "" })
 
   // Update SMTP credentials when checkbox is checked
   useEffect(() => {
@@ -111,12 +112,12 @@ export function ConfigForm() {
         "imap_port": values.imapConfig.port,
         "imap_secure": values.imapConfig.imap_secure,
         "imap_username": values.imapConfig.username,
-        "imap_password": encryptData(values.imapConfig.password),
+        "imap_password": await encryptDataAction(values.imapConfig.password),
         "smtp_host": values.smtpConfig.host,
         "smtp_port": values.smtpConfig.port,
         "smtp_secure": values.smtpConfig.smtp_secure,
         "smtp_username": values.smtpConfig.username,
-        "smtp_password": encryptData(values.smtpConfig.password),
+        "smtp_password": await encryptDataAction(values.smtpConfig.password),
         "uses_same_credentials": values.smtpConfig.uses_same_credentials
       })
     } catch (e: any) {

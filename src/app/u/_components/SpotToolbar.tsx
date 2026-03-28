@@ -16,6 +16,7 @@ export function SpotToolbar() {
   const { checkedItems, all_emails, setCheckedItems, selected_mailbox } = useMailStore()
   const handleImapEvents = useCallback(
     async (event: string) => {
+      const { checkedItems, all_emails, selected_mailbox } = useMailStore.getState()
       try {
         let response
         switch (event) {
@@ -63,30 +64,28 @@ export function SpotToolbar() {
             return toast.error(data.message)
           }
           if (event === "delete" || event === "move" || event === "archive") {
-
-            const udpatedEmails = all_emails?.emails.filter((item) => !checkedItems.includes(item.uid))
-            // setCheckedItems(udpatedEmails)
-
+            const updatedEmails = all_emails?.emails.filter((item) => !checkedItems.includes(item.uid))
+            if (updatedEmails) setCheckedItems([])
           }
           if (event === "move_all" || event === "delete_all") {
             setCheckedItems([])
           }
           toast.success(data.message)
-
         }
       } catch (error: any) {
         return toast.error(error.message)
       }
     },
-    []
+    [setCheckedItems]
   )
   const handleSelectAll = useCallback(() => {
+    const { all_emails } = useMailStore.getState()
     const uids = all_emails?.emails.map((item) => item.uid)
-    if (uids && uids?.length > 0) {
+    if (uids && uids.length > 0) {
       setCheckedItems(uids)
     }
   },
-    []
+    [setCheckedItems]
   )
   return checkedItems.length > 0 ? (
     <div className="flex z-10 fixed items-center justify-between w-full glass border-b border-border/30 text-foreground px-4 py-1 animate-slide-down-fade">

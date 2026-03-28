@@ -6,14 +6,14 @@ import React from "react";
 
 const variants: Record<string, Variants> = {
   fadeUp: {
-    initial: { opacity: 0, y: 20, filter: "blur(4px)" },
-    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-    exit: { opacity: 0, y: -10, filter: "blur(4px)" },
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
   },
   fadeIn: {
-    initial: { opacity: 0, filter: "blur(4px)" },
-    animate: { opacity: 1, filter: "blur(0px)" },
-    exit: { opacity: 0, filter: "blur(4px)" },
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 },
   },
   scaleIn: {
     initial: { opacity: 0, scale: 0.95 },
@@ -109,9 +109,9 @@ export function PageTransition({ children, className }: { children: React.ReactN
   return (
     <motion.div
       className={cn("gpu-accelerate", className)}
-      initial={{ opacity: 0, y: 12, filter: "blur(8px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -8, filter: "blur(8px)" }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}

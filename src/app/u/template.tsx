@@ -1,5 +1,5 @@
 "use client"
-import React, { ReactNode, useLayoutEffect, } from "react";
+import React, { ReactNode, useEffect, } from "react";
 
 import SocketContextProvider from "@/context/SocketContext";
 
@@ -24,7 +24,7 @@ function MainLayout({ children }: { children: ReactNode }) {
       setCurrentAccount(null)
     }
   }, [])
-  useLayoutEffect(() => {
+  useEffect(() => {
     fetchUserProfile()
   }, [])
   return (

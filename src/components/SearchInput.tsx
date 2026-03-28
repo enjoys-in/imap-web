@@ -9,19 +9,17 @@ function SearchInput() {
   const [showSearchBar, setShowSearchBar] = useState(false);
   const searchBarRef = useRef<HTMLInputElement>(null);
   const [searchText, setSearchText] = useState("");
-  const [timer, setTimer] = useState<NodeJS.Timer | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    
   // debounce searching
   useEffect(() => {
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
     
     }, 500);
-    setTimer(timer);
     return () => {
-      clearTimeout(timer);
-      setTimer(null);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [searchText,  ]);
+  }, [searchText]);
   return (
     <>
       <div className="hidden md:flex">
