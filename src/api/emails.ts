@@ -1,6 +1,7 @@
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { MOCK_EMAILS } from '@/lib/mock';
 import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
+import { getCachedEmailBody, saveCachedEmailBody } from '@/lib/idb/mailCacheDb';
 
 export interface SendEmailPayload {
   to: string;
@@ -18,9 +19,6 @@ export interface DraftPayload {
   bodyHtml?: string;
 }
 
-/**
- * Fetch email metadata list for a folder (lightweight without heavy body HTML).
- */
 export async function getEmailsMetadata(
   folderId: string,
   accountId?: string
@@ -40,7 +38,6 @@ export async function getEmailsMetadata(
     const data: MailMessage[] = await res.json();
     return data.map(({ bodyHtml, bodyText, ...meta }) => meta);
   } catch {
-    await new Promise((r) => setTimeout(r, 70));
     return MOCK_EMAILS.filter((e) => {
       const matchFolder = e.folderId === folderId || folderId === 'fld-inbox';
       const matchAccount = !accountId || e.accountId === accountId;
@@ -49,39 +46,39 @@ export async function getEmailsMetadata(
   }
 }
 
-/**
- * Fetch email message detail by ID.
- */
 export async function getEmailById(messageId: string): Promise<MailMessage | null> {
   const match = MOCK_EMAILS.find((e) => e.id === messageId);
   return match || null;
 }
 
-/**
- * Fetch full body HTML / text for a selected email message on demand.
- */
 export async function getEmailBody(
   messageId: string
 ): Promise<{ bodyHtml?: string; bodyText?: string }> {
+  const cached = await getCachedEmailBody(messageId);
+  if (cached && (cached.bodyHtml || cached.bodyText)) {
+    return cached;
+  }
   if (!isLiveApiAvailable()) {
     const match = MOCK_EMAILS.find((e) => e.id === messageId);
-    return { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
+    const body = { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
+    saveCachedEmailBody(messageId, body);
+    return body;
   }
   const { apiUrl } = getClientConfig();
   try {
     const res = await fetch(`${apiUrl}/fetch-email-body?messageId=${messageId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    saveCachedEmailBody(messageId, data);
+    return data;
   } catch {
-    await new Promise((r) => setTimeout(r, 60));
     const match = MOCK_EMAILS.find((e) => e.id === messageId);
-    return { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
+    const body = { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
+    saveCachedEmailBody(messageId, body);
+    return body;
   }
 }
 
-/**
- * Send an email message.
- */
 export async function sendEmail(payload: SendEmailPayload): Promise<{ success: boolean; id: string }> {
   const { apiUrl } = getClientConfig();
   try {
@@ -117,36 +114,14 @@ export async function bulkMarkAsRead(messageIds: string[], isRead: boolean): Pro
   return true;
 }
 
+export async function markAsRead(messageId: string, isRead: boolean): Promise<boolean> {
+  return true;
+}
+
 export async function bulkToggleFlag(messageIds: string[], isFlagged: boolean): Promise<boolean> {
   return true;
 }
 
 export async function deleteEmail(messageId: string): Promise<boolean> {
   return true;
-}
-
-export async function markAsRead(messageId: string, isRead: boolean): Promise<boolean> {
-  return true;
-}
-
-export async function toggleFlag(messageId: string, isFlagged: boolean): Promise<boolean> {
-  return true;
-}
-
-export async function togglePin(messageId: string, isPinned: boolean): Promise<boolean> {
-  return true;
-}
-
-/**
- * Search emails by query.
- */
-export async function searchEmails(query: string, folderId?: string): Promise<MailMessageMetadata[]> {
-  const q = query.toLowerCase();
-  return MOCK_EMAILS.filter(
-    (e) =>
-      (!folderId || e.folderId === folderId) &&
-      (e.subject.toLowerCase().includes(q) ||
-        e.fromName.toLowerCase().includes(q) ||
-        e.preview.toLowerCase().includes(q))
-  ).map(({ bodyHtml, bodyText, ...meta }) => meta);
 }

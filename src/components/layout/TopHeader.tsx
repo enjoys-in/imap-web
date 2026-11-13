@@ -58,9 +58,16 @@ export function TopHeader() {
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search"
-            className="w-full h-8 pl-8 pr-3 rounded bg-black/20 hover:bg-black/30 text-white text-xs md:text-sm placeholder:text-neutral-300 focus:outline-none focus:bg-white focus:text-neutral-900 focus:placeholder:text-neutral-400 transition-colors border border-white/10"
+            placeholder="Search mail or press Ctrl+K..."
+            className="w-full h-8 pl-8 pr-16 rounded bg-black/20 hover:bg-black/30 text-white text-xs md:text-sm placeholder:text-neutral-300 focus:outline-none focus:bg-white focus:text-neutral-900 focus:placeholder:text-neutral-400 transition-colors border border-white/10"
           />
+          <kbd
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className="absolute right-2 top-1/2 -translate-y-1/2 hidden md:inline px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/10 text-white/80 border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
+            title="Open Command Palette"
+          >
+            Ctrl+K
+          </kbd>
         </div>
       </div>
 

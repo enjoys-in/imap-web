@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
 import { emailsApi } from '@/api';
+import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 
-export type MailFilterTab = 'all' | 'unread' | 'flagged';
+export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
 
 interface MailState {
   selectedAccountId: string;
@@ -35,6 +36,7 @@ interface MailState {
   emptyFolder: (folderId: string) => void;
   deleteEmail: (id: string) => void;
   moveEmailToFolder: (emailId: string, folderId: string) => void;
+  snoozeEmail: (id: string, untilText: string) => void;
   bulkDelete: () => void;
   bulkMarkAsRead: (isRead: boolean) => void;
   bulkMoveToFolder: (folderId: string) => void;
@@ -57,11 +59,17 @@ export const useMailStore = create<MailState>((set, get) => ({
   fetchEmails: async (folderId, accountId) => {
     const fId = folderId || get().selectedFolderId || 'fld-inbox';
     const aId = accountId || get().selectedAccountId || 'acc-1';
-    if (get().selectedFolderId === fId && get().selectedAccountId === aId && get().localEmails.length > 0 && !get().isLoadingEmails) return;
-    set({ isLoadingEmails: true, selectedFolderId: fId });
+    try {
+      const cached = await getCachedEmails(fId, aId);
+      if (cached.length > 0 && get().localEmails.length === 0) {
+        set({ localEmails: cached, selectedFolderId: fId });
+      }
+    } catch {}
+    set({ isLoadingEmails: get().localEmails.length === 0, selectedFolderId: fId });
     try {
       const list = await emailsApi.getEmailsMetadata(fId, aId);
       set({ localEmails: list, isLoadingEmails: false });
+      saveCachedEmails(list);
     } catch {
       set({ isLoadingEmails: false });
     }
@@ -119,6 +127,11 @@ export const useMailStore = create<MailState>((set, get) => ({
   moveEmailToFolder: (emailId, folderId) => set((s) => ({
     lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
+  })),
+  snoozeEmail: (id, _until) => set((s) => ({
+    lastSnapshot: s.localEmails,
+    localEmails: s.localEmails.filter((m) => m.id !== id),
+    selectedMailId: s.selectedMailId === id ? null : s.selectedMailId,
   })),
   bulkDelete: () => set((s) => {
     const setIds = new Set(s.selectedIds);

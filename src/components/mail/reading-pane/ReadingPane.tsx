@@ -9,6 +9,7 @@ import { ReadingPaneSecurityBanner } from './ReadingPaneSecurityBanner';
 import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
+import { QuickReplyChips } from './QuickReplyChips';
 
 interface ReadingPaneProps {
   activeMailId?: string;
@@ -136,6 +137,8 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
             allowExternalImages={allowExternalImages}
           />
         )}
+
+        <QuickReplyChips email={email} />
 
         <div className="p-4 pt-2">
           <button

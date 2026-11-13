@@ -8,6 +8,7 @@ import {
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
 import { emailsApi } from '@/api';
 import { cn } from '@/lib/utils';
+import { SnoozeMenu } from '../SnoozeMenu';
 
 const FOLDERS = [
   { id: 'fld-inbox', name: 'Inbox' },
@@ -117,6 +118,7 @@ export function MailCommandBarActions() {
       <button disabled={!hasTarget} onClick={() => { handleMoveSelect('fld-junk', 'Junk Email'); addToast({ title: 'Reported Junk', description: 'Moved to junk & trained spam filter', type: 'warning' }); }} className={btnClass(hasTarget)} title={hasTarget ? 'Report junk' : 'Select an email'}>
         <AlertCircle className={cn('w-3.5 h-3.5', hasTarget ? 'text-amber-500' : 'text-neutral-400')} /><span>Report junk</span>
       </button>
+      {hasTarget && activeEmail && <SnoozeMenu emailId={activeEmail.id} />}
       <button disabled={!hasTarget} onClick={() => { handleMoveSelect('fld-junk', 'Junk Email'); addToast({ title: 'Reported Phishing', description: 'Phishing alert sent & sender blocked', type: 'warning' }); }} className={btnClass(hasTarget)} title={hasTarget ? 'Report phishing' : 'Select an email'}>
         <ShieldAlert className={cn('w-3.5 h-3.5', hasTarget ? 'text-red-500' : 'text-neutral-400')} /><span>Report phishing</span>
       </button>

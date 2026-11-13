@@ -28,6 +28,7 @@ export function MailList({
   const selectedMailId = useMailStore((s) => s.selectedMailId);
   const selectedIds = useMailStore((s) => s.selectedIds);
   const searchQuery = useMailStore((s) => s.searchQuery);
+  const filterTab = useMailStore((s) => s.filterTab);
 
   const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const toggleSelectId = useMailStore((s) => s.toggleSelectId);
@@ -52,6 +53,10 @@ export function MailList({
       if (activeFolderId && activeFolderId !== 'fld-inbox' && email.folderId !== activeFolderId) {
         return false;
       }
+      if (filterTab === 'unread' && email.isRead) return false;
+      if (filterTab === 'flagged' && !email.isFlagged) return false;
+      if (filterTab === 'pinned' && !email.isPinned) return false;
+      if (filterTab === 'attachments' && !email.hasAttachments) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
@@ -62,7 +67,7 @@ export function MailList({
       }
       return true;
     });
-  }, [localEmails, activeFolderId, searchQuery]);
+  }, [localEmails, activeFolderId, filterTab, searchQuery]);
 
   const pinnedEmails = useMemo(() => filteredEmails.filter((e) => e.isPinned), [filteredEmails]);
   const unpinnedEmails = useMemo(() => filteredEmails.filter((e) => !e.isPinned), [filteredEmails]);

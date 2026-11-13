@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useComposeStore, useMailStore } from '@/stores';
+import { useUndoSendStore } from '@/stores/useUndoSendStore';
+import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
@@ -15,12 +17,12 @@ export function ComposeModal() {
   const isMaximized = useComposeStore((s) => s.isMaximized);
   const mode = useComposeStore((s) => s.mode);
   const to = useComposeStore((s) => s.to);
+  const cc = useComposeStore((s) => s.cc);
+  const bcc = useComposeStore((s) => s.bcc);
   const subject = useComposeStore((s) => s.subject);
   const body = useComposeStore((s) => s.body);
   const close = useComposeStore((s) => s.close);
-
-  const localEmails = useMailStore((s) => s.localEmails);
-  const setMailStore = useMailStore.setState;
+  const startPendingSend = useUndoSendStore((s) => s.startPendingSend);
 
   if (!isOpen) return null;
 
@@ -60,8 +62,16 @@ export function ComposeModal() {
       isBodyDownloaded: true,
     };
 
-    setMailStore({ localEmails: [newMsg, ...localEmails] });
     close();
+
+    startPendingSend(
+      { id: newMsg.id, to, cc, bcc, subject, body, message: newMsg },
+      (msg) => {
+        const currentEmails = useMailStore.getState().localEmails;
+        useMailStore.setState({ localEmails: [msg, ...currentEmails] });
+        saveCachedEmails([msg]);
+      }
+    );
   };
 
   return (
