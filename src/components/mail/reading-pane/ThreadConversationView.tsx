@@ -11,12 +11,16 @@ import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { format } from 'date-fns';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
+import { useSession } from '@/components/providers/SessionProvider';
+import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 
 interface ThreadConversationViewProps {
   mailId: string;
 }
 
 export function ThreadConversationView({ mailId }: ThreadConversationViewProps) {
+  const { account, accounts } = useSession();
+  const myEmails = getUserEmails(account?.email, accounts);
   const localEmails = useMailStore((s) => s.localEmails);
   const deleteEmail = useMailStore((s) => s.deleteEmail);
   const openReply = useComposeStore((s) => s.openReply);
@@ -126,7 +130,7 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
                   <BimiAvatar name={msg.fromName || msg.fromAddress} email={msg.fromAddress} explicitLogo={msg.bimiLogoUrl} size="sm" />
                   <div>
                     <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{msg.fromName || msg.fromAddress}</span>
-                    <span className="text-[11px] text-neutral-500 ml-2">to {msg.to}</span>
+                    <span className="text-[11px] text-neutral-500 ml-2">to {formatRecipientsWithYou(msg.to, myEmails)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-neutral-400">

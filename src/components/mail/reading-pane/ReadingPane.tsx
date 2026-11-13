@@ -15,6 +15,8 @@ import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
+import { useSession } from '@/components/providers/SessionProvider';
+import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 
 interface ReadingPaneProps {
   activeMailId?: string;
@@ -48,6 +50,8 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const openForward = useComposeStore((s) => s.openForward);
 
   const currentId = activeMailId || selectedMailId;
+  const { account, accounts } = useSession();
+  const myEmails = useMemo(() => getUserEmails(account?.email, accounts), [account?.email, accounts]);
   const emailInStore = localEmails.find((e) => e.id === currentId);
   const syncMockEmail = !emailInStore && currentId ? MOCK_EMAILS.find((e) => e.id === currentId) : null;
   const [fallbackEmail, setFallbackEmail] = useState<MailMessage | null>(null);
@@ -273,7 +277,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
                           </span>
                         </div>
                         <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                          to {histMsg.to}
+                          to {formatRecipientsWithYou(histMsg.to, myEmails)}
                         </span>
                       </div>
                     </div>

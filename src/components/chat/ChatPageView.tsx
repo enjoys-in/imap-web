@@ -52,12 +52,11 @@ export function ChatPageView() {
       />
 
       {/* Right Details Drawer */}
-      {showInfoDrawer && (
-        <ChatInfoDrawer
-          conversation={activeConversation}
-          onClose={() => setShowInfoDrawer(false)}
-        />
-      )}
+      <ChatInfoDrawer
+        conversation={activeConversation}
+        open={showInfoDrawer}
+        onClose={() => setShowInfoDrawer(false)}
+      />
 
       {/* New Channel Dialog */}
       <ChatNewChannelModal

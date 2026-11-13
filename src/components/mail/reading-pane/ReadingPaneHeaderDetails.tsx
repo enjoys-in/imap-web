@@ -3,13 +3,27 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { MailMessage, MailMessageMetadata } from '@/types';
+import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
+import { useSession } from '@/components/providers/SessionProvider';
 
 interface ReadingPaneHeaderDetailsProps {
   email: MailMessage | MailMessageMetadata;
   formattedDate: string;
+  myEmails?: string[];
 }
 
-export function ReadingPaneHeaderDetails({ email, formattedDate }: ReadingPaneHeaderDetailsProps) {
+export function ReadingPaneHeaderDetails({
+  email,
+  formattedDate,
+  myEmails: propEmails,
+}: ReadingPaneHeaderDetailsProps) {
+  const { account, accounts } = useSession();
+  const effectiveMyEmails = propEmails || getUserEmails(account?.email, accounts);
+
+  const formattedTo = formatRecipientsWithYou(email.to, effectiveMyEmails);
+  const formattedCc = email.cc ? formatRecipientsWithYou(email.cc, effectiveMyEmails) : '';
+  const formattedBcc = email.bcc ? formatRecipientsWithYou(email.bcc, effectiveMyEmails) : '';
+
   return (
     <div className="mt-3 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#222222] text-xs space-y-1.5 animate-in fade-in duration-100">
       <div className="flex items-center justify-between text-neutral-500 text-[11px] pb-1 border-b border-neutral-200 dark:border-neutral-800">
@@ -25,19 +39,19 @@ export function ReadingPaneHeaderDetails({ email, formattedDate }: ReadingPaneHe
         <span className="font-mono text-[11px]">{email.fromName} &lt;{email.fromAddress}&gt;</span>
 
         <span className="text-neutral-500 font-medium">To:</span>
-        <span className="font-mono text-[11px]">{email.to}</span>
+        <span className="font-mono text-[11px]">{formattedTo}</span>
 
         {email.cc && (
           <>
             <span className="text-neutral-500 font-medium">Cc:</span>
-            <span className="font-mono text-[11px] text-[#0078d4]">{email.cc}</span>
+            <span className="font-mono text-[11px] text-[#0078d4]">{formattedCc}</span>
           </>
         )}
 
         {email.bcc && (
           <>
             <span className="text-neutral-500 font-medium">Bcc:</span>
-            <span className="font-mono text-[11px] text-neutral-400">{email.bcc}</span>
+            <span className="font-mono text-[11px] text-neutral-400">{formattedBcc}</span>
           </>
         )}
 

@@ -3,13 +3,15 @@
 import React from 'react';
 import { X, Hash, Bell, Users, FileText, Pin, Image as ImageIcon } from 'lucide-react';
 import { ChatConversation } from './useChatState';
+import { cn } from '@/lib/utils';
 
 interface ChatInfoDrawerProps {
   conversation: ChatConversation;
   onClose: () => void;
+  open?: boolean;
 }
 
-export function ChatInfoDrawer({ conversation, onClose }: ChatInfoDrawerProps) {
+export function ChatInfoDrawer({ conversation, onClose, open = true }: ChatInfoDrawerProps) {
   const isChannel = conversation.type === 'channel';
 
   const SAMPLE_MEMBERS = [
@@ -26,18 +28,31 @@ export function ChatInfoDrawer({ conversation, onClose }: ChatInfoDrawerProps) {
   ];
 
   return (
-    <aside className="w-64 border-l border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] flex flex-col h-full shrink-0 select-none overflow-y-auto">
-      {/* Drawer Header */}
-      <div className="h-14 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
-        <h3 className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">Details</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <aside
+      className={cn(
+        'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1b1b1b] flex flex-col h-full shrink-0 select-none overflow-hidden transition-all duration-300 ease-in-out',
+        open
+          ? 'w-64 border-l opacity-100'
+          : 'w-0 border-l-0 opacity-0 pointer-events-none'
+      )}
+    >
+      <div
+        className={cn(
+          'w-64 h-full flex flex-col shrink-0 min-w-[256px] overflow-y-auto transition-transform duration-300 ease-in-out',
+          open ? 'translate-x-0' : 'translate-x-4'
+        )}
+      >
+        {/* Drawer Header */}
+        <div className="h-14 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
+          <h3 className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">Details</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
       <div className="p-4 space-y-5">
         {/* Profile Card */}
@@ -121,6 +136,7 @@ export function ChatInfoDrawer({ conversation, onClose }: ChatInfoDrawerProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </div>
+  </aside>
   );
 }

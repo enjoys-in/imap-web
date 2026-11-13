@@ -57,11 +57,22 @@ export function CalendarSidebar({
   onOpenSettings,
   onOpenReleaseNotes,
 }: CalendarSidebarProps) {
-  if (!open) return null;
-
   return (
-    <aside className="w-56 border-r border-neutral-200 dark:border-neutral-800 bg-[#fafafa] dark:bg-[#141414] flex flex-col justify-between shrink-0 select-none py-3 overflow-y-auto">
-      <div className="px-3 space-y-4">
+    <aside
+      className={cn(
+        'border-neutral-200 dark:border-neutral-800 bg-[#fafafa] dark:bg-[#141414] flex flex-col justify-between shrink-0 select-none overflow-hidden transition-all duration-300 ease-in-out',
+        open
+          ? 'w-56 border-r opacity-100'
+          : 'w-0 border-r-0 opacity-0 pointer-events-none'
+      )}
+    >
+      <div
+        className={cn(
+          'w-56 h-full flex flex-col justify-between shrink-0 min-w-[224px] py-3 overflow-y-auto transition-transform duration-300 ease-in-out',
+          open ? 'translate-x-0' : '-translate-x-4'
+        )}
+      >
+        <div className="px-3 space-y-4">
         {/* Quick Search */}
         <div className="relative">
           <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" />
@@ -162,6 +173,7 @@ export function CalendarSidebar({
           <span>Release Notes</span>
         </button>
       </div>
-    </aside>
+    </div>
+  </aside>
   );
 }

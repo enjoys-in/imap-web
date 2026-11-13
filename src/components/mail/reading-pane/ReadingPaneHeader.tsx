@@ -13,6 +13,8 @@ import { ReadingPaneHeaderDetails } from './ReadingPaneHeaderDetails';
 import { exportEmailToEml } from '@/lib/emlExport';
 import { SnoozeMenu } from '../SnoozeMenu';
 import { format } from 'date-fns';
+import { useSession } from '@/components/providers/SessionProvider';
+import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 
 interface ReadingPaneHeaderProps {
   email: MailMessage | MailMessageMetadata;
@@ -30,12 +32,16 @@ interface ReadingPaneHeaderProps {
 export function ReadingPaneHeader({
   email, onReply, onReplyAll, onForward, onDelete, onToggleFlag
 }: ReadingPaneHeaderProps) {
+  const { account, accounts } = useSession();
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [profileContact, setProfileContact] = useState<ProfileContactData | null>(null);
 
   const formattedDate = format(new Date(email.date), 'EEE M/d/yyyy h:mm a');
   const senderName = email.fromName || email.fromAddress;
+
+  const myEmails = getUserEmails(account?.email, accounts);
+  const formattedTo = formatRecipientsWithYou(email.to, myEmails);
 
   const handleOpenProfile = (name: string, addr: string) => {
     setProfileContact({
@@ -68,7 +74,10 @@ export function ReadingPaneHeader({
               <span className="text-xs text-neutral-400 dark:text-neutral-500 truncate hidden sm:inline">&lt;{email.fromAddress}&gt;</span>
             </div>
             <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 mt-0.5">
-              <span>To:</span><span className="text-neutral-700 dark:text-neutral-300 font-medium truncate max-w-[200px] md:max-w-md">{email.to}</span>
+              <span>To:</span>
+              <span className="text-neutral-700 dark:text-neutral-300 font-medium truncate max-w-[200px] md:max-w-md">
+                {formattedTo}
+              </span>
               <button type="button" onClick={() => setIsHeaderExpanded((prev) => !prev)} className="ml-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 p-0.5 rounded transition-colors cursor-pointer" title="Toggle full message details">
                 {isHeaderExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
@@ -111,7 +120,13 @@ export function ReadingPaneHeader({
         </div>
       </div>
 
-      {isHeaderExpanded && <ReadingPaneHeaderDetails email={email} formattedDate={formattedDate} />}
+      {isHeaderExpanded && (
+        <ReadingPaneHeaderDetails
+          email={email}
+          formattedDate={formattedDate}
+          myEmails={myEmails}
+        />
+      )}
       <ProfileCardModal contact={profileContact} isOpen={Boolean(profileContact)} onClose={() => setProfileContact(null)} />
     </div>
   );

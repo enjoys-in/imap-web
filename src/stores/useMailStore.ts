@@ -14,6 +14,8 @@ interface MailState {
   selectedMailId: string | null;
   filterTab: MailFilterTab;
   searchQuery: string;
+  isSearchingServer: boolean;
+  serverSearchResults: MailMessageMetadata[] | null;
   selectedIds: string[];
   localEmails: MailMessageMetadata[];
   isLoadingEmails: boolean;
@@ -28,6 +30,8 @@ interface MailState {
   setSelectedMail: (id: string | null) => void;
   setFilterTab: (tab: MailFilterTab) => void;
   setSearchQuery: (query: string) => void;
+  executeServerSearch: (query: string, folderId?: string) => Promise<void>;
+  clearSearch: () => void;
   toggleSelectId: (id: string) => void;
   selectAllIds: (ids: string[]) => void;
   clearSelectedIds: () => void;
@@ -83,6 +87,8 @@ export const useMailStore = create<MailState>((set, get) => ({
   selectedMailId: initialState.selectedMailId,
   filterTab: 'all',
   searchQuery: '',
+  isSearchingServer: false,
+  serverSearchResults: null,
   selectedIds: [],
   localEmails: initialState.localEmails,
   isLoadingEmails: false,
@@ -151,7 +157,31 @@ export const useMailStore = create<MailState>((set, get) => ({
     }
   },
   setFilterTab: (filterTab) => set({ filterTab }),
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setSearchQuery: (searchQuery) => {
+    if (!searchQuery.trim()) {
+      set({ searchQuery: '', serverSearchResults: null, isSearchingServer: false });
+    } else {
+      set({ searchQuery });
+    }
+  },
+  clearSearch: () => set({ searchQuery: '', serverSearchResults: null, isSearchingServer: false }),
+  executeServerSearch: async (query: string, folderId?: string) => {
+    const q = query.trim();
+    if (!q) {
+      set({ serverSearchResults: null, isSearchingServer: false });
+      return;
+    }
+    const folder = folderId || get().selectedFolderId || 'INBOX';
+    set({ isSearchingServer: true });
+    try {
+      const res = await emailsApi.searchEmails(q, folder);
+      if (get().searchQuery.trim() === q) {
+        set({ serverSearchResults: res.emails, isSearchingServer: false });
+      }
+    } catch {
+      set({ isSearchingServer: false });
+    }
+  },
 
   toggleSelectId: (id) => set((s) => ({
     selectedIds: s.selectedIds.includes(id) ? s.selectedIds.filter((item) => item !== id) : [...s.selectedIds, id],

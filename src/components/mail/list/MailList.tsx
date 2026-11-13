@@ -9,7 +9,8 @@ import { MailItemContextMenu } from './MailItemContextMenu';
 import { MailThreadSubItems } from './MailThreadSubItems';
 import { MOCK_THREAD_SUB_MESSAGES } from '@/lib/mock/emails';
 import { MailMessage, MailMessageMetadata } from '@/types';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2, X } from 'lucide-react';
+import { parseEmailSearchQuery, matchesEmailFilter } from '@/lib/searchParser';
 
 interface MailListProps {
   activeFolderId?: string;
@@ -25,6 +26,9 @@ export function MailList({
   width,
 }: MailListProps) {
   const localEmails = useMailStore((s) => s.localEmails);
+  const serverSearchResults = useMailStore((s) => s.serverSearchResults);
+  const isSearchingServer = useMailStore((s) => s.isSearchingServer);
+  const clearSearch = useMailStore((s) => s.clearSearch);
   const selectedMailId = useMailStore((s) => s.selectedMailId);
   const selectedIds = useMailStore((s) => s.selectedIds);
   const searchQuery = useMailStore((s) => s.searchQuery);
@@ -49,25 +53,24 @@ export function MailList({
   const activeId = activeMailId || selectedMailId;
 
   const filteredEmails = useMemo(() => {
-    return localEmails.filter((email) => {
-      if (activeFolderId && activeFolderId !== 'fld-inbox' && email.folderId !== activeFolderId) {
+    const candidateList = serverSearchResults !== null ? serverSearchResults : localEmails;
+    const parsedFilter = parseEmailSearchQuery(searchQuery);
+
+    return candidateList.filter((email) => {
+      if (!serverSearchResults && activeFolderId && activeFolderId !== 'fld-inbox' && email.folderId !== activeFolderId) {
         return false;
       }
       if (filterTab === 'unread' && email.isRead) return false;
       if (filterTab === 'flagged' && !email.isFlagged) return false;
       if (filterTab === 'pinned' && !email.isPinned) return false;
       if (filterTab === 'attachments' && !email.hasAttachments) return false;
+
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches =
-          email.subject.toLowerCase().includes(q) ||
-          email.fromName.toLowerCase().includes(q) ||
-          email.preview.toLowerCase().includes(q);
-        if (!matches) return false;
+        return matchesEmailFilter(email, parsedFilter);
       }
       return true;
     });
-  }, [localEmails, activeFolderId, filterTab, searchQuery]);
+  }, [localEmails, serverSearchResults, activeFolderId, filterTab, searchQuery]);
 
   const pinnedEmails = useMemo(() => filteredEmails.filter((e) => e.isPinned), [filteredEmails]);
   const unpinnedEmails = useMemo(() => filteredEmails.filter((e) => !e.isPinned), [filteredEmails]);
@@ -105,6 +108,26 @@ export function MailList({
       className="w-full md:w-80 lg:w-96 flex flex-col h-full border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f] shrink-0 select-none transition-colors"
     >
       <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} />
+
+      {/* Active Search Filter Banner */}
+      {searchQuery.trim() && (
+        <div className="px-3 py-1.5 bg-blue-50/80 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/60 flex items-center justify-between text-xs text-blue-900 dark:text-blue-300">
+          <div className="flex items-center gap-1.5 truncate">
+            {isSearchingServer ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+            ) : null}
+            <span className="truncate">
+              Search: <strong className="font-semibold">{searchQuery}</strong> ({filteredEmails.length} results)
+            </span>
+          </div>
+          <button
+            onClick={clearSearch}
+            className="text-blue-700 dark:text-blue-400 hover:text-red-600 dark:hover:text-red-400 text-[11px] underline shrink-0 cursor-pointer ml-2"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {/* Pinned Emails Section */}

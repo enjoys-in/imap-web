@@ -417,17 +417,22 @@ export async function handleCustomFlags(
 }
 
 /**
- * Search emails by IMAP search criteria.
+ * Search emails by IMAP search criteria or structured query string.
+ * Supports: from:, to:, subject:, body:, has:attachment, file:, is:unread, is:flagged
  */
 export async function searchEmails(
-  folder: string,
-  query: EmailSearchQuery
-): Promise<any[]> {
+  query: string | EmailSearchQuery,
+  folder = 'INBOX'
+): Promise<{ emails: MailMessageMetadata[]; totalCount: number }> {
   try {
-    const data = await apiClient.post<any>('/search-emails', { folder, query });
-    return data?.result || data || [];
+    const payload = typeof query === 'string' ? { q: query, folder } : { query, folder };
+    const data = await apiClient.post<any>('/search-emails', payload);
+    const emails: MailMessageMetadata[] =
+      data?.emails || data?.result?.emails || (Array.isArray(data?.result) ? data.result : []);
+    const totalCount = data?.totalCount || data?.result?.totalCount || emails.length;
+    return { emails, totalCount };
   } catch {
-    return [];
+    return { emails: [], totalCount: 0 };
   }
 }
 
