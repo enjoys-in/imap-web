@@ -44,7 +44,7 @@ export const useComposeStore = create<ComposeState>((set) => ({
       mode: 'new',
       to: '',
       cc: '',
-      bcc: '',
+      bcc: 'Jeelan Basha Shaik <jeelan.shaik@recruitment.com>',
       subject: '',
       body: '',
       attachments: [],

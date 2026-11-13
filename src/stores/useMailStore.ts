@@ -14,6 +14,7 @@ interface MailState {
   selectedIds: string[];
   localEmails: MailMessageMetadata[];
   isLoadingEmails: boolean;
+  lastSnapshot: MailMessageMetadata[] | null;
 
   fetchEmails: (folderId?: string, accountId?: string) => Promise<void>;
   setLocalEmails: (emails: MailMessageMetadata[]) => void;
@@ -38,6 +39,7 @@ interface MailState {
   bulkMarkAsRead: (isRead: boolean) => void;
   bulkMoveToFolder: (folderId: string) => void;
   bulkToggleFlag: (isFlagged?: boolean) => void;
+  undoLastAction: () => boolean;
 }
 
 export const useMailStore = create<MailState>((set, get) => ({
@@ -50,6 +52,7 @@ export const useMailStore = create<MailState>((set, get) => ({
   selectedIds: [],
   localEmails: [],
   isLoadingEmails: false,
+  lastSnapshot: null,
 
   fetchEmails: async (folderId, accountId) => {
     const fId = folderId || get().selectedFolderId || 'fld-inbox';
@@ -86,49 +89,62 @@ export const useMailStore = create<MailState>((set, get) => ({
   clearSelectedIds: () => set({ selectedIds: [] }),
 
   toggleFlag: (id) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isFlagged: !m.isFlagged } : m)),
   })),
   togglePin: (id) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isPinned: !m.isPinned } : m)),
   })),
   markAsRead: (id, isRead) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isRead: isRead !== undefined ? isRead : !m.isRead } : m)),
   })),
   markFolderAsRead: (folderId) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) =>
       m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox')) ? { ...m, isRead: true } : m
     ),
   })),
   emptyFolder: (folderId) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.filter((m) => folderId === 'fld-inbox' ? m.folderId && m.folderId !== 'fld-inbox' : m.folderId !== folderId),
     selectedMailId: null,
     selectedIds: [],
   })),
   deleteEmail: (id) => set((s) => {
     const nextEmails = s.localEmails.filter((m) => m.id !== id);
-    return { localEmails: nextEmails, selectedMailId: s.selectedMailId === id ? nextEmails[0]?.id || null : s.selectedMailId };
+    return { lastSnapshot: s.localEmails, localEmails: nextEmails, selectedMailId: s.selectedMailId === id ? nextEmails[0]?.id || null : s.selectedMailId };
   }),
   moveEmailToFolder: (emailId, folderId) => set((s) => ({
+    lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
   })),
   bulkDelete: () => set((s) => {
     const setIds = new Set(s.selectedIds);
-    return { localEmails: s.localEmails.filter((m) => !setIds.has(m.id)), selectedIds: [], selectedMailId: null };
+    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.filter((m) => !setIds.has(m.id)), selectedIds: [], selectedMailId: null };
   }),
   bulkMarkAsRead: (isRead) => set((s) => {
     const setIds = new Set(s.selectedIds);
-    return { localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, isRead } : m)) };
+    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, isRead } : m)) };
   }),
   bulkMoveToFolder: (folderId) => set((s) => {
     const setIds = new Set(s.selectedIds);
-    return { localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, folderId } : m)), selectedIds: [], selectedMailId: null };
+    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, folderId } : m)), selectedIds: [], selectedMailId: null };
   }),
   bulkToggleFlag: (isFlagged) => set((s) => {
     const setIds = new Set(s.selectedIds);
     return {
+      lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) =>
         setIds.has(m.id) ? { ...m, isFlagged: isFlagged !== undefined ? isFlagged : !m.isFlagged } : m
       ),
     };
   }),
+  undoLastAction: () => {
+    const snap = get().lastSnapshot;
+    if (!snap) return false;
+    set({ localEmails: snap, lastSnapshot: null });
+    return true;
+  },
 }));

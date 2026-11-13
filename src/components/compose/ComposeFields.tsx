@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Paperclip } from 'lucide-react';
 import { useComposeStore } from '@/stores';
 import { formatFileSize } from '@/lib/utils';
+import { RecipientChipInput } from './RecipientChipInput';
 
 export function ComposeFields() {
   const to = useComposeStore((s) => s.to);
@@ -17,30 +18,41 @@ export function ComposeFields() {
   const [showCc, setShowCc] = useState(Boolean(cc));
   const [showBcc, setShowBcc] = useState(Boolean(bcc));
 
+  const handleToggleBcc = () => {
+    setShowBcc(true);
+    if (!bcc) {
+      updateFields({ bcc: 'Jeelan Basha Shaik <jeelan.shaik@recruitment.com>' });
+    }
+  };
+
   return (
     <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1 space-y-1 text-xs">
-      <div className="flex items-center gap-2 py-1">
-        <span className="w-10 text-neutral-500 font-medium shrink-0">To</span>
-        <input
-          type="text"
-          value={to}
-          onChange={(e) => updateFields({ to: e.target.value })}
-          placeholder="Recipients"
-          className="flex-1 bg-transparent focus:outline-none text-neutral-900 dark:text-neutral-100"
-        />
-        <div className="flex items-center gap-2 text-neutral-400">
+      {/* To Field with Recipient Chips */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <RecipientChipInput
+            label="To"
+            value={to}
+            onChange={(val) => updateFields({ to: val })}
+            placeholder="Recipients"
+            autoFocus={!to}
+          />
+        </div>
+        <div className="flex items-center gap-2 text-neutral-400 shrink-0">
           {!showCc && (
             <button
+              type="button"
               onClick={() => setShowCc(true)}
-              className="hover:text-neutral-700 dark:hover:text-neutral-200 font-medium"
+              className="hover:text-neutral-700 dark:hover:text-neutral-200 font-medium cursor-pointer"
             >
               Cc
             </button>
           )}
           {!showBcc && (
             <button
-              onClick={() => setShowBcc(true)}
-              className="hover:text-neutral-700 dark:hover:text-neutral-200 font-medium"
+              type="button"
+              onClick={handleToggleBcc}
+              className="hover:text-neutral-700 dark:hover:text-neutral-200 font-medium cursor-pointer"
             >
               Bcc
             </button>
@@ -48,32 +60,31 @@ export function ComposeFields() {
         </div>
       </div>
 
+      {/* Cc Field with Recipient Chips */}
       {showCc && (
-        <div className="flex items-center gap-2 py-1 border-t border-neutral-100 dark:border-neutral-800">
-          <span className="w-10 text-neutral-500 font-medium shrink-0">Cc</span>
-          <input
-            type="text"
+        <div className="border-t border-neutral-100 dark:border-neutral-800">
+          <RecipientChipInput
+            label="Cc"
             value={cc}
-            onChange={(e) => updateFields({ cc: e.target.value })}
+            onChange={(val) => updateFields({ cc: val })}
             placeholder="Carbon copy recipients"
-            className="flex-1 bg-transparent focus:outline-none text-neutral-900 dark:text-neutral-100"
           />
         </div>
       )}
 
+      {/* Bcc Field with Recipient Chips */}
       {showBcc && (
-        <div className="flex items-center gap-2 py-1 border-t border-neutral-100 dark:border-neutral-800">
-          <span className="w-10 text-neutral-500 font-medium shrink-0">Bcc</span>
-          <input
-            type="text"
+        <div className="border-t border-neutral-100 dark:border-neutral-800">
+          <RecipientChipInput
+            label="Bcc"
             value={bcc}
-            onChange={(e) => updateFields({ bcc: e.target.value })}
+            onChange={(val) => updateFields({ bcc: val })}
             placeholder="Blind carbon copy recipients"
-            className="flex-1 bg-transparent focus:outline-none text-neutral-900 dark:text-neutral-100"
           />
         </div>
       )}
 
+      {/* Subject Line */}
       <div className="flex items-center gap-2 py-1 border-t border-neutral-100 dark:border-neutral-800">
         <input
           type="text"
@@ -84,6 +95,7 @@ export function ComposeFields() {
         />
       </div>
 
+      {/* Attachments List */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-1.5 py-1.5 border-t border-neutral-100 dark:border-neutral-800">
           {attachments.map((file, idx) => (
@@ -97,8 +109,10 @@ export function ComposeFields() {
               </span>
               <span className="text-neutral-400">({formatFileSize(file.size)})</span>
               <button
+                type="button"
                 onClick={() => removeAttachment(idx)}
-                className="hover:text-red-500 text-neutral-400 ml-0.5"
+                className="hover:text-red-500 text-neutral-400 ml-0.5 cursor-pointer"
+                title="Remove attachment"
               >
                 <X className="w-3 h-3" />
               </button>
