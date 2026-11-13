@@ -1,12 +1,53 @@
 import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
 
+/**
+ * Standardized IMAP IDLE Server-Sent Event types emitted by backend /api/stream.
+ */
+export enum EmailStreamEventType {
+  CONNECTED = 'connected',
+  MAILBOX_CHANGE = 'mailbox:change',
+  MAILBOX_EXPUNGE = 'mailbox:expunge',
+  MESSAGE_FLAGS = 'message:flags',
+  WARNING = 'warning',
+}
+
+// Alias for convenience
+export const ImapStreamEvent = EmailStreamEventType;
+export type ImapStreamEvent = EmailStreamEventType;
+
+export interface MailboxChangeEventPayload {
+  path: string;
+  count: number;
+  prevCount: number;
+}
+
+export interface MailboxExpungeEventPayload {
+  path: string;
+  seq?: number;
+  uid?: number;
+  vanished: boolean;
+}
+
+export interface MessageFlagsEventPayload {
+  path: string;
+  seq?: number;
+  uid?: number;
+  flags: string[];
+}
+
+export interface ConnectedEventPayload {
+  email: string;
+  time: string;
+}
+
 export interface EmailStreamHandlers {
-  onConnected?: (data: { email: string; time: string }) => void;
-  onMailboxChange?: (data: { path: string; count: number; prevCount: number }) => void;
-  onMailboxExpunge?: (data: { path: string; seq?: number; uid?: number; vanished: boolean }) => void;
-  onMessageFlags?: (data: { path: string; seq?: number; uid?: number; flags: string[] }) => void;
+  onConnected?: (data: ConnectedEventPayload) => void;
+  onMailboxChange?: (data: MailboxChangeEventPayload) => void;
+  onMailboxExpunge?: (data: MailboxExpungeEventPayload) => void;
+  onMessageFlags?: (data: MessageFlagsEventPayload) => void;
   onWarning?: (data: { message: string }) => void;
   onError?: (err: Event) => void;
+  onEvent?: (eventType: EmailStreamEventType, data: any) => void;
 }
 
 /**
@@ -31,35 +72,22 @@ export function subscribeToEmailStream(handlers: EmailStreamHandlers): () => voi
     }
   };
 
-  if (handlers.onConnected) {
-    eventSource.addEventListener('connected', (e: MessageEvent) => {
-      handlers.onConnected?.(parseData(e));
+  const registerListener = (
+    eventType: EmailStreamEventType,
+    handler?: (data: any) => void
+  ) => {
+    eventSource.addEventListener(eventType, (e: MessageEvent) => {
+      const data = parseData(e);
+      handler?.(data);
+      handlers.onEvent?.(eventType, data);
     });
-  }
+  };
 
-  if (handlers.onMailboxChange) {
-    eventSource.addEventListener('mailbox:change', (e: MessageEvent) => {
-      handlers.onMailboxChange?.(parseData(e));
-    });
-  }
-
-  if (handlers.onMailboxExpunge) {
-    eventSource.addEventListener('mailbox:expunge', (e: MessageEvent) => {
-      handlers.onMailboxExpunge?.(parseData(e));
-    });
-  }
-
-  if (handlers.onMessageFlags) {
-    eventSource.addEventListener('message:flags', (e: MessageEvent) => {
-      handlers.onMessageFlags?.(parseData(e));
-    });
-  }
-
-  if (handlers.onWarning) {
-    eventSource.addEventListener('warning', (e: MessageEvent) => {
-      handlers.onWarning?.(parseData(e));
-    });
-  }
+  registerListener(EmailStreamEventType.CONNECTED, handlers.onConnected);
+  registerListener(EmailStreamEventType.MAILBOX_CHANGE, handlers.onMailboxChange);
+  registerListener(EmailStreamEventType.MAILBOX_EXPUNGE, handlers.onMailboxExpunge);
+  registerListener(EmailStreamEventType.MESSAGE_FLAGS, handlers.onMessageFlags);
+  registerListener(EmailStreamEventType.WARNING, handlers.onWarning);
 
   eventSource.onerror = (err) => {
     handlers.onError?.(err);
