@@ -1,0 +1,17 @@
+{
+  "name": "AirSend Web Mail",
+  "short_name": "AirSend",
+  "description": "Modern Web Mail, Calendar & Productivity Client",
+  "start_url": "/mail",
+  "display": "standalone",
+  "background_color": "#092244",
+  "theme_color": "#004578",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

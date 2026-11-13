@@ -1,0 +1,171 @@
+'use client';
+
+import React, { useMemo, useState, useCallback } from 'react';
+import { useMailStore } from '@/stores';
+import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
+import { MailListItem } from './MailListItem';
+import { MailListHeader } from './MailListHeader';
+import { MailItemContextMenu } from './MailItemContextMenu';
+import { MailThreadSubItems } from './MailThreadSubItems';
+import { MOCK_THREAD_SUB_MESSAGES } from '@/lib/mock/emails';
+import { MailMessage, MailMessageMetadata } from '@/types';
+import { ChevronDown } from 'lucide-react';
+
+interface MailListProps {
+  activeFolderId?: string;
+  activeMailId?: string;
+  onSelectMail?: (mailId: string) => void;
+  width?: number;
+}
+
+export function MailList({
+  activeFolderId,
+  activeMailId,
+  onSelectMail,
+  width,
+}: MailListProps) {
+  const localEmails = useMailStore((s) => s.localEmails);
+  const selectedMailId = useMailStore((s) => s.selectedMailId);
+  const selectedIds = useMailStore((s) => s.selectedIds);
+  const searchQuery = useMailStore((s) => s.searchQuery);
+
+  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
+  const toggleSelectId = useMailStore((s) => s.toggleSelectId);
+  const toggleFlag = useMailStore((s) => s.toggleFlag);
+  const togglePin = useMailStore((s) => s.togglePin);
+  const markAsRead = useMailStore((s) => s.markAsRead);
+  const deleteEmail = useMailStore((s) => s.deleteEmail);
+
+  const selectedAccountId = useMailStore((s) => s.selectedAccountId);
+  const getSettings = useAccountSettingsStore((s) => s.getSettings);
+  const cardsRows = getSettings(selectedAccountId).appearance.cardsViewRows;
+
+  const [contextMenu, setContextMenu] = useState<{
+    email: MailMessageMetadata | MailMessage;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  const activeId = activeMailId || selectedMailId;
+
+  const filteredEmails = useMemo(() => {
+    return localEmails.filter((email) => {
+      if (activeFolderId && activeFolderId !== 'fld-inbox' && email.folderId !== activeFolderId) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matches =
+          email.subject.toLowerCase().includes(q) ||
+          email.fromName.toLowerCase().includes(q) ||
+          email.preview.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [localEmails, activeFolderId, searchQuery]);
+
+  const pinnedEmails = useMemo(() => filteredEmails.filter((e) => e.isPinned), [filteredEmails]);
+  const unpinnedEmails = useMemo(() => filteredEmails.filter((e) => !e.isPinned), [filteredEmails]);
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const currentIds = useMemo(() => filteredEmails.map((e) => e.id), [filteredEmails]);
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      if (onSelectMail) onSelectMail(id);
+      else setSelectedMail(id);
+    },
+    [onSelectMail, setSelectedMail]
+  );
+
+  const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set());
+
+  const handleToggleThreadExpand = useCallback((id: string) => {
+    setExpandedThreadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleContextMenu = (e: React.MouseEvent, email: MailMessageMetadata | MailMessage) => {
+    e.preventDefault();
+    setContextMenu({ email, position: { x: e.clientX, y: e.clientY } });
+  };
+
+  return (
+    <div
+      style={{ width: width ? `${width}px` : undefined }}
+      className="w-full md:w-80 lg:w-96 flex flex-col h-full border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f] shrink-0 select-none transition-colors"
+    >
+      <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} />
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Pinned Emails Section */}
+        {pinnedEmails.length > 0 && (
+          <div>
+            {pinnedEmails.map((email) => (
+              <MailListItem
+                key={`pin-${email.id}`} email={email} isSelected={email.id === activeId}
+                isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
+                cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
+                onToggleFlag={toggleFlag} onTogglePin={togglePin} onToggleRead={markAsRead}
+                onDelete={deleteEmail} onContextMenu={handleContextMenu}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* This Month Grouping Header */}
+        {unpinnedEmails.length > 0 && (
+          <div>
+            <div className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold text-neutral-800 dark:text-white bg-neutral-100 dark:bg-[#252525] border-y border-neutral-200 dark:border-neutral-800">
+              <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-300" />
+              <span>This Month</span>
+            </div>
+
+            {unpinnedEmails.map((email) => {
+              const isExpanded = expandedThreadIds.has(email.id);
+              const subEmails = MOCK_THREAD_SUB_MESSAGES[email.threadId || email.id] || [];
+              const hasThread = Boolean(email.isThread || subEmails.length > 0);
+
+              return (
+                <React.Fragment key={email.id}>
+                  <MailListItem
+                    email={email} isSelected={email.id === activeId}
+                    isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
+                    isThread={hasThread} isThreadExpanded={isExpanded} onToggleThreadExpand={handleToggleThreadExpand}
+                    cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
+                    onToggleFlag={toggleFlag} onTogglePin={togglePin} onToggleRead={markAsRead}
+                    onDelete={deleteEmail} onContextMenu={handleContextMenu}
+                  />
+                  {isExpanded && subEmails.length > 0 && (
+                    <MailThreadSubItems
+                      subEmails={subEmails} activeId={activeId} selectedIds={selectedIds}
+                      onSelect={handleSelect} onToggleCheck={toggleSelectId}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+
+        {filteredEmails.length === 0 && (
+          <div className="h-48 flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500 text-xs">
+            <p>No messages found</p>
+          </div>
+        )}
+      </div>
+
+      {contextMenu && (
+        <MailItemContextMenu
+          email={contextMenu.email}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </div>
+  );
+}

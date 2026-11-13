@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="airsend-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0078d4"/>
+      <stop offset="100%" stop-color="#003d73"/>
+    </linearGradient>
+    <linearGradient id="airsend-plane" x1="12" y1="12" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#airsend-bg)"/>
+  <path d="M14 32L50 14L34 50L28 36L14 32Z" fill="url(#airsend-plane)"/>
+  <path d="M28 36L50 14" stroke="#005a9e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M28 36V44L33 39.5" fill="#bae6fd"/>
+</svg>

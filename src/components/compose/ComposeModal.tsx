@@ -1,0 +1,89 @@
+'use client';
+
+import React from 'react';
+import { useComposeStore, useMailStore } from '@/stores';
+import { ComposeHeader } from './ComposeHeader';
+import { ComposeToolbar } from './ComposeToolbar';
+import { ComposeFields } from './ComposeFields';
+import { ComposeEditor } from './ComposeEditor';
+import { cn } from '@/lib/utils';
+import { MailMessage } from '@/types';
+
+export function ComposeModal() {
+  const isOpen = useComposeStore((s) => s.isOpen);
+  const isMinimized = useComposeStore((s) => s.isMinimized);
+  const isMaximized = useComposeStore((s) => s.isMaximized);
+  const mode = useComposeStore((s) => s.mode);
+  const to = useComposeStore((s) => s.to);
+  const subject = useComposeStore((s) => s.subject);
+  const body = useComposeStore((s) => s.body);
+  const close = useComposeStore((s) => s.close);
+
+  const localEmails = useMailStore((s) => s.localEmails);
+  const setMailStore = useMailStore.setState;
+
+  if (!isOpen) return null;
+
+  const title =
+    mode === 'new'
+      ? 'New message'
+      : mode === 'reply'
+      ? `RE: ${subject}`
+      : mode === 'replyAll'
+      ? `RE: ${subject}`
+      : `FW: ${subject}`;
+
+  const handleSend = () => {
+    const newMsg: MailMessage = {
+      id: `sent-${Date.now()}`,
+      folderId: 'fld-sent',
+      accountId: 'acc-1',
+      uid: Math.floor(Math.random() * 10000),
+      threadId: `thread-${Date.now()}`,
+      subject: subject || '(No subject)',
+      fromName: 'Alex Morgan',
+      fromAddress: 'alex.morgan@contoso.com',
+      to: to || 'recipient@contoso.com',
+      date: new Date().toISOString(),
+      size: body.length + 1024,
+      preview: body.slice(0, 80),
+      bodyText: body,
+      bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+      isRead: true,
+      isFlagged: false,
+      isPinned: false,
+      isAnswered: false,
+      isForwarded: false,
+      isDraft: false,
+      hasAttachments: false,
+      hasCalendar: false,
+      isBodyDownloaded: true,
+    };
+
+    setMailStore({ localEmails: [newMsg, ...localEmails] });
+    close();
+  };
+
+  return (
+    <div
+      className={cn(
+        'fixed z-50 transition-all duration-150 flex flex-col shadow-2xl overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900',
+        isMaximized
+          ? 'inset-0 md:inset-8 md:rounded-lg'
+          : isMinimized
+          ? 'bottom-14 md:bottom-0 right-2 md:right-10 w-72 h-9 rounded-t-lg'
+          : 'inset-0 md:inset-auto md:bottom-0 md:right-10 md:w-[580px] md:h-[520px] md:rounded-t-lg'
+      )}
+    >
+      <ComposeHeader title={title} />
+
+      {!isMinimized && (
+        <>
+          <ComposeToolbar onSend={handleSend} />
+          <ComposeFields />
+          <ComposeEditor />
+        </>
+      )}
+    </div>
+  );
+}
