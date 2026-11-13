@@ -3,10 +3,13 @@
 import React, { useState } from 'react';
 import { Save, Calendar, Clock } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
+import { useAccounts } from '@/hooks/useEmailsQuery';
 import { useToastStore } from '@/stores';
 
 export function AutoRepliesSettingsView() {
-  const [selectedAccountId, setSelectedAccountId] = useState('acc-1');
+  const { data: accountsData } = useAccounts();
+  const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
+  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
   const [isEnabled, setIsEnabled] = useState(false);
   const [onlyDuringPeriod, setOnlyDuringPeriod] = useState(false);
   const [startDate, setStartDate] = useState('2026-11-15T09:00');
@@ -40,7 +43,7 @@ export function AutoRepliesSettingsView() {
           onChange={(e) => setSelectedAccountId(e.target.value)}
           className="h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
         >
-          {MOCK_ACCOUNTS.map((a) => (
+          {accounts.map((a) => (
             <option key={a.id} value={a.id}>{a.email} ({a.accountType || 'IMAP'})</option>
           ))}
         </select>

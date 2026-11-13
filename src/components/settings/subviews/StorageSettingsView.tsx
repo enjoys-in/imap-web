@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { HardDrive, Trash2, CheckCircle2 } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
+import { useAccounts } from '@/hooks/useEmailsQuery';
 import { useMailStore, useToastStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
@@ -14,7 +15,9 @@ interface FolderStorageItem {
 }
 
 export function StorageSettingsView() {
-  const [selectedAccountId, setSelectedAccountId] = useState('acc-1');
+  const { data: accountsData } = useAccounts();
+  const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
+  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
   const [folderSizes, setFolderSizes] = useState<FolderStorageItem[]>([
     { id: 'fld-inbox', name: 'Inbox', sizeMb: 2840 },
     { id: 'fld-sent', name: 'Sent Items', sizeMb: 850 },
@@ -51,7 +54,7 @@ export function StorageSettingsView() {
           onChange={(e) => setSelectedAccountId(e.target.value)}
           className="h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
         >
-          {MOCK_ACCOUNTS.map((a) => (
+          {accounts.map((a) => (
             <option key={a.id} value={a.id}>{a.email} ({a.accountType || 'IMAP'})</option>
           ))}
         </select>
