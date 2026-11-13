@@ -3,7 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Mail, Calendar, Users, CheckSquare, FileText, LayoutGrid, Settings } from 'lucide-react';
+import {
+  Mail,
+  Calendar,
+  Users,
+  MessageSquare,
+  HardDrive,
+  Bell,
+  CheckSquare,
+  FileText,
+  LayoutGrid,
+  Settings,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getLastMailRoute } from '@/lib/storage/mailSessionStorage';
 
@@ -18,6 +29,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'mail', label: 'Mail', href: '/mail', icon: Mail },
   { id: 'calendar', label: 'Calendar', href: '/calendar', icon: Calendar },
   { id: 'people', label: 'People', href: '/people', icon: Users },
+  { id: 'chat', label: 'Chat', href: '/chat', icon: MessageSquare },
+  { id: 'files', label: 'Files', href: '/files', icon: HardDrive },
+  { id: 'activity', label: 'Activity', href: '/activity', icon: Bell },
   { id: 'todo', label: 'To Do', href: '/todo', icon: CheckSquare },
   { id: 'notes', label: 'Notes', href: '/notes', icon: FileText },
   { id: 'apps', label: 'More apps', href: '/apps', icon: LayoutGrid },

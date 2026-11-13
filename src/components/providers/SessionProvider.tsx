@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
 import { accountsApi, clearAuthToken } from '@/lib/api';
 import { Account } from '@/types';
@@ -33,12 +33,17 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
 
-  const isLoginPage = pathname === '/login';
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoginPage, setIsLoginPage] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(!isLoginPage);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+      setIsLoginPage(true);
+      setIsLoading(false);
+    }
+  }, []);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, Mail, Inbox, Send, Archive, Trash2, FileEdit, FileText,
-  Sliders, ShieldCheck, HardDrive, Settings, Sun, RefreshCw, X
+  Sliders, ShieldCheck, HardDrive, Settings, Sun, RefreshCw,
+  MessageSquare, Calendar, Users, Bell, CheckSquare
 } from 'lucide-react';
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
 import { cn } from '@/lib/utils';
@@ -30,7 +31,6 @@ export function CommandPaletteModal() {
   const openNew = useComposeStore((s) => s.openNew);
   const addToast = useToastStore((s) => s.addToast);
 
-  // Global Ctrl+K / Cmd+K keyboard listener
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -55,17 +55,16 @@ export function CommandPaletteModal() {
   const commands: CommandItem[] = [
     { id: 'new-mail', category: 'Actions', title: 'New Message', subtitle: 'Compose a new email', icon: Mail, action: () => openNew() },
     { id: 'sync-mail', category: 'Actions', title: 'Sync Mailbox', subtitle: 'Fetch latest messages from IMAP', icon: RefreshCw, action: () => { fetchEmails(); addToast({ title: 'Synced', description: 'Folder refreshed', type: 'success' }); } },
-    { id: 'toggle-theme', category: 'Actions', title: 'Toggle Theme', subtitle: 'Switch between light and dark mode', icon: Sun, action: () => { document.documentElement.classList.toggle('dark'); } },
+    { id: 'toggle-theme', category: 'Actions', title: 'Toggle Theme', subtitle: 'Switch light / dark mode', icon: Sun, action: () => document.documentElement.classList.toggle('dark') },
     { id: 'nav-inbox', category: 'Navigation', title: 'Inbox', subtitle: 'Go to Inbox', icon: Inbox, action: () => { setSelectedFolder('fld-inbox'); router.push('/mail/u/0#inbox'); } },
-    { id: 'nav-sent', category: 'Navigation', title: 'Sent Items', subtitle: 'View sent messages', icon: Send, action: () => { setSelectedFolder('fld-sent'); router.push('/mail/u/0#sent'); } },
-    { id: 'nav-drafts', category: 'Navigation', title: 'Drafts', subtitle: 'View message drafts', icon: FileEdit, action: () => { setSelectedFolder('fld-drafts'); router.push('/mail/u/0#drafts'); } },
-    { id: 'nav-archive', category: 'Navigation', title: 'Archive', subtitle: 'View archived mail', icon: Archive, action: () => { setSelectedFolder('fld-archive'); router.push('/mail/u/0#archive'); } },
-    { id: 'nav-trash', category: 'Navigation', title: 'Deleted Items', subtitle: 'View deleted messages', icon: Trash2, action: () => { setSelectedFolder('fld-deleted'); router.push('/mail/u/0#trash'); } },
-    { id: 'nav-notes', category: 'Navigation', title: 'Notes', subtitle: 'View and create sticky notes', icon: FileText, action: () => router.push('/notes') },
-    { id: 'set-storage', category: 'Settings', title: 'Storage & Quota', subtitle: 'Manage IMAP quota and storage breakdown', icon: HardDrive, action: () => router.push('/settings/accounts/storage') },
-    { id: 'set-rules', category: 'Settings', title: 'Rules & Policies', subtitle: 'Configure server-side filtering policies', icon: Sliders, action: () => router.push('/settings/mail/rules') },
-    { id: 'set-junk', category: 'Settings', title: 'Spam Filter', subtitle: 'Manage junk threshold & safe senders', icon: ShieldCheck, action: () => router.push('/settings/mail/junk') },
-    { id: 'set-accounts', category: 'Settings', title: 'Account Settings', subtitle: 'Manage connections, ports, & credentials', icon: Settings, action: () => router.push('/settings/accounts') },
+    { id: 'nav-chat', category: 'Navigation', title: 'Team Chat', subtitle: 'Channels & Direct Messages', icon: MessageSquare, action: () => router.push('/chat') },
+    { id: 'nav-files', category: 'Navigation', title: 'Cloud Files', subtitle: 'Mail attachments & storage hub', icon: HardDrive, action: () => router.push('/files') },
+    { id: 'nav-activity', category: 'Navigation', title: 'Activity Feed', subtitle: 'Timeline of mentions & updates', icon: Bell, action: () => router.push('/activity') },
+    { id: 'nav-cal', category: 'Navigation', title: 'Calendar', subtitle: 'Schedules & appointments', icon: Calendar, action: () => router.push('/calendar') },
+    { id: 'nav-todo', category: 'Navigation', title: 'To Do', subtitle: 'Task lists & deadlines', icon: CheckSquare, action: () => router.push('/todo') },
+    { id: 'nav-notes', category: 'Navigation', title: 'Notes', subtitle: 'Sticky notes & scratchpads', icon: FileText, action: () => router.push('/notes') },
+    { id: 'set-storage', category: 'Settings', title: 'Storage & Quota', subtitle: 'Manage IMAP quota', icon: HardDrive, action: () => router.push('/settings/accounts/storage') },
+    { id: 'set-accounts', category: 'Settings', title: 'Account Settings', subtitle: 'Manage credentials & server', icon: Settings, action: () => router.push('/settings/accounts') },
   ];
 
   const filtered = commands.filter((c) => {
@@ -95,7 +94,7 @@ export function CommandPaletteModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-xs select-none animate-in fade-in duration-100">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-xs select-none">
       <div className="fixed inset-0" onClick={() => setIsOpen(false)} />
       <div className="relative w-full max-w-lg bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl overflow-hidden z-10 text-neutral-800 dark:text-neutral-200">
         <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-neutral-200 dark:border-neutral-800">
@@ -106,7 +105,7 @@ export function CommandPaletteModal() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyNavigation}
-            placeholder="Type a command or jump to folder (Ctrl+K)..."
+            placeholder="Type a command or jump to feature (Ctrl+K)..."
             className="flex-1 bg-transparent text-sm focus:outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
           />
           <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border border-neutral-300 dark:border-neutral-700">ESC</kbd>

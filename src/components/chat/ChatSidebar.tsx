@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Hash, Plus, Search, Circle } from 'lucide-react';
+import { Hash, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChatConversation } from './useChatState';
 
@@ -16,6 +16,13 @@ interface ChatSidebarProps {
   onNewChannel: () => void;
 }
 
+const STATUS_COLORS = {
+  online: 'bg-emerald-500',
+  away: 'bg-amber-500',
+  busy: 'bg-rose-500',
+  offline: 'bg-neutral-400',
+};
+
 export function ChatSidebar({
   conversations,
   activeId,
@@ -26,24 +33,17 @@ export function ChatSidebar({
   onTabChange,
   onNewChannel,
 }: ChatSidebarProps) {
+  const q = searchQuery.toLowerCase();
   const filtered = conversations.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (!matchesSearch) return false;
+    const matches = c.name.toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+    if (!matches) return false;
     if (activeTab === 'channels') return c.type === 'channel';
     if (activeTab === 'direct') return c.type === 'direct';
     return true;
   });
 
   const channels = filtered.filter((c) => c.type === 'channel');
-  const directMessages = filtered.filter((c) => c.type === 'direct');
-
-  const statusColors = {
-    online: 'bg-emerald-500',
-    away: 'bg-amber-500',
-    busy: 'bg-rose-500',
-    offline: 'bg-neutral-400',
-  };
+  const dms = filtered.filter((c) => c.type === 'direct');
 
   return (
     <aside className="w-72 border-r border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-[#161616] flex flex-col h-full shrink-0 select-none">
@@ -53,7 +53,7 @@ export function ChatSidebar({
           <button
             type="button"
             onClick={onNewChannel}
-            title="Create Channel or Group"
+            title="Create Channel"
             className="p-1.5 rounded-lg bg-[#0078d4] text-white hover:bg-[#106ebe] transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -93,91 +93,76 @@ export function ChatSidebar({
       <div className="flex-1 overflow-y-auto p-2 space-y-4">
         {activeTab !== 'direct' && channels.length > 0 && (
           <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Channels</span>
+            <div className="flex items-center justify-between px-2 mb-1 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+              <span>Channels</span>
               <span className="text-[10px] text-neutral-400">{channels.length}</span>
             </div>
             <div className="space-y-0.5">
-              {channels.map((ch) => {
-                const isActive = activeId === ch.id;
-                return (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    onClick={() => onSelect(ch.id)}
-                    className={cn(
-                      'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors',
-                      isActive
-                        ? 'bg-white dark:bg-[#252525] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60'
-                    )}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Hash className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
-                      <span className="truncate">{ch.name}</span>
-                    </div>
-                    {ch.unreadCount && ch.unreadCount > 0 ? (
-                      <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-[#0078d4] text-white">
-                        {ch.unreadCount}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+              {channels.map((ch) => (
+                <button
+                  key={ch.id}
+                  type="button"
+                  onClick={() => onSelect(ch.id)}
+                  className={cn(
+                    'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors',
+                    activeId === ch.id
+                      ? 'bg-white dark:bg-[#252525] text-neutral-900 dark:text-white shadow-xs font-semibold'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60'
+                  )}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Hash className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                    <span className="truncate">{ch.name}</span>
+                  </div>
+                  {ch.unreadCount ? (
+                    <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-[#0078d4] text-white">
+                      {ch.unreadCount}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {activeTab !== 'channels' && directMessages.length > 0 && (
+        {activeTab !== 'channels' && dms.length > 0 && (
           <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Direct Messages</span>
-              <span className="text-[10px] text-neutral-400">{directMessages.length}</span>
+            <div className="flex items-center justify-between px-2 mb-1 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+              <span>Direct Messages</span>
+              <span className="text-[10px] text-neutral-400">{dms.length}</span>
             </div>
             <div className="space-y-0.5">
-              {directMessages.map((dm) => {
-                const isActive = activeId === dm.id;
-                return (
-                  <button
-                    key={dm.id}
-                    type="button"
-                    onClick={() => onSelect(dm.id)}
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium cursor-pointer transition-colors',
-                      isActive
-                        ? 'bg-white dark:bg-[#252525] text-neutral-900 dark:text-white shadow-xs'
-                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60'
-                    )}
-                  >
-                    <div className="relative shrink-0">
-                      {dm.avatar ? (
-                        <img src={dm.avatar} alt={dm.name} className="w-7 h-7 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-xs">
-                          {dm.name.charAt(0)}
-                        </div>
-                      )}
-                      <span
-                        className={cn(
-                          'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#161616]',
-                          dm.status ? statusColors[dm.status] : statusColors.offline
-                        )}
-                      />
-                    </div>
-                    <div className="flex-1 truncate text-left">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-neutral-900 dark:text-neutral-100 truncate">{dm.name}</span>
-                        {dm.lastMessageTime && (
-                          <span className="text-[10px] text-neutral-400 shrink-0">{dm.lastMessageTime}</span>
-                        )}
+              {dms.map((dm) => (
+                <button
+                  key={dm.id}
+                  type="button"
+                  onClick={() => onSelect(dm.id)}
+                  className={cn(
+                    'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium cursor-pointer transition-colors',
+                    activeId === dm.id
+                      ? 'bg-white dark:bg-[#252525] text-neutral-900 dark:text-white shadow-xs'
+                      : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60'
+                  )}
+                >
+                  <div className="relative shrink-0">
+                    {dm.avatar ? (
+                      <img src={dm.avatar} alt={dm.name} className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-xs">
+                        {dm.name.charAt(0)}
                       </div>
-                      {dm.lastMessage && (
-                        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{dm.lastMessage}</p>
-                      )}
+                    )}
+                    <span className={cn('absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#161616]', dm.status ? STATUS_COLORS[dm.status] : STATUS_COLORS.offline)} />
+                  </div>
+                  <div className="flex-1 truncate text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-100 truncate">{dm.name}</span>
+                      {dm.lastMessageTime && <span className="text-[10px] text-neutral-400 shrink-0">{dm.lastMessageTime}</span>}
                     </div>
-                  </button>
-                );
-              })}
+                    {dm.lastMessage && <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">{dm.lastMessage}</p>}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
