@@ -1,90 +1,147 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, Plus, User } from 'lucide-react';
-import { useAppointments } from '@/hooks/useEmailsQuery';
-import { format } from 'date-fns';
+import { CalendarWorkspaceTabs } from './CalendarWorkspaceTabs';
+import { CalendarSidebar } from './CalendarSidebar';
+import { CalendarToolbar } from './CalendarToolbar';
+import { CalendarWeekGrid } from './CalendarWeekGrid';
+import { CreateScheduleModal } from './CreateScheduleModal';
+import { INITIAL_EVENTS, INITIAL_TABS } from './mockData';
+import { CalendarEvent, CalendarViewMode, WorkspaceTab } from './types';
 
 export function CalendarView() {
-  const [selectedDay] = useState(new Date());
-  const { data: appointments, isLoading } = useAppointments();
+  const [tabs, setTabs] = useState<WorkspaceTab[]>(INITIAL_TABS);
+  const [activeTabId, setActiveTabId] = useState<string>('tab-2');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedProject, setSelectedProject] = useState('Totoro CRM System');
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('Week');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalDayIndex, setModalDayIndex] = useState(2);
+  const [modalHour, setModalHour] = useState(8.5);
+
+  const handleSelectTab = (id: string) => {
+    setTabs((prev) =>
+      prev.map((t) => ({ ...t, active: t.id === id }))
+    );
+    setActiveTabId(id);
+    const found = tabs.find((t) => t.id === id);
+    if (found) setSelectedProject(found.name);
+  };
+
+  const handleCloseTab = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (tabs.length <= 1) return;
+    const remaining = tabs.filter((t) => t.id !== id);
+    setTabs(remaining);
+    if (activeTabId === id) {
+      handleSelectTab(remaining[0].id);
+    }
+  };
+
+  const handleAddTab = () => {
+    const newId = `tab-${Date.now()}`;
+    const newTab: WorkspaceTab = {
+      id: newId,
+      name: `Project ${tabs.length + 1}`,
+      icon: '📁',
+      active: true,
+    };
+    setTabs((prev) => [...prev.map((t) => ({ ...t, active: false })), newTab]);
+    setActiveTabId(newId);
+    setSelectedProject(newTab.name);
+  };
+
+  const handleSlotClick = (dayIndex: number, hour: number) => {
+    setModalDayIndex(dayIndex);
+    setModalHour(hour);
+    setModalOpen(true);
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setModalDayIndex(event.dayIndex);
+    setModalHour(event.startHour);
+    setModalOpen(true);
+  };
+
+  const handleSaveSchedule = (newEventData: Partial<CalendarEvent>) => {
+    const created: CalendarEvent = {
+      id: `evt-${Date.now()}`,
+      title: newEventData.title || 'Untitled Schedule',
+      dayIndex: newEventData.dayIndex ?? modalDayIndex,
+      startTime: newEventData.startTime || '08:30 AM',
+      endTime: newEventData.endTime || '09:30 AM',
+      startHour: newEventData.startHour ?? modalHour,
+      durationHours: newEventData.durationHours || 1,
+      color: newEventData.color || 'blue',
+      striped: newEventData.striped ?? false,
+      category: newEventData.category || 'Meeting',
+      description: newEventData.description,
+      meetUrl: newEventData.meetUrl,
+      participants: newEventData.participants || [],
+    };
+    setEvents((prev) => [...prev, created]);
+  };
+
+  const filteredEvents = searchQuery.trim()
+    ? events.filter((e) =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.category?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : events;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden select-none">
-      <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 px-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="w-5 h-5 text-[#0078d4]" />
-          <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-            {format(selectedDay, 'MMMM yyyy')}
-          </h2>
-        </div>
+      {/* Workspace Top Tabs */}
+      <CalendarWorkspaceTabs
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSelectTab={handleSelectTab}
+        onCloseTab={handleCloseTab}
+        onAddTab={handleAddTab}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((p) => !p)}
+      />
 
-        <button className="h-8 px-3 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer">
-          <Plus className="w-3.5 h-3.5" />
-          <span>New event</span>
-        </button>
+      {/* Main Split: Sidebar + Calendar Workspace */}
+      <div className="flex-1 flex overflow-hidden">
+        <CalendarSidebar
+          open={sidebarOpen}
+          selectedProject={selectedProject}
+          onSelectProject={setSelectedProject}
+        />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Controls Ribbon */}
+          <CalendarToolbar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onPrev={() => {}}
+            onNext={() => {}}
+            onToday={() => {}}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onNewSchedule={() => setModalOpen(true)}
+          />
+
+          {/* Week Grid */}
+          <CalendarWeekGrid
+            events={filteredEvents}
+            onSlotClick={handleSlotClick}
+            onEventClick={handleEventClick}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 md:p-6 max-w-4xl">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">
-            Today &bull; {format(selectedDay, 'EEEE, MMMM d')}
-          </h3>
-        </div>
-
-        {isLoading ? (
-          <div className="space-y-3 animate-pulse">
-            <div className="h-20 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
-            <div className="h-20 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {appointments?.map((apt) => {
-              const startFormatted = format(new Date(apt.startUtc), 'h:mm a');
-              const endFormatted = format(new Date(apt.endUtc), 'h:mm a');
-
-              return (
-                <div
-                  key={apt.id}
-                  className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-800/40 hover:border-[#0078d4] transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                      {apt.title}
-                    </h4>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-[#0078d4] font-medium">
-                      Confirmed
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>
-                        {startFormatted} – {endFormatted}
-                      </span>
-                    </div>
-
-                    {apt.location && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>{apt.location}</span>
-                      </div>
-                    )}
-
-                    {apt.organizerName && (
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        <span>{apt.organizerName}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Create Schedule Modal */}
+      <CreateScheduleModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveSchedule}
+        initialDayIndex={modalDayIndex}
+        initialHour={modalHour}
+      />
     </div>
   );
 }
