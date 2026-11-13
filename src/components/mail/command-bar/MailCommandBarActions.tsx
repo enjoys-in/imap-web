@@ -123,13 +123,13 @@ export function MailCommandBarActions() {
 
       <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-700/80 mx-1 shrink-0" />
 
-      <button disabled={!isSingle} onClick={() => activeEmail && openReply(activeEmail, false)} className={btnClass(isSingle)} title={isSingle ? 'Reply' : 'Select single email'}>
+      <button disabled={!isSingle} onClick={() => activeEmail && openReply(activeEmail, false)} className={btnClass(isSingle)} title={!hasTarget ? 'Select an email to reply' : !isSingle ? 'Reply not available for multiple conversations' : 'Reply'}>
         <CornerUpLeft className={cn('w-3.5 h-3.5', isSingle ? 'text-blue-500' : 'text-neutral-400')} /><span>Reply</span>
       </button>
-      <button disabled={!isSingle} onClick={() => activeEmail && openReply(activeEmail, true)} className={btnClass(isSingle)} title={isSingle ? 'Reply all' : 'Select single email'}>
+      <button disabled={!isSingle} onClick={() => activeEmail && openReply(activeEmail, true)} className={btnClass(isSingle)} title={!hasTarget ? 'Select an email to reply all' : !isSingle ? 'Reply all not available for multiple conversations' : 'Reply all'}>
         <ReplyAll className={cn('w-3.5 h-3.5', isSingle ? 'text-purple-500' : 'text-neutral-400')} /><span>Reply all</span>
       </button>
-      <button disabled={!isSingle} onClick={() => activeEmail && openForward(activeEmail)} className={btnClass(isSingle)} title={isSingle ? 'Forward' : 'Select single email'}>
+      <button disabled={!isSingle} onClick={() => activeEmail && openForward(activeEmail)} className={btnClass(isSingle)} title={!hasTarget ? 'Select an email to forward' : !isSingle ? 'Forward not available for multiple conversations' : 'Forward'}>
         <CornerUpRight className={cn('w-3.5 h-3.5', isSingle ? 'text-cyan-500' : 'text-neutral-400')} /><span>Forward</span>
       </button>
 

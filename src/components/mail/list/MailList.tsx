@@ -73,9 +73,9 @@ export function MailList({
   const handleSelect = useCallback(
     (id: string) => {
       if (onSelectMail) onSelectMail(id);
-      else setSelectedMail(id);
+      else setSelectedMail(id === activeId ? null : id);
     },
-    [onSelectMail, setSelectedMail]
+    [onSelectMail, setSelectedMail, activeId]
   );
 
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set());
