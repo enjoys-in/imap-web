@@ -1,4 +1,4 @@
-import { MailMessage, MailMessageMetadata } from '@/types';
+import { MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
 import { MOCK_EMAILS } from '@/lib/mock';
 import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
 import { getCachedEmailBody, saveCachedEmailBody } from '@/lib/idb/mailCacheDb';
@@ -52,6 +52,27 @@ export async function getEmailsMetadata(
 export async function getEmailById(messageId: string): Promise<MailMessage | null> {
   const match = MOCK_EMAILS.find((e) => e.id === messageId);
   return match || null;
+}
+
+export async function getThreadMessages(threadId: string): Promise<MailMessage[]> {
+  const matches = MOCK_EMAILS.filter((e) => e.threadId === threadId || e.id === threadId);
+  return matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+export async function getEmailConversation(threadIdOrMailId: string): Promise<ThreadConversation | null> {
+  const root = MOCK_EMAILS.find((e) => e.id === threadIdOrMailId || e.threadId === threadIdOrMailId);
+  if (!root) return null;
+  const threadId = root.threadId || `thread-${root.id}`;
+  const messages = await getThreadMessages(threadId);
+  return {
+    threadId,
+    subject: root.subject,
+    totalMessages: messages.length,
+    unreadCount: messages.filter((m) => !m.isRead).length,
+    messages,
+    rootMessageId: messages[0]?.id || root.id,
+    lastActivityDate: messages[messages.length - 1]?.date || root.date,
+  };
 }
 
 export async function getEmailBody(

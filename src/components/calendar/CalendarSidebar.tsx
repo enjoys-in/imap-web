@@ -17,30 +17,46 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
 interface CalendarSidebarProps {
   open: boolean;
+  activeEssential: string;
+  onSelectEssential: (id: string) => void;
   selectedProject: string;
   onSelectProject: (name: string) => void;
+  projects: ProjectItem[];
+  onAddProject: () => void;
+  onOpenSettings: () => void;
+  onOpenReleaseNotes: () => void;
 }
 
 const ESSENTIALS = [
-  { id: 'home', label: 'Home', icon: Home, href: '#' },
-  { id: 'calendar', label: 'Calendar', icon: Calendar, href: '#', active: true },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '#' },
-  { id: 'team', label: 'Team', icon: Users, href: '#' },
-  { id: 'documents', label: 'Documents', icon: FileText, href: '#' },
-  { id: 'automations', label: 'Automations', icon: Workflow, href: '#' },
-  { id: 'reports', label: 'Reports', icon: BarChart2, href: '#' },
+  { id: 'home', label: 'Home', icon: Home },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'team', label: 'Team', icon: Users },
+  { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'automations', label: 'Automations', icon: Workflow },
+  { id: 'reports', label: 'Reports', icon: BarChart2 },
 ];
 
-const PROJECTS = [
-  { id: 'p1', name: 'Totoro CRM System', color: 'bg-blue-600', icon: 'Q' },
-  { id: 'p2', name: 'Obake Dashboard', color: 'bg-emerald-600', icon: '★' },
-  { id: 'p3', name: 'Calcifer API Gateway', color: 'bg-amber-700', icon: '🔥' },
-  { id: 'p4', name: 'Ponyo Task Manager', color: 'bg-neutral-800', icon: '🐟' },
-];
-
-export function CalendarSidebar({ open, selectedProject, onSelectProject }: CalendarSidebarProps) {
+export function CalendarSidebar({
+  open,
+  activeEssential,
+  onSelectEssential,
+  selectedProject,
+  onSelectProject,
+  projects,
+  onAddProject,
+  onOpenSettings,
+  onOpenReleaseNotes,
+}: CalendarSidebarProps) {
   if (!open) return null;
 
   return (
@@ -67,17 +83,19 @@ export function CalendarSidebar({ open, selectedProject, onSelectProject }: Cale
           <nav className="space-y-0.5">
             {ESSENTIALS.map((item) => {
               const Icon = item.icon;
+              const isActive = activeEssential === item.id;
               return (
                 <button
                   key={item.id}
+                  onClick={() => onSelectEssential(item.id)}
                   className={cn(
-                    'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left',
-                    item.active
+                    'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer',
+                    isActive
                       ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold shadow-2xs'
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40'
                   )}
                 >
-                  <Icon className={cn('w-4 h-4', item.active ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400')} />
+                  <Icon className={cn('w-4 h-4', isActive ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400')} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -92,21 +110,22 @@ export function CalendarSidebar({ open, selectedProject, onSelectProject }: Cale
               Projects
             </span>
             <button
+              onClick={onAddProject}
               title="Add new project"
-              className="w-4 h-4 rounded flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+              className="w-4 h-4 rounded flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <Plus className="w-3 h-3" />
             </button>
           </div>
           <nav className="space-y-0.5">
-            {PROJECTS.map((proj) => {
+            {projects.map((proj) => {
               const isSelected = selectedProject === proj.name;
               return (
                 <button
                   key={proj.id}
                   onClick={() => onSelectProject(proj.name)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left truncate',
+                    'w-full flex items-center gap-2 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left truncate cursor-pointer',
                     isSelected
                       ? 'bg-neutral-200/70 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold'
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/30'
@@ -128,11 +147,17 @@ export function CalendarSidebar({ open, selectedProject, onSelectProject }: Cale
         <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 px-2 uppercase tracking-wider block mb-1">
           Support
         </span>
-        <button className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40 transition-colors">
+        <button
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer"
+        >
           <Settings className="w-4 h-4 text-neutral-400" />
           <span>Settings</span>
         </button>
-        <button className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40 transition-colors">
+        <button
+          onClick={onOpenReleaseNotes}
+          className="w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer"
+        >
           <Megaphone className="w-4 h-4 text-neutral-400" />
           <span>Release Notes</span>
         </button>

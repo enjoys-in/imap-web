@@ -9,7 +9,7 @@ export interface AppConfig {
 }
 
 export const env: AppConfig = {
-  apiUrl: process.env.API_URL || 'http://localhost:3001/api',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:7654/api',
   appName: process.env.APP_NAME || 'AirSend',
   appVersion: process.env.APP_VERSION || '1.0.0',
   nodeEnv: process.env.NODE_ENV || 'development',

@@ -26,6 +26,7 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   const [quickReplyText, setQuickReplyText] = useState('');
   const [threadBodies, setThreadBodies] = useState<Record<string, string>>({});
   const [fetchedEmail, setFetchedEmail] = useState<MailMessage | null>(null);
+  const [threadList, setThreadList] = useState<MailMessage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [backPath, setBackPath] = useState('/mail/u/0/#inbox');
 
@@ -38,9 +39,10 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   }, []);
 
   const targetEmail = localEmails.find((e) => e.id === mailId) || fetchedEmail;
-  const threadMessages = localEmails.filter(
+  const localThreadMessages = localEmails.filter(
     (e) => e.threadId === targetEmail?.threadId || e.id === targetEmail?.id
   );
+  const activeThread = threadList.length > 0 ? threadList : localThreadMessages;
 
   useEffect(() => {
     if (!targetEmail && mailId) {
@@ -54,6 +56,16 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
       });
     }
   }, [targetEmail, mailId, addOrSelectEmail]);
+
+  useEffect(() => {
+    if (!targetEmail?.threadId) return;
+    emailsApi.getThreadMessages(targetEmail.threadId).then((msgs) => {
+      if (msgs.length > 0) {
+        setThreadList(msgs);
+        setExpandedIds((prev) => Array.from(new Set([...prev, ...msgs.map((m) => m.id)])));
+      }
+    });
+  }, [targetEmail?.threadId]);
 
   useEffect(() => {
     if (!targetEmail) return;
@@ -92,7 +104,7 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
           </Link>
           <div>
             <h1 className="text-base font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-xl">{targetEmail.subject}</h1>
-            <span className="text-[11px] text-neutral-500">{threadMessages.length || 1} message in conversation</span>
+            <span className="text-[11px] text-neutral-500">{activeThread.length || 1} {activeThread.length === 1 ? 'message' : 'messages'} in conversation</span>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -102,7 +114,7 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
       </div>
 
       <div className="p-4 space-y-3 max-w-4xl w-full mx-auto">
-        {(threadMessages.length > 0 ? threadMessages : [targetEmail]).map((msg: MailMessageMetadata | MailMessage) => {
+        {(activeThread.length > 0 ? activeThread : [targetEmail]).map((msg: MailMessageMetadata | MailMessage) => {
           const isExpanded = expandedIds.includes(msg.id);
           const sentDate = format(new Date(msg.date), 'MMM d, h:mm a');
           const bodyContent = threadBodies[msg.id] || ('bodyHtml' in msg ? msg.bodyHtml : '');

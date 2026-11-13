@@ -18,6 +18,7 @@ export function MailCommandBar() {
   const activeEmail = localEmails.find((e) => e.id === selectedMailId);
   const hasEmailTarget = selectedIds.length > 0 || Boolean(activeEmail);
   const isMulti = selectedIds.length > 1;
+  const isTrashOrJunk = selectedFolderId === 'fld-deleted' || selectedFolderId === 'fld-junk';
 
   return (
     <div className="bg-[#f0f0f0] dark:bg-[#1b1b1b] border-b border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shrink-0 select-none transition-colors">
@@ -66,13 +67,15 @@ export function MailCommandBar() {
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-700/80 mx-1 shrink-0" />
-          <MailboxToolbarActions
-            folderId={selectedFolderId || 'fld-inbox'}
-            hasEmailTarget={hasEmailTarget}
-          />
-        </div>
+        {isTrashOrJunk && (
+          <div className="flex items-center gap-1 shrink-0">
+            <div className="h-4 w-px bg-neutral-300 dark:bg-neutral-700/80 mx-1 shrink-0" />
+            <MailboxToolbarActions
+              folderId={selectedFolderId || 'fld-inbox'}
+              hasEmailTarget={hasEmailTarget}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

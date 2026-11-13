@@ -9,6 +9,7 @@ interface CalendarWeekGridProps {
   events: CalendarEvent[];
   onSlotClick: (dayIndex: number, hour: number) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onSelectDayHeader?: (dayIndex: number) => void;
 }
 
 const DAYS = [
@@ -42,10 +43,11 @@ export function CalendarWeekGrid({
         <div className="w-20 border-r border-neutral-200 dark:border-neutral-800 shrink-0" />
         <div className="flex-1 grid grid-cols-5">
           {DAYS.map((day) => (
-            <div
+            <button
               key={day.dayIndex}
+              onClick={() => onSelectDayHeader?.(day.dayIndex)}
               className={cn(
-                'flex items-center justify-center text-xs font-semibold border-r border-neutral-200 dark:border-neutral-800 last:border-r-0',
+                'flex items-center justify-center text-xs font-semibold border-r border-neutral-200 dark:border-neutral-800 last:border-r-0 cursor-pointer hover:bg-neutral-100/60 dark:hover:bg-neutral-800/40 transition-colors',
                 day.isToday
                   ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
                   : 'text-neutral-600 dark:text-neutral-400'
@@ -53,13 +55,13 @@ export function CalendarWeekGrid({
             >
               <span
                 className={cn(
-                  'px-3 py-1 rounded-full',
+                  'px-3 py-1 rounded-full transition-all',
                   day.isToday && 'border border-blue-500 bg-white dark:bg-neutral-900 shadow-2xs font-bold'
                 )}
               >
                 {day.label}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       </div>

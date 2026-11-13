@@ -46,9 +46,16 @@ export function ReadingPaneHeader({
 
   return (
     <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-200 select-none transition-colors p-3 md:p-4">
-      <h1 className="text-base md:text-xl font-bold text-neutral-900 dark:text-white tracking-tight mb-3 truncate">
-        {email.subject || '(No subject)'}
-      </h1>
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <h1 className="text-base md:text-xl font-bold text-neutral-900 dark:text-white tracking-tight truncate">
+          {email.subject || '(No subject)'}
+        </h1>
+        {((email.threadCount && email.threadCount > 1) || email.isThread) && (
+          <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-[#0078d4] dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            {email.threadCount ? `${email.threadCount} messages` : 'Conversation'}
+          </span>
+        )}
+      </div>
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">

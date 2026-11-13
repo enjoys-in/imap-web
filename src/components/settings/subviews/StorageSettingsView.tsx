@@ -68,12 +68,41 @@ export function StorageSettingsView() {
           </span>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+        {/* Progress Bar with Gradient */}
+        <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative border border-neutral-300/40 dark:border-neutral-700/40">
           <div
-            style={{ width: `${percentUsed}%` }}
-            className="h-full bg-gradient-to-r from-[#0078d4] to-cyan-500 rounded-full transition-all duration-300"
+            style={{
+              width: `${percentUsed}%`,
+              background: 'linear-gradient(90deg, #10b981 0%, #84cc16 25%, #eab308 50%, #f97316 75%, #ef4444 100%)',
+            }}
+            className="h-full rounded-full transition-all duration-300 relative"
           />
+          {/* Subtle tick markers for 25%, 50%, 75% */}
+          <div className="absolute inset-0 pointer-events-none">
+            <span className="absolute top-0 bottom-0 left-[25%] w-[1px] bg-white/40 dark:bg-black/40" />
+            <span className="absolute top-0 bottom-0 left-[50%] w-[1px] bg-white/40 dark:bg-black/40" />
+            <span className="absolute top-0 bottom-0 left-[75%] w-[1px] bg-white/40 dark:bg-black/40" />
+          </div>
+        </div>
+
+        {/* 25 50 75 100 percent scale */}
+        <div className="flex justify-between items-center text-[10px] font-mono select-none pt-0.5">
+          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            25%
+          </span>
+          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+            50%
+          </span>
+          <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
+            75%
+          </span>
+          <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+            100%
+          </span>
         </div>
 
         <p className="text-[11px] text-neutral-500">

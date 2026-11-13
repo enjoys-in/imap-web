@@ -13,6 +13,7 @@ export interface ComposeState {
   subject: string;
   body: string;
   originalMessageId?: string;
+  threadId?: string;
   attachments: File[];
   openNew: () => void;
   openReply: (msg: MailMessageMetadata | MailMessage, replyAll?: boolean) => void;
@@ -47,11 +48,14 @@ export const useComposeStore = create<ComposeState>((set) => ({
       bcc: 'Jeelan Basha Shaik <jeelan.shaik@recruitment.com>',
       subject: '',
       body: '',
+      originalMessageId: undefined,
+      threadId: undefined,
       attachments: [],
     }),
 
   openReply: (msg, replyAll = false) => {
     const seed = buildComposeSeed(replyAll ? 'replyAll' : 'reply', msg);
+    const resolvedThreadId = msg.threadId || `thread-${msg.id}`;
     set({
       isOpen: true,
       isMinimized: false,
@@ -61,12 +65,14 @@ export const useComposeStore = create<ComposeState>((set) => ({
       subject: seed.subject,
       body: seed.body,
       originalMessageId: msg.id,
+      threadId: resolvedThreadId,
       attachments: [],
     });
   },
 
   openForward: (msg) => {
     const seed = buildComposeSeed('forward', msg);
+    const resolvedThreadId = msg.threadId || `thread-${msg.id}`;
     set({
       isOpen: true,
       isMinimized: false,
@@ -76,11 +82,12 @@ export const useComposeStore = create<ComposeState>((set) => ({
       subject: seed.subject,
       body: seed.body,
       originalMessageId: msg.id,
+      threadId: resolvedThreadId,
       attachments: [],
     });
   },
 
-  close: () => set({ isOpen: false, isMinimized: false, isMaximized: false }),
+  close: () => set({ isOpen: false, isMinimized: false, isMaximized: false, originalMessageId: undefined, threadId: undefined }),
   toggleMinimize: () => set((s) => ({ isMinimized: !s.isMinimized })),
   toggleMaximize: () => set((s) => ({ isMaximized: !s.isMaximized })),
   updateFields: (fields) => set((s) => ({ ...s, ...fields })),

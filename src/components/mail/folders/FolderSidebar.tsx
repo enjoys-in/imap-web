@@ -7,6 +7,7 @@ import { useMailStore } from '@/stores';
 import { useFolders, useAccounts } from '@/hooks/useEmailsQuery';
 import { FolderItem } from './FolderItem';
 import { FolderContextMenu } from './FolderContextMenu';
+import { SidebarQuota } from './SidebarQuota';
 import { MailFolder } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
 import { getClientConfig } from '@/config/clientConfig';
@@ -159,6 +160,9 @@ export function FolderSidebar({
           </Link>
         </div>
       </div>
+
+      {/* Docked Quota Section: Just above version footer */}
+      <SidebarQuota />
 
       {/* Docked Bottom Version Footer */}
       <div title="AirSend IMAP Web v 1.0.0" className="py-2 px-3 border-t border-neutral-200 dark:border-neutral-800/80 flex items-center justify-between text-[11px] text-neutral-500 shrink-0 select-none bg-neutral-200/40 dark:bg-[#1a1a1a]/40">

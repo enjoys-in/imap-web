@@ -21,6 +21,8 @@ export function ComposeModal() {
   const bcc = useComposeStore((s) => s.bcc);
   const subject = useComposeStore((s) => s.subject);
   const body = useComposeStore((s) => s.body);
+  const originalMessageId = useComposeStore((s) => s.originalMessageId);
+  const threadId = useComposeStore((s) => s.threadId);
   const close = useComposeStore((s) => s.close);
   const startPendingSend = useUndoSendStore((s) => s.startPendingSend);
 
@@ -36,12 +38,16 @@ export function ComposeModal() {
       : `FW: ${subject}`;
 
   const handleSend = () => {
+    const isReplyOrForward = mode === 'reply' || mode === 'replyAll' || mode === 'forward';
+    const resolvedThreadId = isReplyOrForward && threadId ? threadId : `thread-${Date.now()}`;
+
     const newMsg: MailMessage = {
       id: `sent-${Date.now()}`,
       folderId: 'fld-sent',
       accountId: 'acc-1',
       uid: Math.floor(Math.random() * 10000),
-      threadId: `thread-${Date.now()}`,
+      threadId: resolvedThreadId,
+      inReplyTo: isReplyOrForward ? originalMessageId : undefined,
       subject: subject || '(No subject)',
       fromName: 'Alex Morgan',
       fromAddress: 'alex.morgan@contoso.com',
@@ -57,6 +63,8 @@ export function ComposeModal() {
       isAnswered: false,
       isForwarded: false,
       isDraft: false,
+      isThread: Boolean(isReplyOrForward && threadId),
+      conversationType: isReplyOrForward && threadId ? 'thread' : 'single',
       hasAttachments: false,
       hasCalendar: false,
       isBodyDownloaded: true,
@@ -68,7 +76,12 @@ export function ComposeModal() {
       { id: newMsg.id, to, cc, bcc, subject, body, message: newMsg },
       (msg) => {
         const currentEmails = useMailStore.getState().localEmails;
-        useMailStore.setState({ localEmails: [msg, ...currentEmails] });
+        const updatedList = currentEmails.map((e) =>
+          e.threadId === resolvedThreadId
+            ? { ...e, isThread: true, threadCount: (e.threadCount || 1) + 1, conversationType: 'thread' as const }
+            : e
+        );
+        useMailStore.setState({ localEmails: [msg, ...updatedList] });
         saveCachedEmails([msg]);
       }
     );

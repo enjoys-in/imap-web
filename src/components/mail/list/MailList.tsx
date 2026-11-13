@@ -132,8 +132,12 @@ export function MailList({
 
             {unpinnedEmails.map((email) => {
               const isExpanded = expandedThreadIds.has(email.id);
-              const subEmails = MOCK_THREAD_SUB_MESSAGES[email.threadId || email.id] || [];
-              const hasThread = Boolean(email.isThread || subEmails.length > 0);
+              const mockSubEmails = MOCK_THREAD_SUB_MESSAGES[email.threadId || email.id] || [];
+              const dynamicSubEmails = localEmails.filter(
+                (e) => e.threadId === email.threadId && e.id !== email.id
+              );
+              const subEmails = dynamicSubEmails.length > 0 ? dynamicSubEmails : mockSubEmails;
+              const hasThread = Boolean(email.isThread || subEmails.length > 0 || (email.threadCount && email.threadCount > 1));
 
               return (
                 <React.Fragment key={email.id}>

@@ -106,14 +106,21 @@ export const MailListItem = React.memo(function MailListItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1 mb-0.5">
-          <span
-            className={cn(
-              'truncate text-xs',
-              !email.isRead ? 'font-bold text-neutral-900 dark:text-white' : 'font-semibold text-neutral-700 dark:text-neutral-200'
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                'truncate text-xs',
+                !email.isRead ? 'font-bold text-neutral-900 dark:text-white' : 'font-semibold text-neutral-700 dark:text-neutral-200'
+              )}
+            >
+              {email.fromName || email.fromAddress}
+            </span>
+            {hasThread && email.threadCount && email.threadCount > 1 && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 shrink-0">
+                {email.threadCount}
+              </span>
             )}
-          >
-            {email.fromName || email.fromAddress}
-          </span>
+          </div>
           <span className="text-[11px] text-neutral-500 dark:text-neutral-400 shrink-0 font-medium">{dateFormatted}</span>
         </div>
 

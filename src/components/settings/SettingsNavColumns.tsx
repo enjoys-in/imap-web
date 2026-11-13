@@ -48,7 +48,7 @@ const CATEGORIES: CategoryItem[] = [
     subcategories: [
       { id: 'compose', label: 'Compose and reply', href: '/settings/mail' },
       { id: 'rules', label: 'Rules & filters', href: '/settings/mail/rules' },
-      { id: 'junk', label: 'Junk email', href: '/settings/mail/junk' },
+      { id: 'junk', label: 'Spam & Junk filter', href: '/settings/mail/junk' },
     ],
   },
   {
@@ -61,7 +61,7 @@ const CATEGORIES: CategoryItem[] = [
   },
   {
     id: 'people', label: 'People', href: '/settings/mail/junk', icon: UserCheck,
-    subcategories: [{ id: 'safe-contacts', label: 'Safe & blocked', href: '/settings/mail/junk' }],
+    subcategories: [{ id: 'safe-contacts', label: 'Spam & Safe lists', href: '/settings/mail/junk' }],
   },
 ];
 
