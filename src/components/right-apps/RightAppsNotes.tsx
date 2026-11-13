@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Search, Trash2, Pin, ExternalLink } from 'lucide-react';
 import { useRightAppsStore, NoteItem } from '@/stores/useRightAppsStore';
 import { format } from 'date-fns';
 
@@ -18,13 +19,20 @@ export function RightAppsNotes() {
   const addNote = useRightAppsStore((s) => s.addNote);
   const updateNote = useRightAppsStore((s) => s.updateNote);
   const deleteNote = useRightAppsStore((s) => s.deleteNote);
+  const togglePinNote = useRightAppsStore((s) => s.togglePinNote);
 
   const [query, setQuery] = useState('');
   const [selectedColor, setSelectedColor] = useState<NoteItem['color']>('yellow');
 
-  const filtered = notes.filter(
-    (n) => n.title.toLowerCase().includes(query.toLowerCase()) || n.content.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = notes
+    .filter(
+      (n) => n.title.toLowerCase().includes(query.toLowerCase()) || n.content.toLowerCase().includes(query.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
   const handleCreate = () => {
     addNote('New Note', 'Type your note content here...', selectedColor);
@@ -34,15 +42,24 @@ export function RightAppsNotes() {
     <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200 select-none">
       {/* Top Search & Create Bar */}
       <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 space-y-2.5 bg-neutral-50/50 dark:bg-neutral-800/40">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search notes..."
-            className="w-full h-7 pl-8 pr-2 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1f1f1f] text-xs focus:outline-none focus:border-[#0078d4]"
-          />
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search notes..."
+              className="w-full h-7 pl-8 pr-2 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1f1f1f] text-xs focus:outline-none focus:border-[#0078d4]"
+            />
+          </div>
+          <Link
+            href="/notes"
+            title="Open Full Notes Workspace"
+            className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#202020] text-neutral-500 hover:text-[#0078d4] hover:border-[#0078d4] transition-colors cursor-pointer shrink-0"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         <div className="flex items-center justify-between">
@@ -76,34 +93,49 @@ export function RightAppsNotes() {
           return (
             <div
               key={note.id}
-              className={`p-3 rounded-lg border shadow-xs transition-shadow ${colors.bg} ${colors.border}`}
+              className={`p-3 rounded-lg border shadow-xs transition-shadow relative ${colors.bg} ${colors.border}`}
             >
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1.5 gap-1.5">
                 <input
                   type="text"
                   value={note.title}
                   onChange={(e) => updateNote(note.id, { title: e.target.value })}
-                  className={`font-bold text-xs bg-transparent focus:outline-none w-full mr-2 ${colors.text}`}
+                  className={`font-bold text-xs bg-transparent focus:outline-none w-full ${colors.text}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => deleteNote(note.id)}
-                  className="text-neutral-400 hover:text-red-500 cursor-pointer transition-colors"
-                  title="Delete note"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => togglePinNote(note.id)}
+                    className={`p-1 rounded cursor-pointer transition-colors ${
+                      note.isPinned ? 'text-amber-500' : 'text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                    }`}
+                    title={note.isPinned ? 'Unpin note' : 'Pin note'}
+                  >
+                    <Pin className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteNote(note.id)}
+                    className="p-1 rounded text-neutral-400 hover:text-red-500 cursor-pointer transition-colors"
+                    title="Delete note"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
 
               <textarea
-                rows={3}
+                rows={4}
                 value={note.content}
                 onChange={(e) => updateNote(note.id, { content: e.target.value })}
-                className="w-full bg-transparent text-xs focus:outline-none resize-none leading-relaxed text-neutral-800 dark:text-neutral-200"
+                className="w-full bg-transparent text-xs focus:outline-none resize-y leading-relaxed text-neutral-800 dark:text-neutral-200 select-text"
               />
 
-              <div className="text-[10px] text-neutral-400 mt-1">
-                {format(new Date(note.updatedAt), 'MMM d, h:mm a')}
+              <div className="text-[10px] text-neutral-400 mt-1 flex items-center justify-between">
+                <span>{format(new Date(note.updatedAt), 'MMM d, h:mm a')}</span>
+                {note.isPinned && (
+                  <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400">Pinned</span>
+                )}
               </div>
             </div>
           );

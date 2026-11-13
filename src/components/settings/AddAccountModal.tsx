@@ -5,7 +5,7 @@ import { X, Mail, Check, RefreshCw } from 'lucide-react';
 import { Account, AccountFormData, AccountProviderType } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
 import { detectPresetByEmail } from '@/lib/emailServerPresets';
-import { accountsApi } from '@/api';
+import { accountsApi } from '@/lib/api';
 import { ImapServerFields } from './ImapServerFields';
 import { SmtpServerFields } from './SmtpServerFields';
 

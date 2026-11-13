@@ -25,7 +25,7 @@ export function AppsPageView() {
     { id: 'calendar', name: 'Calendar', desc: 'Schedule meetings, view daily agenda and manage appointments', href: '/calendar', icon: Calendar, color: 'bg-teal-600 text-white' },
     { id: 'people', name: 'People', desc: 'Address book, contact cards, and team directories', href: '/people', icon: Users, color: 'bg-indigo-600 text-white' },
     { id: 'todo', name: 'To Do', desc: 'Task lists, daily priorities, and deadline management', href: '/todo', icon: CheckSquare, color: 'bg-sky-600 text-white' },
-    { id: 'notes', name: 'Sticky Notes', desc: 'Quick capture notes with color tags and instant search', icon: FileText, color: 'bg-amber-500 text-white', action: () => toggleApp('notes') },
+    { id: 'notes', name: 'Sticky Notes', desc: 'Quick capture notes with color tags and instant search', href: '/notes', icon: FileText, color: 'bg-amber-500 text-white' },
     { id: 'settings', name: 'Preferences', desc: 'Per-account incoming, appearance, junk, sync, and server config', href: '/settings/accounts', icon: Settings, color: 'bg-neutral-600 text-white' },
     { id: 'onedrive', name: 'Cloud Storage', desc: 'Connected Filelink storage and attachment archives', icon: Cloud, color: 'bg-blue-500 text-white', action: () => addToast({ title: 'Cloud Storage', description: 'Filelink cloud storage connected.', type: 'info' }) },
     { id: 'teams', name: 'Chat & Teams', desc: 'Instant collaboration and direct messaging channels', icon: MessageSquare, color: 'bg-violet-600 text-white', action: () => addToast({ title: 'Chat & Collaboration', description: 'Teams integration active.', type: 'info' }) },

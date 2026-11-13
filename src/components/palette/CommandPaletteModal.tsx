@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Search, Mail, Inbox, Send, Archive, Trash2, FileEdit,
+  Search, Mail, Inbox, Send, Archive, Trash2, FileEdit, FileText,
   Sliders, ShieldCheck, HardDrive, Settings, Sun, RefreshCw, X
 } from 'lucide-react';
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
@@ -61,6 +61,7 @@ export function CommandPaletteModal() {
     { id: 'nav-drafts', category: 'Navigation', title: 'Drafts', subtitle: 'View message drafts', icon: FileEdit, action: () => { setSelectedFolder('fld-drafts'); router.push('/mail/u/0#drafts'); } },
     { id: 'nav-archive', category: 'Navigation', title: 'Archive', subtitle: 'View archived mail', icon: Archive, action: () => { setSelectedFolder('fld-archive'); router.push('/mail/u/0#archive'); } },
     { id: 'nav-trash', category: 'Navigation', title: 'Deleted Items', subtitle: 'View deleted messages', icon: Trash2, action: () => { setSelectedFolder('fld-deleted'); router.push('/mail/u/0#trash'); } },
+    { id: 'nav-notes', category: 'Navigation', title: 'Notes', subtitle: 'View and create sticky notes', icon: FileText, action: () => router.push('/notes') },
     { id: 'set-storage', category: 'Settings', title: 'Storage & Quota', subtitle: 'Manage IMAP quota and storage breakdown', icon: HardDrive, action: () => router.push('/settings/accounts/storage') },
     { id: 'set-rules', category: 'Settings', title: 'Rules & Policies', subtitle: 'Configure server-side filtering policies', icon: Sliders, action: () => router.push('/settings/mail/rules') },
     { id: 'set-junk', category: 'Settings', title: 'Spam Filter', subtitle: 'Manage junk threshold & safe senders', icon: ShieldCheck, action: () => router.push('/settings/mail/junk') },

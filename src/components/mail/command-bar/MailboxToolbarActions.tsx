@@ -3,7 +3,7 @@
 import React from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { useMailStore, useToastStore } from '@/stores';
-import { foldersApi } from '@/api';
+import { foldersApi } from '@/lib/api';
 
 interface MailboxToolbarActionsProps {
   folderId: string;

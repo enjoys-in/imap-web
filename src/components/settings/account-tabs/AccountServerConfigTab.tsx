@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Server, Eye, EyeOff, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Account, TransportSecurity } from '@/types';
-import { accountsApi } from '@/api';
+import { accountsApi } from '@/lib/api';
 import { useToastStore } from '@/stores/useToastStore';
 
 interface AccountServerConfigTabProps {

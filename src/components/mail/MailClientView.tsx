@@ -12,7 +12,7 @@ import { RightAppsRail } from '@/components/right-apps/RightAppsRail';
 import { RightAppsPanel } from '@/components/right-apps/RightAppsPanel';
 import { getAccountByUserIndex } from '@/lib/accountRouter';
 import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
-import { emailsApi, foldersApi } from '@/api';
+import { emailsApi, foldersApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { saveOpenMailSession, getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 

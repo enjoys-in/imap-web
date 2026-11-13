@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
-import { emailsApi } from '@/api';
+import { emailsApi } from '@/lib/api';
 import { MOCK_EMAILS_METADATA } from '@/lib/mock';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';

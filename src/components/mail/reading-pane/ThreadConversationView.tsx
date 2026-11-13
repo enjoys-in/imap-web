@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CornerUpLeft, Send, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMailStore, useComposeStore } from '@/stores';
-import { emailsApi } from '@/api';
+import { emailsApi } from '@/lib/api';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { ReadingPaneAttachments } from './ReadingPaneAttachments';

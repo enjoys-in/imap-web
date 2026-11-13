@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Mail, Calendar, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getLastMailRoute } from '@/lib/storage/mailSessionStorage';
 
 interface NavItem {
   id: string;
@@ -22,15 +23,22 @@ const NAV_ITEMS: NavItem[] = [
 
 export function BottomNavigationRail() {
   const pathname = usePathname();
+  const [mailHref, setMailHref] = useState('/mail/u/0');
+
+  useEffect(() => {
+    const route = getLastMailRoute();
+    if (route) setMailHref(route);
+  }, [pathname]);
 
   return (
     <nav className="md:hidden h-14 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-around px-2 shrink-0 select-none z-30">
       {NAV_ITEMS.map(({ id, label, href, icon: Icon }) => {
-        const isActive = pathname.startsWith(href);
+        const targetHref = id === 'mail' ? mailHref : href;
+        const isActive = pathname.startsWith(href) || (id === 'mail' && pathname.startsWith('/mail'));
         return (
           <Link
             key={id}
-            href={href}
+            href={targetHref}
             className={cn(
               'flex flex-col items-center justify-center py-1 px-3 rounded-lg transition-colors text-xs font-medium',
               isActive

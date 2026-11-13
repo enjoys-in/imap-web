@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
-import { accountsApi } from '@/api';
+import { accountsApi } from '@/lib/api';
 import { Account } from '@/types';
 
 interface SessionContextType {

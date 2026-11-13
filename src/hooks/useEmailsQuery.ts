@@ -4,7 +4,7 @@ import {
   foldersApi,
   emailsApi,
   calendarApi,
-} from '@/api';
+} from '@/lib/api';
 import { MailFolder, MailMessageMetadata, Account, Appointment } from '@/types';
 
 export function useAccounts() {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, UserPlus, ExternalLink } from 'lucide-react';
-import { accountsApi } from '@/api';
+import { accountsApi } from '@/lib/api';
 import { Account } from '@/types';
 import { AccountRowItem } from './AccountRowItem';
 import { AddAccountModal } from './AddAccountModal';

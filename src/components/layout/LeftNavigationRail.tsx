@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Mail, Calendar, Users, CheckSquare, LayoutGrid, Settings } from 'lucide-react';
+import { Mail, Calendar, Users, CheckSquare, FileText, LayoutGrid, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getLastMailRoute } from '@/lib/storage/mailSessionStorage';
 
 interface NavItem {
   id: string;
@@ -18,21 +19,29 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'calendar', label: 'Calendar', href: '/calendar', icon: Calendar },
   { id: 'people', label: 'People', href: '/people', icon: Users },
   { id: 'todo', label: 'To Do', href: '/todo', icon: CheckSquare },
+  { id: 'notes', label: 'Notes', href: '/notes', icon: FileText },
   { id: 'apps', label: 'More apps', href: '/apps', icon: LayoutGrid },
 ];
 
 export function LeftNavigationRail() {
   const pathname = usePathname();
+  const [mailHref, setMailHref] = useState('/mail/u/0');
+
+  useEffect(() => {
+    const route = getLastMailRoute();
+    if (route) setMailHref(route);
+  }, [pathname]);
 
   return (
     <aside className="hidden md:flex w-12 bg-neutral-100 dark:bg-[#181818] border-r border-neutral-200 dark:border-neutral-800 flex-col items-center py-2 shrink-0 select-none">
       <div className="flex-1 flex flex-col items-center gap-1.5 w-full">
         {NAV_ITEMS.map(({ id, label, href, icon: Icon }) => {
-          const isActive = pathname.startsWith(href);
+          const targetHref = id === 'mail' ? mailHref : href;
+          const isActive = pathname.startsWith(href) || (id === 'mail' && pathname.startsWith('/mail'));
           return (
             <Link
               key={id}
-              href={href}
+              href={targetHref}
               title={label}
               className={cn(
                 'w-9 h-9 flex items-center justify-center rounded transition-colors relative group cursor-pointer',

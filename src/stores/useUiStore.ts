@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-export type NavSection = 'mail' | 'calendar' | 'people' | 'todo' | 'settings';
+export type NavSection = 'mail' | 'calendar' | 'people' | 'todo' | 'notes' | 'settings';
 
 interface UiState {
   activeSection: NavSection;

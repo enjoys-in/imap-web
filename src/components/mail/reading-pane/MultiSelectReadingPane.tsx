@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Trash2, Flag, Mail, FolderInput, X, ChevronDown, Check } from 'lucide-react';
 import { useMailStore, useToastStore } from '@/stores';
-import { emailsApi } from '@/api';
+import { emailsApi } from '@/lib/api';
 
 interface MultiSelectReadingPaneProps {
   folderName?: string;

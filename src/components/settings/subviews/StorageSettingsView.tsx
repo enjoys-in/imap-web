@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { HardDrive, Trash2, CheckCircle2 } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { useMailStore, useToastStore } from '@/stores';
-import { foldersApi } from '@/api';
+import { foldersApi } from '@/lib/api';
 
 interface FolderStorageItem {
   id: string;

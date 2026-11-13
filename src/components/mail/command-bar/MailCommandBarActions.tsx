@@ -6,7 +6,7 @@ import {
   CornerUpLeft, ReplyAll, CornerUpRight, Mail, Flag, Undo2, ChevronDown
 } from 'lucide-react';
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
-import { emailsApi } from '@/api';
+import { emailsApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { SnoozeMenu } from '../SnoozeMenu';
 

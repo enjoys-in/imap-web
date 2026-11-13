@@ -1,4 +1,4 @@
-import { TransportSecurity, AccountProviderType } from '@/types';
+import { TransportSecurity, AccountProviderType } from "@/types";
 
 export interface EmailServerPreset {
   provider: AccountProviderType;
@@ -11,59 +11,61 @@ export interface EmailServerPreset {
 }
 
 export const PRESETS: Record<string, EmailServerPreset> = {
-  'outlook.com': {
-    provider: 'Outlook.com',
-    imapHost: 'outlook.office365.com',
+  "outlook.com": {
+    provider: "Outlook.com",
+    imapHost: "outlook.office365.com",
     imapPort: 993,
-    imapSecurity: 'SslOnConnect',
-    smtpHost: 'smtp.office365.com',
+    imapSecurity: "SslOnConnect",
+    smtpHost: "smtp.office365.com",
     smtpPort: 587,
-    smtpSecurity: 'StartTls',
+    smtpSecurity: "StartTls",
   },
-  'hotmail.com': {
-    provider: 'Outlook.com',
-    imapHost: 'outlook.office365.com',
+  "hotmail.com": {
+    provider: "Outlook.com",
+    imapHost: "outlook.office365.com",
     imapPort: 993,
-    imapSecurity: 'SslOnConnect',
-    smtpHost: 'smtp.office365.com',
+    imapSecurity: "SslOnConnect",
+    smtpHost: "smtp.office365.com",
     smtpPort: 587,
-    smtpSecurity: 'StartTls',
+    smtpSecurity: "StartTls",
   },
-  'airsend.in': {
-    provider: 'IMAP',
-    imapHost: 'imap.airsend.in',
+  "airsend.in": {
+    provider: "IMAP",
+    imapHost: "mail.enjoys.in",
     imapPort: 993,
-    imapSecurity: 'SslOnConnect',
-    smtpHost: 'smtp.airsend.in',
+    imapSecurity: "SslOnConnect",
+    smtpHost: "mail.airsend.in",
     smtpPort: 587,
-    smtpSecurity: 'StartTls',
+    smtpSecurity: "StartTls",
   },
-  'gmail.com': {
-    provider: 'IMAP',
-    imapHost: 'imap.gmail.com',
+  "gmail.com": {
+    provider: "IMAP",
+    imapHost: "imap.gmail.com",
     imapPort: 993,
-    imapSecurity: 'SslOnConnect',
-    smtpHost: 'smtp.gmail.com',
+    imapSecurity: "SslOnConnect",
+    smtpHost: "smtp.gmail.com",
     smtpPort: 587,
-    smtpSecurity: 'StartTls',
+    smtpSecurity: "StartTls",
   },
 };
 
 export function detectPresetByEmail(email: string): EmailServerPreset {
-  const domain = email.includes('@') ? email.split('@')[1]?.toLowerCase().trim() : '';
+  const domain = email.includes("@")
+    ? email.split("@")[1]?.toLowerCase().trim()
+    : "";
 
   if (domain && PRESETS[domain]) {
     return PRESETS[domain];
   }
 
-  const cleanDomain = domain || 'domain.com';
+  const cleanDomain = domain || "domain.com";
   return {
-    provider: 'IMAP',
+    provider: "IMAP",
     imapHost: `imap.${cleanDomain}`,
     imapPort: 993,
-    imapSecurity: 'SslOnConnect',
+    imapSecurity: "SslOnConnect",
     smtpHost: `smtp.${cleanDomain}`,
     smtpPort: 587,
-    smtpSecurity: 'StartTls',
+    smtpSecurity: "StartTls",
   };
 }

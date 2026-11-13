@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useCalendarNotificationStore } from '@/stores';
-import { calendarApi } from '@/api';
+import { calendarApi } from '@/lib/api';
 import { requestWebPushPermission } from '@/lib/notificationDispatcher';
 
 export function useCalendarNotifications() {

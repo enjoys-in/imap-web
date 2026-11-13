@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Mail, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
 import { useMailStore, useComposeStore } from '@/stores';
-import { emailsApi } from '@/api';
+import { emailsApi } from '@/lib/api';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
 import { MOCK_EMAILS } from '@/lib/mock';
