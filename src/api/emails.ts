@@ -35,8 +35,11 @@ export async function getEmailsMetadata(
     const url = `${apiUrl}/fetch-emails?folderId=${folderId}${accountId ? `&accountId=${accountId}` : ''}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data: MailMessage[] = await res.json();
-    return data.map(({ bodyHtml, bodyText, ...meta }) => meta);
+    const data = await res.json();
+    const rawList: MailMessage[] = Array.isArray(data)
+      ? data
+      : (data.emails || data.result?.emails || data.result || []);
+    return rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
   } catch {
     return MOCK_EMAILS.filter((e) => {
       const matchFolder = e.folderId === folderId || folderId === 'fld-inbox';
@@ -69,8 +72,9 @@ export async function getEmailBody(
     const res = await fetch(`${apiUrl}/fetch-email-body?messageId=${messageId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    saveCachedEmailBody(messageId, data);
-    return data;
+    const body = data.bodyHtml !== undefined ? data : (data.result || data);
+    saveCachedEmailBody(messageId, body);
+    return body;
   } catch {
     const match = MOCK_EMAILS.find((e) => e.id === messageId);
     const body = { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };

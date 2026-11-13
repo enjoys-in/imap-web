@@ -13,7 +13,8 @@ export async function getFolders(accountId: string): Promise<MailFolder[]> {
   try {
     const res = await fetch(`${apiUrl}/fetch-mailboxes?accountId=${accountId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.mailboxes || data.result || []);
   } catch {
     await new Promise((r) => setTimeout(r, 60));
     return MOCK_FOLDERS.filter((f) => f.accountId === accountId || !f.accountId);
@@ -44,7 +45,8 @@ export async function createFolder(
       body: JSON.stringify({ accountId, name, parentFolderId }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    const data = await res.json();
+    return data.result || data;
   } catch {
     return {
       id: `fld-${Date.now()}`,
