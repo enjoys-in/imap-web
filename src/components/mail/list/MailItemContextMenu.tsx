@@ -1,22 +1,10 @@
 'use client';
 
 import React from 'react';
-import { ContextMenu, ContextMenuItem } from '@/components/ui/ContextMenu';
+import { ContextMenu } from '@/components/ui/ContextMenu';
 import { MailMessage, MailMessageMetadata } from '@/types';
-import {
-  CornerUpLeft,
-  ReplyAll,
-  CornerUpRight,
-  Mail,
-  MailOpen,
-  Pin,
-  Flag,
-  Archive,
-  Trash2,
-  FolderInput,
-} from 'lucide-react';
-import { useComposeStore, useMailStore } from '@/stores';
-import { useToastStore } from '@/stores/useToastStore';
+import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { buildMailContextMenuItems, MailContextActions } from './mailContextMenuItems';
 
 interface MailItemContextMenuProps {
   email: MailMessageMetadata | MailMessage | null;
@@ -29,73 +17,97 @@ export function MailItemContextMenu({
   position,
   onClose,
 }: MailItemContextMenuProps) {
-  const openReply = useComposeStore((s) => s.openReply);
-  const openForward = useComposeStore((s) => s.openForward);
-
-  const togglePin = useMailStore((s) => s.togglePin);
-  const toggleFlag = useMailStore((s) => s.toggleFlag);
-  const markAsRead = useMailStore((s) => s.markAsRead);
-  const deleteEmail = useMailStore((s) => s.deleteEmail);
-  const moveEmailToFolder = useMailStore((s) => s.moveEmailToFolder);
-  const addToast = useToastStore((s) => s.addToast);
-
   if (!email || !position) return null;
 
-  const items: ContextMenuItem[] = [
-    {
-      label: 'Reply',
-      icon: CornerUpLeft,
-      onClick: () => openReply(email, false),
+  const actions: MailContextActions = {
+    onReply: (em, replyAll) =>
+      dispatchMailAction({
+        action: replyAll ? 'reply-all' : 'reply',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onForward: (em) =>
+      dispatchMailAction({
+        action: 'forward',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onDelete: (id) =>
+      dispatchMailAction({
+        action: 'delete',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
+    onArchive: (id) =>
+      dispatchMailAction({
+        action: 'archive',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
+    onMoveTo: (id, folderId, folderName) =>
+      dispatchMailAction({
+        action: 'move-to',
+        targetEmailId: id,
+        targetEmail: email,
+        folderId,
+        folderName,
+      }),
+    onToggleRead: (id) =>
+      dispatchMailAction({
+        action: 'toggle-read',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
+    onTogglePin: (id) =>
+      dispatchMailAction({
+        action: 'toggle-pin',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
+    onToggleFlag: (id) =>
+      dispatchMailAction({
+        action: 'toggle-flag',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
+    onSnooze: (id, label) =>
+      dispatchMailAction({
+        action: 'snooze',
+        targetEmailId: id,
+        targetEmail: email,
+        snoozeUntil: label,
+      }),
+    onBlock: (address) => {
+      dispatchMailAction({
+        action: 'report-junk',
+        targetEmailId: email.id,
+        targetEmail: email,
+      });
     },
-    {
-      label: 'Reply All',
-      icon: ReplyAll,
-      onClick: () => openReply(email, true),
+    onReportJunk: (em) =>
+      dispatchMailAction({
+        action: 'report-junk',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onReportPhishing: (em) =>
+      dispatchMailAction({
+        action: 'report-phishing',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onToast: (title, desc, type = 'info') => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('airsend:toast', {
+            detail: { title, description: desc, type },
+          })
+        );
+      }
     },
-    {
-      label: 'Forward',
-      icon: CornerUpRight,
-      onClick: () => openForward(email),
-    },
-    { divider: true, label: '', onClick: () => {} },
-    {
-      label: email.isRead ? 'Mark as unread' : 'Mark as read',
-      icon: email.isRead ? Mail : MailOpen,
-      onClick: () => markAsRead(email.id),
-    },
-    {
-      label: email.isPinned ? 'Unpin' : 'Pin to top',
-      icon: Pin,
-      onClick: () => {
-        togglePin(email.id);
-        addToast({
-          title: email.isPinned ? 'Unpinned' : 'Pinned to Top',
-          description: email.subject,
-          type: 'info',
-        });
-      },
-    },
-    {
-      label: email.isFlagged ? 'Clear flag' : 'Flag message',
-      icon: Flag,
-      onClick: () => toggleFlag(email.id),
-    },
-    { divider: true, label: '', onClick: () => {} },
-    {
-      label: 'Move to Archive',
-      icon: Archive,
-      onClick: () => {
-        moveEmailToFolder(email.id, 'fld-archive');
-        addToast({ title: 'Archived', description: 'Message moved to Archive.', type: 'success' });
-      },
-    },
-    {
-      label: 'Delete',
-      icon: Trash2,
-      destructive: true,
-      onClick: () => deleteEmail(email.id),
-    },
-  ];
+  };
+
+  const items = buildMailContextMenuItems(email, actions);
 
   return <ContextMenu x={position.x} y={position.y} items={items} onClose={onClose} />;
 }

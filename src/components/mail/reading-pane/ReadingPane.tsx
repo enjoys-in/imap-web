@@ -17,6 +17,7 @@ import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
 import { useSession } from '@/components/providers/SessionProvider';
 import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
+import { cn } from '@/lib/utils';
 
 interface ReadingPaneProps {
   activeMailId?: string;
@@ -226,7 +227,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
             onClick={() => setHideHistory((prev) => !prev)}
             className="flex items-center gap-1.5 text-xs font-semibold text-[#0078d4] hover:text-[#106ebe] dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer select-none"
           >
-            {hideHistory ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-250 ease-in-out', hideHistory && '-rotate-90')} />
             <span>
               {hideHistory
                 ? `Show message history${historyMessages.length > 0 ? ` (${historyMessages.length})` : ''}`
@@ -235,72 +236,95 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
           </button>
         </div>
 
-        {!hideHistory && historyMessages.length > 0 && (
-          <div className="px-4 pb-6 space-y-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1">
-              <MessageSquare className="w-3 h-3 text-[#0078d4]" />
-              <span>Earlier messages in conversation</span>
-            </div>
+        {/* Smooth Collapsible History Container */}
+        {historyMessages.length > 0 && (
+          <div
+            className={cn(
+              'grid transition-all duration-300 ease-in-out',
+              !hideHistory ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="px-4 pb-6 space-y-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1">
+                  <MessageSquare className="w-3 h-3 text-[#0078d4]" />
+                  <span>Earlier messages in conversation</span>
+                </div>
 
-            {historyMessages.map((histMsg) => {
-              const isExpanded = expandedHistoryIds.includes(histMsg.id);
-              const histDate = format(new Date(histMsg.date), 'EEE M/d/yyyy h:mm a');
-              const senderName = histMsg.fromName || histMsg.fromAddress;
+                {historyMessages.map((histMsg) => {
+                  const isExpanded = expandedHistoryIds.includes(histMsg.id);
+                  const histDate = format(new Date(histMsg.date), 'EEE M/d/yyyy h:mm a');
+                  const senderName = histMsg.fromName || histMsg.fromAddress;
 
-              return (
-                <div
-                  key={histMsg.id}
-                  className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-neutral-50/70 dark:bg-neutral-800/40 shadow-2xs"
-                >
-                  <div
-                    onClick={() => {
-                      setExpandedHistoryIds((prev) =>
-                        prev.includes(histMsg.id) ? prev.filter((id) => id !== histMsg.id) : [...prev, histMsg.id]
-                      );
-                    }}
-                    className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/70 dark:hover:bg-neutral-800/80 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <BimiAvatar
-                        name={senderName}
-                        email={histMsg.fromAddress}
-                        explicitLogo={histMsg.bimiLogoUrl}
-                        size="sm"
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">
-                            {senderName}
-                          </span>
-                          <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate hidden sm:inline">
-                            &lt;{histMsg.fromAddress}&gt;
-                          </span>
+                  return (
+                    <div
+                      key={histMsg.id}
+                      className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-neutral-50/70 dark:bg-neutral-800/40 shadow-2xs"
+                    >
+                      <div
+                        onClick={() => {
+                          setExpandedHistoryIds((prev) =>
+                            prev.includes(histMsg.id) ? prev.filter((id) => id !== histMsg.id) : [...prev, histMsg.id]
+                          );
+                        }}
+                        className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/70 dark:hover:bg-neutral-800/80 transition-colors select-none"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <BimiAvatar
+                            name={senderName}
+                            email={histMsg.fromAddress}
+                            explicitLogo={histMsg.bimiLogoUrl}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+                                {senderName}
+                              </span>
+                              <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate hidden sm:inline">
+                                &lt;{histMsg.fromAddress}&gt;
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                              to {formatRecipientsWithYou(histMsg.to, myEmails)}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                          to {formatRecipientsWithYou(histMsg.to, myEmails)}
-                        </span>
+
+                        <div className="flex items-center gap-2 shrink-0 text-xs text-neutral-400">
+                          <span className="text-[11px] font-medium hidden sm:inline">{histDate}</span>
+                          <ChevronDown
+                            className={cn(
+                              'w-3.5 h-3.5 transition-transform duration-250 ease-in-out',
+                              !isExpanded && '-rotate-90'
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Smooth Collapsible Historical Message Body */}
+                      <div
+                        className={cn(
+                          'grid transition-all duration-300 ease-in-out',
+                          isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f]">
+                            <ReadingPaneAttachments attachments={histMsg.attachments} />
+                            <SandboxedEmailBody
+                              bodyHtml={histMsg.bodyHtml || ''}
+                              bodyText={histMsg.bodyText || histMsg.preview}
+                              allowExternalImages={allowExternalImages}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0 text-xs text-neutral-400">
-                      <span className="text-[11px] font-medium hidden sm:inline">{histDate}</span>
-                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f]">
-                      <ReadingPaneAttachments attachments={histMsg.attachments} />
-                      <SandboxedEmailBody
-                        bodyHtml={histMsg.bodyHtml || ''}
-                        bodyText={histMsg.bodyText || histMsg.preview}
-                        allowExternalImages={allowExternalImages}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>

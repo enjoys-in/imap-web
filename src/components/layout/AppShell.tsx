@@ -12,6 +12,7 @@ import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { ToastContainer } from '@/components/notifications/ToastContainer';
 import { GlobalAlertDialog } from '@/components/ui/AlertDialog';
 import { LiveEmailSyncBridge } from '@/components/layout/LiveEmailSyncBridge';
+import { MailActionController } from '@/components/mail/MailActionController';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <MailActionController />
       <LiveEmailSyncBridge />
       <TopHeader />
       <OfflineBanner />

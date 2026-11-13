@@ -1,7 +1,7 @@
 import { apiClient, clearAuthToken, setAuthToken } from '../client';
 import { Account } from '@/types';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
-import { isLiveApiAvailable } from '@/config/clientConfig';
+import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
 import { detectPresetByEmail } from '@/lib/emailServerPresets';
 
 export interface AutodiscoverResult {
@@ -75,6 +75,109 @@ export async function login(username: string, password?: string): Promise<AuthLo
   }
 
   return data;
+}
+
+export interface SetupProgressEvent {
+  step: 'init' | 'imap_connect' | 'smtp_verify' | 'mailbox_sync' | 'email_fetch' | 'provision_account' | 'complete' | 'error';
+  status: 'running' | 'success' | 'warning' | 'error';
+  message: string;
+  progress: number;
+  timestamp: string;
+  data?: any;
+  token?: string;
+  user?: any;
+  mailboxes?: any[];
+}
+
+/**
+ * Initiates first-time setup with live SSE streaming updates.
+ * Emits progress events for IMAP authentication, SMTP verification,
+ * mailbox discovery, email pre-fetching, and token issuance.
+ */
+export async function setupAccountStream(
+  config: any,
+  onProgress: (event: SetupProgressEvent) => void
+): Promise<{ user: any; token: string; mailboxes: any[] }> {
+  const { apiUrl } = getClientConfig();
+  const url = `${apiUrl}/setup-stream`;
+
+  onProgress({
+    step: 'init',
+    status: 'running',
+    message: 'Initiating connection handshake...',
+    progress: 5,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      credentials: 'include',
+      body: JSON.stringify(config),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Connection request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult: any = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const jsonStr = trimmed.slice(5).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const event: SetupProgressEvent = JSON.parse(jsonStr);
+          onProgress(event);
+
+          if (event.token || event.data?.token) {
+            setAuthToken(event.token || event.data.token);
+          }
+
+          if (event.step === 'complete') {
+            finalResult = event.data || event;
+          }
+
+          if (event.status === 'error') {
+            throw new Error(event.message || 'Setup failed');
+          }
+        } catch (err: any) {
+          if (err.message && !err.message.includes('JSON')) {
+            throw err;
+          }
+        }
+      }
+    }
+
+    if (finalResult) {
+      return finalResult;
+    }
+  } catch (streamErr: any) {
+    if (streamErr.message && !streamErr.message.includes('fetch')) {
+      throw streamErr;
+    }
+  }
+
+  // Graceful fallback to standard validateNewUser if streaming reader drops
+  const fallback = await validateNewUser(config);
+  return fallback;
 }
 
 /**

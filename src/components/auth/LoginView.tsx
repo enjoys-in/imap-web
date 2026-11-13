@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Sun,
   Moon,
+  Terminal,
 } from 'lucide-react';
 import { accountsApi, type AutodiscoverResult } from '@/lib/api';
 import { useSession } from '@/components/providers/SessionProvider';
@@ -55,6 +56,19 @@ export function LoginView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  // Live Setup Progress State
+  const [isSetupRunning, setIsSetupRunning] = useState(false);
+  const [setupProgress, setSetupProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState<string>('init');
+  const [setupLogs, setSetupLogs] = useState<{ id: string; time: string; text: string; status: 'running' | 'success' | 'warning' | 'error' }[]>([]);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
+  }, [setupLogs]);
 
   // Dark/Light Theme state
   const [isDark, setIsDark] = useState(true);
@@ -175,8 +189,19 @@ export function LoginView() {
     }
 
     setIsSubmitting(true);
+    setIsSetupRunning(true);
+    setSetupProgress(5);
+    setCurrentStep('init');
     setErrorMessage(null);
     setInfoMessage(null);
+    setSetupLogs([
+      {
+        id: `log-${Date.now()}`,
+        time: new Date().toLocaleTimeString(),
+        text: `Starting account provisioning for ${email.trim()}...`,
+        status: 'running',
+      },
+    ]);
 
     try {
       const payload = {
@@ -194,17 +219,41 @@ export function LoginView() {
         display_name: displayName.trim() || email.split('@')[0],
       };
 
-      const res = await accountsApi.validateNewUser(payload);
+      const res = await accountsApi.setupAccountStream(payload, (event) => {
+        setSetupProgress(event.progress);
+        setCurrentStep(event.step);
+        setSetupLogs((prev) => [
+          ...prev,
+          {
+            id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+            time: new Date().toLocaleTimeString(),
+            text: event.message,
+            status: event.status,
+          },
+        ]);
+      });
 
-      if (res && (res.success || res.imap_configured)) {
+      if (res) {
+        setSetupProgress(100);
+        setCurrentStep('complete');
         await refreshSession();
-        router.push('/mail/u/0/#inbox');
-        return;
+        setTimeout(() => {
+          router.push('/mail/u/0/#inbox');
+        }, 1200);
       }
-
-      throw new Error(res?.message || 'Failed to connect to IMAP/SMTP server');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Connection test failed. Please verify credentials and server settings.');
+      const msg = err?.message || 'Connection test failed. Please verify credentials and server settings.';
+      setErrorMessage(msg);
+      setCurrentStep('error');
+      setSetupLogs((prev) => [
+        ...prev,
+        {
+          id: `log-${Date.now()}`,
+          time: new Date().toLocaleTimeString(),
+          text: `Error: ${msg}`,
+          status: 'error',
+        },
+      ]);
     } finally {
       setIsSubmitting(false);
     }
@@ -319,7 +368,150 @@ export function LoginView() {
 
         {/* Form Container */}
         <div className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl shadow-neutral-200/50 dark:shadow-none space-y-5">
-          {mode === 'login' ? (
+          {isSetupRunning ? (
+            /* ──────────────── Live Setup Progress Stepper & Terminal ──────────────── */
+            <div className="space-y-5 select-none">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    {currentStep === 'complete'
+                      ? 'Account Connected!'
+                      : currentStep === 'error'
+                      ? 'Connection Problem'
+                      : 'Connecting Account...'}
+                  </h3>
+                  <p className="text-xs text-neutral-500 truncate mt-0.5 max-w-[280px]">
+                    {email}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg font-extrabold font-mono text-blue-600 dark:text-blue-400">
+                    {setupProgress}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    currentStep === 'error'
+                      ? 'bg-red-500'
+                      : currentStep === 'complete'
+                      ? 'bg-emerald-500'
+                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500'
+                  }`}
+                  style={{ width: `${setupProgress}%` }}
+                />
+              </div>
+
+              {/* Stepper Status List */}
+              <div className="space-y-2 py-1">
+                {[
+                  { id: 'imap_connect', label: 'IMAP TLS Authentication' },
+                  { id: 'smtp_verify', label: 'Outbound SMTP Handshake' },
+                  { id: 'mailbox_sync', label: 'Discovering Mailboxes' },
+                  { id: 'email_fetch', label: 'Pre-fetching Initial Emails' },
+                  { id: 'provision_account', label: 'Finalizing Account & Security Token' },
+                ].map((step, idx) => {
+                  const order = ['init', 'imap_connect', 'smtp_verify', 'mailbox_sync', 'email_fetch', 'provision_account', 'complete'];
+                  const currentIdx = order.indexOf(currentStep);
+                  const thisIdx = order.indexOf(step.id);
+                  let status: 'completed' | 'active' | 'error' | 'pending' = 'pending';
+
+                  if (currentStep === 'complete') status = 'completed';
+                  else if (currentStep === 'error') {
+                    if (currentIdx === thisIdx) status = 'error';
+                    else if (currentIdx > thisIdx) status = 'completed';
+                    else status = 'pending';
+                  } else if (currentIdx > thisIdx) status = 'completed';
+                  else if (currentIdx === thisIdx) status = 'active';
+
+                  return (
+                    <div key={step.id} className="flex items-center gap-3 text-xs">
+                      {status === 'completed' && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+                      {status === 'active' && <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />}
+                      {status === 'error' && <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                      {status === 'pending' && <div className="w-4 h-4 rounded-full border border-neutral-300 dark:border-neutral-700 shrink-0" />}
+
+                      <span
+                        className={`truncate ${
+                          status === 'active'
+                            ? 'font-semibold text-blue-600 dark:text-blue-400'
+                            : status === 'completed'
+                            ? 'text-neutral-700 dark:text-neutral-300'
+                            : status === 'error'
+                            ? 'font-semibold text-red-600 dark:text-red-400'
+                            : 'text-neutral-400 dark:text-neutral-600'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Live Terminal Activity Log */}
+              <div className="rounded-xl overflow-hidden border border-neutral-800 bg-[#0d1117] text-neutral-300 text-xs shadow-inner">
+                <div className="bg-[#161b22] px-3 py-1.5 border-b border-neutral-800 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/80 inline-block" />
+                    <span className="text-[11px] font-mono text-neutral-400 ml-1.5">Live Setup Stream</span>
+                  </div>
+                  <Terminal className="w-3.5 h-3.5 text-neutral-500" />
+                </div>
+                <div
+                  ref={logsContainerRef}
+                  className="p-3 font-mono text-[11px] max-h-44 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-neutral-700 select-text"
+                >
+                  {setupLogs.map((log) => (
+                    <div key={log.id} className="flex items-start gap-2 leading-relaxed">
+                      <span className="text-neutral-500 shrink-0 select-none">[{log.time}]</span>
+                      <span
+                        className={
+                          log.status === 'success'
+                            ? 'text-emerald-400'
+                            : log.status === 'error'
+                            ? 'text-red-400 font-semibold'
+                            : log.status === 'warning'
+                            ? 'text-amber-400'
+                            : 'text-neutral-300'
+                        }
+                      >
+                        {log.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions & Alerts */}
+              {currentStep === 'error' && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSetupRunning(false);
+                      setShowAdvanced(true);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 font-semibold text-xs transition cursor-pointer"
+                  >
+                    Adjust Settings & Try Again
+                  </button>
+                </div>
+              )}
+
+              {currentStep === 'complete' && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-900 dark:text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="font-medium">Setup complete! Redirecting to your mailbox...</span>
+                </div>
+              )}
+            </div>
+          ) : mode === 'login' ? (
             /* ──────────────── Sign In Form ──────────────── */
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>

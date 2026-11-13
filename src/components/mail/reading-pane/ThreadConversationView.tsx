@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CornerUpLeft, Send, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, CornerUpLeft, Send, Trash2, ChevronDown } from 'lucide-react';
 import { useMailStore, useComposeStore } from '@/stores';
 import { emailsApi } from '@/lib/api';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
@@ -13,6 +13,7 @@ import { MailMessage, MailMessageMetadata } from '@/types';
 import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
 import { useSession } from '@/components/providers/SessionProvider';
 import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
+import { cn } from '@/lib/utils';
 
 interface ThreadConversationViewProps {
   mailId: string;
@@ -135,15 +136,29 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
                 </div>
                 <div className="flex items-center gap-2 text-xs text-neutral-400">
                   <span>{sentDate}</span>
-                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <ChevronDown
+                    className={cn(
+                      'w-4 h-4 transition-transform duration-250 ease-in-out',
+                      isExpanded ? 'rotate-180' : 'rotate-0'
+                    )}
+                  />
                 </div>
               </div>
-              {isExpanded && (
-                <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-                  <ReadingPaneAttachments attachments={msg.attachments} />
-                  <SandboxedEmailBody bodyHtml={bodyContent} allowExternalImages={true} />
+
+              {/* Smooth Collapsible Message Body */}
+              <div
+                className={cn(
+                  'grid transition-all duration-300 ease-in-out',
+                  isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <ReadingPaneAttachments attachments={msg.attachments} />
+                    <SandboxedEmailBody bodyHtml={bodyContent} allowExternalImages={true} />
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

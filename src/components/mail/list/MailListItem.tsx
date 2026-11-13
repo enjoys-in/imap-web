@@ -75,7 +75,7 @@ export const MailListItem = React.memo(function MailListItem({
             className="p-0.5 -ml-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer rounded"
             title={isThreadExpanded ? 'Collapse conversation' : 'Expand conversation'}
           >
-            <ChevronRight className={cn('w-3.5 h-3.5 transition-transform duration-150', isThreadExpanded && 'rotate-90 text-[#0078d4]')} />
+            <ChevronRight className={cn('w-3.5 h-3.5 transition-transform duration-250 ease-in-out', isThreadExpanded && 'rotate-90 text-[#0078d4]')} />
           </button>
         )}
 

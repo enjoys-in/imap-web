@@ -46,18 +46,6 @@ export function MailCommandBar() {
             </div>
           )}
 
-          {/* Single Email Deselect Button */}
-          {Boolean(activeEmail) && !isMulti && (
-            <button
-              onClick={() => { setSelectedMail(null); clearSelectedIds(); }}
-              title="Deselect conversation (Return to Mailbox Mode)"
-              className="h-6 px-1.5 rounded text-[11px] text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-            >
-              <X className="w-3 h-3" />
-              <span className="hidden xl:inline">Deselect</span>
-            </button>
-          )}
-
           {/* Mailbox Mode Badge when no email selected */}
           {!hasEmailTarget && (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-200/70 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 text-[11px] font-medium shrink-0">
