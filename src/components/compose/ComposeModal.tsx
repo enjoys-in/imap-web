@@ -4,6 +4,7 @@ import React from 'react';
 import { useComposeStore, useMailStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
+import { emailsApi } from '@/lib/api';
 import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
@@ -83,6 +84,22 @@ export function ComposeModal() {
         );
         useMailStore.setState({ localEmails: [msg, ...updatedList] });
         saveCachedEmails([msg]);
+
+        const toRecipients = to.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+        const ccRecipients = cc ? cc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
+        const bccRecipients = bcc ? bcc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
+
+        emailsApi.sendEmail({
+          to: toRecipients.length > 0 ? toRecipients : to,
+          cc: ccRecipients,
+          bcc: bccRecipients,
+          subject: subject || '(No subject)',
+          bodyText: body,
+          bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+          replyToMessageId: isReplyOrForward ? originalMessageId : undefined,
+        }).catch((err) => {
+          console.error('[SendEmail error]', err);
+        });
       }
     );
   };

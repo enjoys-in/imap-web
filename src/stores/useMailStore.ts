@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
-import { emailsApi } from '@/lib/api';
+import { emailsApi, foldersApi } from '@/lib/api';
 import { MOCK_EMAILS_METADATA } from '@/lib/mock';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
@@ -137,15 +137,19 @@ export const useMailStore = create<MailState>((set, get) => ({
       selectedIds: [],
     };
   }),
-  setSelectedMail: (id) => set((s) => {
-    if (s.selectedMailId === id && (!id || s.localEmails.some((m) => m.id === id && m.isRead))) {
-      return s;
+  setSelectedMail: (id) => {
+    const current = get().localEmails.find((m) => m.id === id);
+    if (get().selectedMailId === id && (!id || current?.isRead)) {
+      return;
     }
-    return {
+    set((s) => ({
       selectedMailId: id,
       localEmails: id ? s.localEmails.map((m) => (m.id === id ? { ...m, isRead: true } : m)) : s.localEmails,
-    };
-  }),
+    }));
+    if (id && current && !current.isRead) {
+      emailsApi.markAsRead(id, true, current.folderId || get().selectedFolderId).catch(() => {});
+    }
+  },
   setFilterTab: (filterTab) => set({ filterTab }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
@@ -155,64 +159,139 @@ export const useMailStore = create<MailState>((set, get) => ({
   selectAllIds: (ids) => set({ selectedIds: ids }),
   clearSelectedIds: () => set({ selectedIds: [] }),
 
-  toggleFlag: (id) => set((s) => ({
-    lastSnapshot: s.localEmails,
-    localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isFlagged: !m.isFlagged } : m)),
-  })),
+  toggleFlag: (id) => {
+    const email = get().localEmails.find((m) => m.id === id);
+    const newFlag = email ? !email.isFlagged : true;
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isFlagged: newFlag } : m)),
+    }));
+    emailsApi.toggleFlag(id, newFlag).catch(() => {});
+  },
   togglePin: (id) => set((s) => ({
     lastSnapshot: s.localEmails,
     localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isPinned: !m.isPinned } : m)),
   })),
-  markAsRead: (id, isRead) => set((s) => ({
-    lastSnapshot: s.localEmails,
-    localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isRead: isRead !== undefined ? isRead : !m.isRead } : m)),
-  })),
-  markFolderAsRead: (folderId) => set((s) => ({
-    lastSnapshot: s.localEmails,
-    localEmails: s.localEmails.map((m) =>
-      m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox')) ? { ...m, isRead: true } : m
-    ),
-  })),
-  emptyFolder: (folderId) => set((s) => ({
-    lastSnapshot: s.localEmails,
-    localEmails: s.localEmails.filter((m) => folderId === 'fld-inbox' ? m.folderId && m.folderId !== 'fld-inbox' : m.folderId !== folderId),
-    selectedMailId: null,
-    selectedIds: [],
-  })),
-  deleteEmail: (id) => set((s) => {
-    const nextEmails = s.localEmails.filter((m) => m.id !== id);
-    return { lastSnapshot: s.localEmails, localEmails: nextEmails, selectedMailId: s.selectedMailId === id ? nextEmails[0]?.id || null : s.selectedMailId };
-  }),
-  moveEmailToFolder: (emailId, folderId) => set((s) => ({
-    lastSnapshot: s.localEmails,
-    localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
-  })),
+  markAsRead: (id, isRead) => {
+    const email = get().localEmails.find((m) => m.id === id);
+    const nextRead = isRead !== undefined ? isRead : email ? !email.isRead : true;
+    const folder = email?.folderId || get().selectedFolderId;
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isRead: nextRead } : m)),
+    }));
+    emailsApi.markAsRead(id, nextRead, folder).catch(() => {});
+  },
+  markFolderAsRead: (folderId) => {
+    const folderEmails = get().localEmails.filter((m) =>
+      m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox'))
+    );
+    const unreadIds = folderEmails.filter((m) => !m.isRead).map((m) => m.id);
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.map((m) =>
+        m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox')) ? { ...m, isRead: true } : m
+      ),
+    }));
+    if (unreadIds.length > 0) {
+      emailsApi.bulkMarkAsRead(unreadIds, true, folderId).catch(() => {});
+    }
+  },
+  emptyFolder: (folderId) => {
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.filter((m) => folderId === 'fld-inbox' ? m.folderId && m.folderId !== 'fld-inbox' : m.folderId !== folderId),
+      selectedMailId: null,
+      selectedIds: [],
+    }));
+    foldersApi.emptyFolder(folderId).catch(() => {});
+  },
+  deleteEmail: (id) => {
+    const email = get().localEmails.find((m) => m.id === id);
+    const folder = email?.folderId || get().selectedFolderId;
+    set((s) => {
+      const nextEmails = s.localEmails.filter((m) => m.id !== id);
+      return {
+        lastSnapshot: s.localEmails,
+        localEmails: nextEmails,
+        selectedMailId: s.selectedMailId === id ? nextEmails[0]?.id || null : s.selectedMailId,
+      };
+    });
+    emailsApi.deleteEmail(id, folder).catch(() => {});
+  },
+  moveEmailToFolder: (emailId, folderId) => {
+    const currentFolder = get().selectedFolderId;
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
+    }));
+    emailsApi.moveEmail(emailId, folderId, currentFolder).catch(() => {});
+  },
   snoozeEmail: (id, _until) => set((s) => ({
     lastSnapshot: s.localEmails,
     localEmails: s.localEmails.filter((m) => m.id !== id),
     selectedMailId: s.selectedMailId === id ? null : s.selectedMailId,
   })),
-  bulkDelete: () => set((s) => {
-    const setIds = new Set(s.selectedIds);
-    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.filter((m) => !setIds.has(m.id)), selectedIds: [], selectedMailId: null };
-  }),
-  bulkMarkAsRead: (isRead) => set((s) => {
-    const setIds = new Set(s.selectedIds);
-    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, isRead } : m)) };
-  }),
-  bulkMoveToFolder: (folderId) => set((s) => {
-    const setIds = new Set(s.selectedIds);
-    return { lastSnapshot: s.localEmails, localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, folderId } : m)), selectedIds: [], selectedMailId: null };
-  }),
-  bulkToggleFlag: (isFlagged) => set((s) => {
-    const setIds = new Set(s.selectedIds);
-    return {
-      lastSnapshot: s.localEmails,
-      localEmails: s.localEmails.map((m) =>
-        setIds.has(m.id) ? { ...m, isFlagged: isFlagged !== undefined ? isFlagged : !m.isFlagged } : m
-      ),
-    };
-  }),
+  bulkDelete: () => {
+    const ids = get().selectedIds;
+    if (ids.length === 0) return;
+    const folder = get().selectedFolderId;
+    set((s) => {
+      const setIds = new Set(s.selectedIds);
+      return {
+        lastSnapshot: s.localEmails,
+        localEmails: s.localEmails.filter((m) => !setIds.has(m.id)),
+        selectedIds: [],
+        selectedMailId: null,
+      };
+    });
+    emailsApi.bulkDeleteEmails(ids, folder).catch(() => {});
+  },
+  bulkMarkAsRead: (isRead) => {
+    const ids = get().selectedIds;
+    if (ids.length === 0) return;
+    const folder = get().selectedFolderId;
+    set((s) => {
+      const setIds = new Set(s.selectedIds);
+      return {
+        lastSnapshot: s.localEmails,
+        localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, isRead } : m)),
+      };
+    });
+    emailsApi.bulkMarkAsRead(ids, isRead, folder).catch(() => {});
+  },
+  bulkMoveToFolder: (folderId) => {
+    const ids = get().selectedIds;
+    if (ids.length === 0) return;
+    const currentFolder = get().selectedFolderId;
+    set((s) => {
+      const setIds = new Set(s.selectedIds);
+      return {
+        lastSnapshot: s.localEmails,
+        localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, folderId } : m)),
+        selectedIds: [],
+        selectedMailId: null,
+      };
+    });
+    emailsApi.bulkMoveEmails(ids, folderId, currentFolder).catch(() => {});
+  },
+  bulkToggleFlag: (isFlagged) => {
+    const ids = get().selectedIds;
+    if (ids.length === 0) return;
+    const targetFlag = isFlagged !== undefined ? isFlagged : true;
+    set((s) => {
+      const setIds = new Set(s.selectedIds);
+      return {
+        lastSnapshot: s.localEmails,
+        localEmails: s.localEmails.map((m) =>
+          setIds.has(m.id) ? { ...m, isFlagged: isFlagged !== undefined ? isFlagged : !m.isFlagged } : m
+        ),
+      };
+    });
+    for (const id of ids) {
+      emailsApi.toggleFlag(id, targetFlag).catch(() => {});
+    }
+  },
   undoLastAction: () => {
     const snap = get().lastSnapshot;
     if (!snap) return false;

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from './types';
 import { CalendarEventCard } from './CalendarEventCard';
+import { getUserTimeInfo } from '@/lib/timezoneUtils';
 import { cn } from '@/lib/utils';
 
 interface CalendarWeekGridProps {
@@ -34,8 +35,17 @@ export function CalendarWeekGrid({
   onEventClick,
   onSelectDayHeader,
 }: CalendarWeekGridProps) {
-  // Current time marker position at ~10:30 (approx (10.5 - 8) * 80px = 200px)
-  const nowLineTop = (10.5 - 8) * 80;
+  const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
+
+  useEffect(() => {
+    const update = () => setTimeInfo(getUserTimeInfo());
+    update();
+    const timer = setInterval(update, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Position relative to 8 AM start of week grid (clamped to grid range)
+  const nowLineTop = Math.min(Math.max((timeInfo.decimalHour - 8) * 80, 0), 15 * 80);
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] select-none">
@@ -88,10 +98,11 @@ export function CalendarWeekGrid({
             className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
             style={{ top: `${nowLineTop}px` }}
           >
-            <div className="-ml-16 px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-xs">
-              10:30 PM
+            <div className="-ml-16 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold shadow-xs flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              <span>{timeInfo.formattedTime}</span>
             </div>
-            <div className="flex-1 border-b-2 border-dashed border-blue-500/80 ml-1" />
+            <div className="flex-1 border-b-2 border-dotted border-red-500/90 dark:border-red-400/90 ml-1" />
           </div>
 
           {DAYS.map((day) => {

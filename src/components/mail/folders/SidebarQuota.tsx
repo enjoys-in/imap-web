@@ -2,22 +2,33 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { HardDrive, ArrowUpRight } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 
 interface SidebarQuotaProps {
   usedMb?: number;
   totalMb?: number;
 }
 
+export const QUOTA_FULL_GRADIENT =
+  'linear-gradient(90deg, #10b981 0%, #84cc16 25%, #eab308 50%, #f97316 75%, #ef4444 100%)';
+
+export function getQuotaBarColor(pct: number): string {
+  if (pct >= 90) return 'linear-gradient(90deg, #f97316, #ef4444)';
+  if (pct >= 75) return 'linear-gradient(90deg, #eab308, #f97316)';
+  if (pct >= 50) return 'linear-gradient(90deg, #10b981, #eab308)';
+  if (pct >= 25) return 'linear-gradient(90deg, #10b981, #84cc16)';
+  return '#10b981';
+}
+
 export function SidebarQuota({
   usedMb = 4235,
   totalMb = 15360,
 }: SidebarQuotaProps) {
-  const pct = Math.round((usedMb / totalMb) * 100);
+  const pct = Math.min(100, Math.max(0, Math.round((usedMb / totalMb) * 100)));
   const usedGb = (usedMb / 1024).toFixed(1);
   const totalGb = (totalMb / 1024).toFixed(0);
 
-  // Determine color theme for percentage badge based on threshold
+  // Determine badge color theme based on threshold
   const badgeColor =
     pct > 75
       ? 'bg-red-100 text-red-700 dark:bg-red-950/70 dark:text-red-300 border-red-300 dark:border-red-800'
@@ -28,72 +39,45 @@ export function SidebarQuota({
       : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
 
   return (
-    <div className="p-2.5 border-t border-neutral-200 dark:border-neutral-800/80 bg-neutral-50/80 dark:bg-[#191919]/60 shrink-0 select-none transition-colors">
+    <div className="p-3 border-t border-neutral-200 dark:border-neutral-800/80 bg-transparent shrink-0 select-none">
       <Link
         href="/settings/accounts/storage"
-        title="Manage Mailbox Quota & Storage"
-        className="group block space-y-2 cursor-pointer"
+        title="Manage Mailbox Storage"
+        className="group block space-y-1.5 cursor-pointer"
       >
-        {/* Top Header: Title, Icon, and Percentage Badge */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300 group-hover:text-[#0078d4] dark:group-hover:text-blue-400 transition-colors">
+        {/* Header: Icon, Label, and Percentage Badge */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300 group-hover:text-[#0078d4] dark:group-hover:text-blue-400 transition-colors font-medium">
             <HardDrive className="w-3.5 h-3.5 text-[#0078d4] shrink-0" />
-            <span className="font-semibold text-xs tracking-tight">Quota</span>
+            <span>Quota</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span
-              className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none ${badgeColor}`}
-            >
-              {pct}%
-            </span>
-            <ArrowUpRight className="w-3 h-3 text-neutral-400 group-hover:text-[#0078d4] dark:group-hover:text-blue-400 transition-colors" />
-          </div>
-        </div>
-
-        {/* Used and Total capacity */}
-        <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-          <span>{usedGb} GB used</span>
-          <span className="text-neutral-400 dark:text-neutral-500 font-mono text-[10px]">
-            of {totalGb} GB
+          <span
+            className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none ${badgeColor}`}
+          >
+            {pct}%
           </span>
         </div>
 
-        {/* Gradient Progress Bar: Green (0-25%) -> Yellow (25-50%) -> Orange (50-75%) -> Red (75-100%) */}
-        <div className="relative w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden border border-neutral-300/40 dark:border-neutral-700/40">
+        {/* Minimized Height Progress Bar (Full-track gradient revealed proportionally without premature red) */}
+        <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative">
           <div
             className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
-            style={{
-              width: `${pct}%`,
-              background:
-                'linear-gradient(90deg, #10b981 0%, #84cc16 25%, #eab308 50%, #f97316 75%, #ef4444 100%)',
-            }}
-          />
-          {/* Subtle tick markers for 25%, 50%, 75% */}
-          <div className="absolute inset-0 pointer-events-none">
-            <span className="absolute top-0 bottom-0 left-[25%] w-[1px] bg-white/40 dark:bg-black/40" />
-            <span className="absolute top-0 bottom-0 left-[50%] w-[1px] bg-white/40 dark:bg-black/40" />
-            <span className="absolute top-0 bottom-0 left-[75%] w-[1px] bg-white/40 dark:bg-black/40" />
+            style={{ width: `${pct}%` }}
+          >
+            <div
+              className="absolute inset-y-0 left-0"
+              style={{
+                width: `${pct > 0 ? (100 / pct) * 100 : 100}%`,
+                background: QUOTA_FULL_GRADIENT,
+              }}
+            />
           </div>
         </div>
 
-        {/* 25%, 50%, 75%, 100% threshold indicators */}
-        <div className="flex justify-between items-center text-[9px] font-mono select-none pt-0.5">
-          <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-            <span className="w-1 h-1 rounded-full bg-emerald-500 inline-block" />
-            25%
-          </span>
-          <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
-            <span className="w-1 h-1 rounded-full bg-amber-500 inline-block" />
-            50%
-          </span>
-          <span className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400">
-            <span className="w-1 h-1 rounded-full bg-orange-500 inline-block" />
-            75%
-          </span>
-          <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400">
-            <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
-            100%
-          </span>
+        {/* Used and Total Capacity */}
+        <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+          <span>{usedGb} GB used</span>
+          <span>of {totalGb} GB</span>
         </div>
       </Link>
     </div>

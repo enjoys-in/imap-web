@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 interface CalendarEventCardProps {
   event: CalendarEvent;
   onClick: (event: CalendarEvent) => void;
+  startHourOffset?: number;
 }
 
 const COLOR_STYLES: Record<
@@ -63,7 +64,7 @@ const COLOR_STYLES: Record<
   },
 };
 
-export function CalendarEventCard({ event, onClick }: CalendarEventCardProps) {
+export function CalendarEventCard({ event, onClick, startHourOffset = 8 }: CalendarEventCardProps) {
   const styles = COLOR_STYLES[event.color] || COLOR_STYLES.blue;
 
   return (
@@ -78,7 +79,7 @@ export function CalendarEventCard({ event, onClick }: CalendarEventCardProps) {
         event.striped && 'calendar-striped-bg'
       )}
       style={{
-        top: `${(event.startHour - 8) * 80 + 2}px`,
+        top: `${(event.startHour - startHourOffset) * 80 + 2}px`,
         height: `${event.durationHours * 80 - 4}px`,
       }}
     >

@@ -14,9 +14,11 @@ import { CalendarWeekGrid } from './CalendarWeekGrid';
 import { CalendarDayView } from './CalendarDayView';
 import { CalendarMonthView } from './CalendarMonthView';
 import { useCalendarState } from './useCalendarState';
+import { useAlertStore } from '@/stores';
 
 export function CalendarView() {
   const s = useCalendarState();
+  const showAlert = useAlertStore((st) => st.showAlert);
 
   const filteredEvents = s.searchQuery.trim()
     ? s.events.filter((e) =>
@@ -83,8 +85,22 @@ export function CalendarView() {
           }}
           projects={s.projects}
           onAddProject={() => s.setAddProjectModalOpen(true)}
-          onOpenSettings={() => alert('Calendar & Workspace settings')}
-          onOpenReleaseNotes={() => alert('Release notes: Studio Calendar v2.4')}
+          onOpenSettings={() =>
+            showAlert({
+              title: 'Calendar & Workspace Settings',
+              description:
+                'Manage appointment notifications, calendar timezones, and workspace defaults.',
+              type: 'info',
+            })
+          }
+          onOpenReleaseNotes={() =>
+            showAlert({
+              title: 'Studio Calendar v2.4 — Release Notes',
+              description:
+                '• Full-width Day Calendar View with 24-hour scale\n• Live current time dotted indicator with auto-scroll\n• System timezone integration (Asia/Kolkata / GMT+5:30)\n• Multi-project workspace tabs and real-time scheduling',
+              type: 'info',
+            })
+          }
         />
 
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -154,7 +170,11 @@ export function CalendarView() {
         open={s.inviteModalOpen}
         onClose={() => s.setInviteModalOpen(false)}
         onInviteSent={(email, role) => {
-          alert(`Invited ${email} as ${role} to ${s.selectedProject}!`);
+          showAlert({
+            title: 'Invitation Sent',
+            description: `Successfully invited ${email} as ${role} to ${s.selectedProject}.`,
+            type: 'success',
+          });
         }}
       />
 

@@ -1,4 +1,5 @@
 import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
+import { getAuthToken } from '../client';
 
 /**
  * Standardized IMAP IDLE Server-Sent Event types emitted by backend /api/stream.
@@ -60,7 +61,9 @@ export function subscribeToEmailStream(handlers: EmailStreamHandlers): () => voi
   }
 
   const { apiUrl } = getClientConfig();
-  const streamUrl = `${apiUrl}/stream`;
+  const token = getAuthToken();
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  const streamUrl = `${apiUrl}/stream${tokenParam}`;
 
   const eventSource = new EventSource(streamUrl, { withCredentials: true });
 

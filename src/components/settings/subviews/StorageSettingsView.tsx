@@ -5,6 +5,7 @@ import { HardDrive, Trash2, CheckCircle2 } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { useMailStore, useToastStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
+import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
 
 interface FolderStorageItem {
   id: string;
@@ -68,41 +69,20 @@ export function StorageSettingsView() {
           </span>
         </div>
 
-        {/* Progress Bar with Gradient */}
-        <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative border border-neutral-300/40 dark:border-neutral-700/40">
+        {/* Minimized Progress Bar with True Full-Track Gradient */}
+        <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative">
           <div
-            style={{
-              width: `${percentUsed}%`,
-              background: 'linear-gradient(90deg, #10b981 0%, #84cc16 25%, #eab308 50%, #f97316 75%, #ef4444 100%)',
-            }}
-            className="h-full rounded-full transition-all duration-300 relative"
-          />
-          {/* Subtle tick markers for 25%, 50%, 75% */}
-          <div className="absolute inset-0 pointer-events-none">
-            <span className="absolute top-0 bottom-0 left-[25%] w-[1px] bg-white/40 dark:bg-black/40" />
-            <span className="absolute top-0 bottom-0 left-[50%] w-[1px] bg-white/40 dark:bg-black/40" />
-            <span className="absolute top-0 bottom-0 left-[75%] w-[1px] bg-white/40 dark:bg-black/40" />
+            className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
+            style={{ width: `${percentUsed}%` }}
+          >
+            <div
+              className="absolute inset-y-0 left-0"
+              style={{
+                width: `${percentUsed > 0 ? (100 / percentUsed) * 100 : 100}%`,
+                background: QUOTA_FULL_GRADIENT,
+              }}
+            />
           </div>
-        </div>
-
-        {/* 25 50 75 100 percent scale */}
-        <div className="flex justify-between items-center text-[10px] font-mono select-none pt-0.5">
-          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            25%
-          </span>
-          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-            50%
-          </span>
-          <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
-            75%
-          </span>
-          <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
-            100%
-          </span>
         </div>
 
         <p className="text-[11px] text-neutral-500">

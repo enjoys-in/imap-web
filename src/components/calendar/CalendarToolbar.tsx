@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search, Command } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe } from 'lucide-react';
 import { CalendarViewMode } from './types';
+import { getUserTimeInfo } from '@/lib/timezoneUtils';
 import { cn } from '@/lib/utils';
 
 interface CalendarToolbarProps {
@@ -26,6 +27,12 @@ export function CalendarToolbar({
   onSearchChange,
   onNewSchedule,
 }: CalendarToolbarProps) {
+  const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
+
+  useEffect(() => {
+    setTimeInfo(getUserTimeInfo());
+  }, []);
+
   return (
     <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-4 flex items-center justify-between gap-3 shrink-0 select-none">
       {/* Left: View Switcher (Day/Week/Month) & Date Navigation */}
@@ -70,6 +77,13 @@ export function CalendarToolbar({
           >
             <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* User Timezone indicator */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+          <Globe className="w-3.5 h-3.5 text-[#0078d4]" />
+          <span>{timeInfo.timeZone}</span>
+          <span className="text-[10px] font-mono text-neutral-400">({timeInfo.tzAbbr})</span>
         </div>
       </div>
 

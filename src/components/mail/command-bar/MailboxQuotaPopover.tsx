@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { HardDrive, ExternalLink, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
 
 interface MailboxQuotaPopoverProps {
   isHighlighted?: boolean;
@@ -73,11 +74,19 @@ export function MailboxQuotaPopover({ isHighlighted }: MailboxQuotaPopoverProps)
               </span>
             </div>
 
-            <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden relative">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-[#0078d4] rounded-full transition-all"
+                className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
                 style={{ width: `${pct}%` }}
-              />
+              >
+                <div
+                  className="absolute inset-y-0 left-0"
+                  style={{
+                    width: `${pct > 0 ? (100 / pct) * 100 : 100}%`,
+                    background: QUOTA_FULL_GRADIENT,
+                  }}
+                />
+              </div>
             </div>
 
             <div className="pt-1 text-[11px] text-neutral-500 dark:text-neutral-400">

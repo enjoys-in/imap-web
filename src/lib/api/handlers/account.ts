@@ -2,6 +2,27 @@ import { apiClient, clearAuthToken, setAuthToken } from '../client';
 import { Account } from '@/types';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { isLiveApiAvailable } from '@/config/clientConfig';
+import { detectPresetByEmail } from '@/lib/emailServerPresets';
+
+export interface AutodiscoverResult {
+  success: boolean;
+  source: 'preset' | 'thunderbird' | 'outlook' | 'mx' | 'heuristic';
+  domain: string;
+  email: string;
+  displayName?: string;
+  imap: {
+    host: string;
+    port: number;
+    secure: boolean;
+    username: string;
+  };
+  smtp: {
+    host: string;
+    port: number;
+    secure: boolean;
+    username: string;
+  };
+}
 
 export interface CreateAccountDto {
   displayName: string;
@@ -206,4 +227,48 @@ export async function getConnectionStatus(): Promise<ConnectionStatusResponse> {
   } catch {
     return { connected: false };
   }
+}
+
+/**
+ * Autodiscovers IMAP and SMTP server parameters using:
+ * 1. Backend XML Autoconfig (Mozilla Thunderbird / Outlook Autodiscover XML)
+ * 2. DNS MX inspection
+ * 3. Client provider presets
+ */
+export async function autodiscover(email: string): Promise<AutodiscoverResult> {
+  const cleanEmail = email.trim();
+  const domain = cleanEmail.includes('@')
+    ? cleanEmail.split('@')[1]?.toLowerCase().trim()
+    : '';
+
+  try {
+    const res = await apiClient.get<any>(
+      `/autodiscover?email=${encodeURIComponent(cleanEmail)}`
+    );
+    if (res?.result?.imap) {
+      return res.result;
+    }
+  } catch {
+    // fallback to client preset heuristics
+  }
+
+  const preset = detectPresetByEmail(cleanEmail);
+  return {
+    success: true,
+    source: 'preset',
+    domain: domain || 'domain.com',
+    email: cleanEmail,
+    imap: {
+      host: preset.imapHost,
+      port: preset.imapPort,
+      secure: preset.imapSecurity === 'SslOnConnect',
+      username: cleanEmail,
+    },
+    smtp: {
+      host: preset.smtpHost,
+      port: preset.smtpPort,
+      secure: preset.smtpSecurity === 'SslOnConnect',
+      username: cleanEmail,
+    },
+  };
 }
