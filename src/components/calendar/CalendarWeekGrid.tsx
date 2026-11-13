@@ -32,6 +32,7 @@ export function CalendarWeekGrid({
   events,
   onSlotClick,
   onEventClick,
+  onSelectDayHeader,
 }: CalendarWeekGridProps) {
   // Current time marker position at ~10:30 (approx (10.5 - 8) * 80px = 200px)
   const nowLineTop = (10.5 - 8) * 80;

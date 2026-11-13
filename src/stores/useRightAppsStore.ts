@@ -19,6 +19,7 @@ export interface NoteItem {
   content: string;
   color: 'yellow' | 'blue' | 'green' | 'pink' | 'purple';
   updatedAt: string;
+  isPinned?: boolean;
 }
 
 interface RightAppsState {
@@ -33,6 +34,7 @@ interface RightAppsState {
   deleteTodo: (id: string) => void;
   addNote: (title: string, content: string, color?: NoteItem['color']) => void;
   updateNote: (id: string, updates: Partial<NoteItem>) => void;
+  togglePinNote: (id: string) => void;
   deleteNote: (id: string) => void;
 }
 
@@ -45,8 +47,38 @@ const INITIAL_TODOS: TodoItem[] = [
 ];
 
 const INITIAL_NOTES: NoteItem[] = [
-  { id: 'note-1', title: 'SMTP Server Config', content: 'Host: mail.enjoys.in\nPort: 587\nUser: mullayam06@airsend.in\nSecurity: STARTTLS', color: 'yellow', updatedAt: new Date().toISOString() },
-  { id: 'note-2', title: 'Meeting Notes: Sprint Review', content: 'Key focus for next release:\n1. Multi-account tab isolation\n2. Real-time background sync', color: 'blue', updatedAt: new Date().toISOString() },
+  {
+    id: 'note-1',
+    title: 'SMTP Server Config',
+    content: 'Host: mail.enjoys.in\nPort: 587\nUser: mullayam06@airsend.in\nSecurity: STARTTLS',
+    color: 'yellow',
+    updatedAt: new Date().toISOString(),
+    isPinned: true,
+  },
+  {
+    id: 'note-2',
+    title: 'Meeting Notes: Sprint Review',
+    content: 'Key focus for next release:\n1. Multi-account tab isolation\n2. Real-time background sync\n3. Instant search indexer',
+    color: 'blue',
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    isPinned: true,
+  },
+  {
+    id: 'note-3',
+    title: 'IMAP Protocol Reference',
+    content: 'Common RFC-3501 flags:\n- \\Seen\n- \\Answered\n- \\Flagged\n- \\Deleted\n- \\Draft\nCommands: UID SEARCH, UID FETCH, IDLE',
+    color: 'green',
+    updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    isPinned: false,
+  },
+  {
+    id: 'note-4',
+    title: 'Product Roadmap & Ideas',
+    content: '1. Offline local database storage\n2. Color-coded sticky note boards\n3. Quick markdown export & formatting',
+    color: 'purple',
+    updatedAt: new Date(Date.now() - 172800000).toISOString(),
+    isPinned: false,
+  },
 ];
 
 function loadPersistedData() {
@@ -141,6 +173,13 @@ export const useRightAppsStore = create<RightAppsState>((set, get) => {
     updateNote: (id, updates) =>
       set((s) => {
         const next = s.notes.map((n) => (n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n));
+        persistData(s.todos, next);
+        return { notes: next };
+      }),
+
+    togglePinNote: (id) =>
+      set((s) => {
+        const next = s.notes.map((n) => (n.id === id ? { ...n, isPinned: !n.isPinned } : n));
         persistData(s.todos, next);
         return { notes: next };
       }),

@@ -61,6 +61,12 @@ export const MOCK_EMAILS_METADATA: MailMessageMetadata[] = [
 
   // Account 3: mullayam06@airsend.in (acc-4)
   createMeta('msg-airsend-1', 'acc-4', 'AirSend Mailbox Initialized Successfully', 'AirSend System', 'system@airsend.in', 'mullayam06@airsend.in', '2026-11-13T08:00:00.000Z', 'Welcome to AirSend. Your modern, privacy-first web mail client is synchronized...', { isPinned: true }),
+
+  // Notes in fld-notes
+  createMeta('note-smtp-config', 'acc-1', 'SMTP Server Config & Ports', 'AirSend Notes', 'notes@airsend.in', 'mullayam06@outlook.com', '2026-11-13T10:00:00.000Z', 'Host: mail.enjoys.in | Port: 587 | User: mullayam06@airsend.in | Security: STARTTLS...', { folderId: 'fld-notes', isPinned: true }),
+  createMeta('note-sprint-review', 'acc-1', 'Meeting Notes: Sprint Review', 'AirSend Notes', 'notes@airsend.in', 'mullayam06@outlook.com', '2026-11-12T16:30:00.000Z', 'Key focus for next release: Multi-account tab isolation, Real-time background sync...', { folderId: 'fld-notes', isPinned: true }),
+  createMeta('note-imap-commands', 'acc-1', 'IMAP Protocol Reference & RFC Standards', 'AirSend Notes', 'notes@airsend.in', 'mullayam06@outlook.com', '2026-11-11T14:15:00.000Z', 'Standard flags: \\Seen, \\Answered, \\Flagged, \\Deleted, \\Draft. Commands: UID FETCH, IDLE...', { folderId: 'fld-notes' }),
+  createMeta('note-roadmap-ideas', 'acc-1', 'Product Roadmap Ideas & Feature Backlog', 'AirSend Notes', 'notes@airsend.in', 'mullayam06@outlook.com', '2026-11-10T11:00:00.000Z', 'Ideas for upcoming milestones: Offline database cache, sticky notes workspace, export options...', { folderId: 'fld-notes' }),
 ];
 
 export const MOCK_THREAD_SUB_MESSAGES: Record<string, MailMessageMetadata[]> = {

@@ -14,6 +14,7 @@ import { getAccountByUserIndex } from '@/lib/accountRouter';
 import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
 import { emailsApi, foldersApi } from '@/api';
 import { cn } from '@/lib/utils';
+import { saveOpenMailSession, getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 
 interface MailClientViewProps {
   userIndex?: number | string;
@@ -62,18 +63,27 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
     if (typeof window === 'undefined') return;
     const clean = window.location.hash.replace(/^#\/?/, '').trim();
 
-    // If no hash or folder removed (e.g. /mail/u/0): check all mailboxes, resolve Inbox, and default open
+    // If no hash or folder removed (e.g. /mail/u/0 or /mail/u/0/):
     if (!clean) {
-      const mailboxes = await foldersApi.getFolders(activeAccount.id);
-      const inboxBox = mailboxes.find((f) => f.special === 'Inbox' || f.id === 'fld-inbox') || mailboxes[0];
-      const targetFolderId = inboxBox?.id || 'fld-inbox';
-      const targetSlug = folderIdToSlug(targetFolderId);
+      const savedSession = getOpenMailSession(parsedUserIndex);
+      if (savedSession && savedSession.mailId) {
+        const targetFolderId = savedSession.folderId || 'fld-inbox';
+        const targetSlug = savedSession.folderSlug || 'inbox';
+        setSelectedFolder(targetFolderId);
+        setSelectedMail(savedSession.mailId);
+        window.history.replaceState(null, '', `#${targetSlug}/${savedSession.mailId}`);
+        return;
+      }
+
+      const storeList = useMailStore.getState().localEmails;
+      const targetFolderId = 'fld-inbox';
+      const inboxList = storeList.filter((e) => !e.folderId || e.folderId === 'fld-inbox');
+      const firstId = inboxList[0]?.id || 'msg-candidate-outreach';
 
       setSelectedFolder(targetFolderId);
-      window.history.replaceState(null, '', `#${targetSlug}`);
-
-      const list = await emailsApi.getEmailsMetadata(targetFolderId, activeAccount.id);
-      if (list.length > 0) setSelectedMail(list[0].id);
+      setSelectedMail(firstId);
+      saveOpenMailSession(parsedUserIndex, targetFolderId, 'inbox', firstId);
+      window.history.replaceState(null, '', `#inbox/${firstId}`);
       return;
     }
 
@@ -85,28 +95,44 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
       const exists = useMailStore.getState().localEmails.some((e) => e.id === mailId);
       if (exists) {
         setSelectedMail(mailId);
+        saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
       } else {
         const fetched = await emailsApi.getEmailById(mailId);
         if (fetched) {
           addOrSelectEmail(fetched);
+          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
         } else {
           window.location.hash = `#${folderSlug}`;
           setSelectedMail(null);
         }
       }
     } else {
+      // Navigated to `#${folderSlug}` without mailId, check if session has mail for this folder
+      const savedSession = getOpenMailSession(parsedUserIndex);
+      if (savedSession && savedSession.folderSlug === folderSlug && savedSession.mailId) {
+        setSelectedMail(savedSession.mailId);
+        window.history.replaceState(null, '', `#${folderSlug}/${savedSession.mailId}`);
+        return;
+      }
+
       const storeList = useMailStore.getState().localEmails;
       const folderList = storeList.filter((e) =>
         targetFolderId === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === targetFolderId
       );
       if (folderList.length > 0) {
         setSelectedMail(folderList[0].id);
+        saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, folderList[0].id);
+        window.history.replaceState(null, '', `#${folderSlug}/${folderList[0].id}`);
       } else {
         const list = await emailsApi.getEmailsMetadata(targetFolderId, activeAccount.id);
-        if (list.length > 0) setSelectedMail(list[0].id);
+        if (list.length > 0) {
+          setSelectedMail(list[0].id);
+          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, list[0].id);
+          window.history.replaceState(null, '', `#${folderSlug}/${list[0].id}`);
+        }
       }
     }
-  }, [activeAccount.id, setSelectedFolder, setSelectedMail, addOrSelectEmail]);
+  }, [activeAccount.id, parsedUserIndex, setSelectedFolder, setSelectedMail, addOrSelectEmail]);
 
   useEffect(() => {
     syncFromHash();
@@ -117,14 +143,25 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   const handleFolderChange = (folderId: string) => {
     const slug = folderIdToSlug(folderId);
     setSelectedFolder(folderId);
-    setSelectedMail(null);
     if (isSidebarOpen) toggleSidebar();
-    if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
+    
+    // Pick active mail for this folder from session or first mail
+    const storeList = useMailStore.getState().localEmails;
+    const folderList = storeList.filter((e) =>
+      folderId === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === folderId
+    );
+    const targetMailId = folderList[0]?.id || null;
+    setSelectedMail(targetMailId);
+    saveOpenMailSession(parsedUserIndex, folderId, slug, targetMailId);
+    if (typeof window !== 'undefined') {
+      window.location.hash = targetMailId ? `#${slug}/${targetMailId}` : `#${slug}`;
+    }
   };
 
   const handleMailChange = (mailId: string) => {
     const slug = folderIdToSlug(activeFolderId);
     setSelectedMail(mailId);
+    saveOpenMailSession(parsedUserIndex, activeFolderId, slug, mailId);
     if (typeof window !== 'undefined') window.location.hash = `#${slug}/${mailId}`;
   };
 

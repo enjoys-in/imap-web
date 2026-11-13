@@ -2,7 +2,7 @@ import { AppConfig } from './env';
 
 // In-memory runtime configuration store for client-side execution
 let memoryConfig: AppConfig = {
-  apiUrl: '',
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7654/api',
   appName: 'AirSend',
   appVersion: '1.0.0',
   nodeEnv: 'development',
@@ -29,5 +29,5 @@ export function getClientConfig(): AppConfig {
 
 export function isLiveApiAvailable(): boolean {
   const config = getClientConfig();
-  return Boolean(config.apiUrl && !config.apiUrl.includes('3001'));
+  return Boolean(config.apiUrl);
 }

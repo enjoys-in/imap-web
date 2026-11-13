@@ -303,4 +303,56 @@ export const MOCK_BODIES_MAP: Record<string, { bodyHtml?: string; bodyText?: str
     bodyHtml: AIRSEND_1_BODY_HTML,
     bodyText: 'Welcome to AirSend Web Mail. Your modern, privacy-first web mail client is synchronized with IMAP/SMTP.\n\nThe AirSend Team',
   },
+  'note-smtp-config': {
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 13.5px; padding: 12px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a;">
+      <h3 style="margin-top: 0; color: #92400e; font-size: 16px;">📌 SMTP & IMAP Production Config</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr style="border-bottom: 1px solid #fef3c7;"><td style="padding: 6px 0; font-weight: 600;">Incoming IMAP:</td><td>mail.enjoys.in (Port 993 / SSL)</td></tr>
+        <tr style="border-bottom: 1px solid #fef3c7;"><td style="padding: 6px 0; font-weight: 600;">Outgoing SMTP:</td><td>mail.enjoys.in (Port 587 / STARTTLS)</td></tr>
+        <tr style="border-bottom: 1px solid #fef3c7;"><td style="padding: 6px 0; font-weight: 600;">Username:</td><td>mullayam06@airsend.in</td></tr>
+        <tr><td style="padding: 6px 0; font-weight: 600;">Authentication:</td><td>Plain / LOGIN with TLS encryption</td></tr>
+      </table>
+    </div>`,
+    bodyText: 'SMTP & IMAP Production Config\n\nIncoming IMAP: mail.enjoys.in (Port 993 / SSL)\nOutgoing SMTP: mail.enjoys.in (Port 587 / STARTTLS)\nUsername: mullayam06@airsend.in\nAuthentication: Plain / LOGIN with TLS encryption',
+  },
+  'note-sprint-review': {
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 13.5px; padding: 12px; background: #eff6ff; border-radius: 8px; border: 1px solid #bfdbfe;">
+      <h3 style="margin-top: 0; color: #1e40af; font-size: 16px;">📋 Meeting Notes: Sprint Review</h3>
+      <p style="margin-bottom: 8px;">Key focus areas agreed for the next release cycle:</p>
+      <ol style="padding-left: 20px; margin: 0;">
+        <li>Multi-account tab isolation and state preservation</li>
+        <li>Real-time background IMAP synchronization and push alerts</li>
+        <li>Instant client-side search indexer with fast filtering</li>
+        <li>Sticky notes canvas integration with color tagging</li>
+      </ol>
+    </div>`,
+    bodyText: 'Meeting Notes: Sprint Review\n\nKey focus areas agreed for the next release cycle:\n1. Multi-account tab isolation and state preservation\n2. Real-time background IMAP synchronization and push alerts\n3. Instant client-side search indexer with fast filtering\n4. Sticky notes canvas integration with color tagging',
+  },
+  'note-imap-commands': {
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 13.5px; padding: 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #a7f3d0;">
+      <h3 style="margin-top: 0; color: #065f46; font-size: 16px;">⚡ IMAP Protocol Quick Reference</h3>
+      <p>Standard RFC-3501 flags supported by server:</p>
+      <ul style="padding-left: 20px; font-family: monospace; font-size: 12px;">
+        <li>\\Seen — Message has been read</li>
+        <li>\\Answered — Message has been replied to</li>
+        <li>\\Flagged — Message marked for urgent attention</li>
+        <li>\\Deleted — Message marked for expunging</li>
+        <li>\\Draft — Message composition incomplete</li>
+      </ul>
+      <p style="margin-bottom: 0;">Commands: <code>UID FETCH</code>, <code>UID STORE</code>, <code>UID SEARCH</code>, <code>IDLE</code></p>
+    </div>`,
+    bodyText: 'IMAP Protocol Quick Reference\n\nStandard RFC-3501 flags supported by server:\n\\Seen, \\Answered, \\Flagged, \\Deleted, \\Draft\n\nCommands: UID FETCH, UID STORE, UID SEARCH, IDLE',
+  },
+  'note-roadmap-ideas': {
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 13.5px; padding: 12px; background: #faf5ff; border-radius: 8px; border: 1px solid #e9d5ff;">
+      <h3 style="margin-top: 0; color: #6b21a8; font-size: 16px;">💡 Product Roadmap Ideas & Backlog</h3>
+      <ul style="padding-left: 20px; margin: 0;">
+        <li>Offline local database cache using IndexedDB</li>
+        <li>Color-coded sticky note board view with pin/unpin toggles</li>
+        <li>Quick export of notes to markdown or drafts</li>
+        <li>Custom tags and categorized search across all accounts</li>
+      </ul>
+    </div>`,
+    bodyText: 'Product Roadmap Ideas & Backlog\n\n- Offline local database cache using IndexedDB\n- Color-coded sticky note board view with pin/unpin toggles\n- Quick export of notes to markdown or drafts\n- Custom tags and categorized search across all accounts',
+  },
 };

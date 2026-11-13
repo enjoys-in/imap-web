@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
 import { emailsApi } from '@/api';
+import { MOCK_EMAILS_METADATA } from '@/lib/mock';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
+import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
 
@@ -44,15 +46,45 @@ interface MailState {
   undoLastAction: () => boolean;
 }
 
+function getInitialState() {
+  const defaultAccId = 'acc-1';
+  let initialFolder = 'fld-inbox';
+  let initialMailId: string | null = 'msg-candidate-outreach';
+
+  if (typeof window !== 'undefined') {
+    const saved = getOpenMailSession(0);
+    if (saved) {
+      if (saved.folderId) initialFolder = saved.folderId;
+      if (saved.mailId) initialMailId = saved.mailId;
+    }
+  }
+
+  const initialList = MOCK_EMAILS_METADATA.filter((e) => e.accountId === defaultAccId);
+  if (!initialMailId && initialList.length > 0) {
+    initialMailId = initialList[0].id;
+  }
+
+  return {
+    selectedAccountId: defaultAccId,
+    selectedAccountIndex: 0,
+    selectedFolderId: initialFolder,
+    selectedMailId: initialMailId,
+    localEmails: initialList,
+    isLoadingEmails: false,
+  };
+}
+
+const initialState = getInitialState();
+
 export const useMailStore = create<MailState>((set, get) => ({
-  selectedAccountId: 'acc-1',
-  selectedAccountIndex: 0,
-  selectedFolderId: 'fld-inbox',
-  selectedMailId: 'msg-whitekraaft',
+  selectedAccountId: initialState.selectedAccountId,
+  selectedAccountIndex: initialState.selectedAccountIndex,
+  selectedFolderId: initialState.selectedFolderId,
+  selectedMailId: initialState.selectedMailId,
   filterTab: 'all',
   searchQuery: '',
   selectedIds: [],
-  localEmails: [],
+  localEmails: initialState.localEmails,
   isLoadingEmails: false,
   lastSnapshot: null,
 
@@ -65,7 +97,6 @@ export const useMailStore = create<MailState>((set, get) => ({
         set({ localEmails: cached, selectedFolderId: fId });
       }
     } catch {}
-    set({ isLoadingEmails: get().localEmails.length === 0, selectedFolderId: fId });
     try {
       const list = await emailsApi.getEmailsMetadata(fId, aId);
       set({ localEmails: list, isLoadingEmails: false });
@@ -80,13 +111,41 @@ export const useMailStore = create<MailState>((set, get) => ({
     localEmails: s.localEmails.some((e) => e.id === email.id) ? s.localEmails : [email, ...s.localEmails],
     selectedMailId: email.id,
   })),
-  setSelectedAccount: (id) => set({ selectedAccountId: id, selectedMailId: null }),
+  setSelectedAccount: (id) => set((s) => {
+    if (s.selectedAccountId === id) return s;
+    const accountEmails = MOCK_EMAILS_METADATA.filter((e) => e.accountId === id);
+    return {
+      selectedAccountId: id,
+      localEmails: accountEmails,
+      selectedMailId: accountEmails[0]?.id || null,
+      selectedFolderId: 'fld-inbox',
+      selectedIds: [],
+    };
+  }),
   setSelectedAccountIndex: (index) => set({ selectedAccountIndex: index }),
-  setSelectedFolder: (id) => set({ selectedFolderId: id, selectedMailId: null, selectedIds: [] }),
-  setSelectedMail: (id) => set((s) => ({
-    selectedMailId: id,
-    localEmails: id ? s.localEmails.map((m) => (m.id === id ? { ...m, isRead: true } : m)) : s.localEmails,
-  })),
+  setSelectedFolder: (id) => set((s) => {
+    if (s.selectedFolderId === id) return s;
+    const inFolder = s.localEmails.some(
+      (e) => (id === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === id) && e.id === s.selectedMailId
+    );
+    const folderEmails = s.localEmails.filter((e) =>
+      id === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === id
+    );
+    return {
+      selectedFolderId: id,
+      selectedMailId: inFolder ? s.selectedMailId : (folderEmails[0]?.id || null),
+      selectedIds: [],
+    };
+  }),
+  setSelectedMail: (id) => set((s) => {
+    if (s.selectedMailId === id && (!id || s.localEmails.some((m) => m.id === id && m.isRead))) {
+      return s;
+    }
+    return {
+      selectedMailId: id,
+      localEmails: id ? s.localEmails.map((m) => (m.id === id ? { ...m, isRead: true } : m)) : s.localEmails,
+    };
+  }),
   setFilterTab: (filterTab) => set({ filterTab }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 

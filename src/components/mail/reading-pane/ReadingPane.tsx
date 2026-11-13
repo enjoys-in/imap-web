@@ -6,6 +6,8 @@ import { useMailStore, useComposeStore } from '@/stores';
 import { emailsApi } from '@/api';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
+import { MOCK_EMAILS } from '@/lib/mock';
+import { MOCK_BODIES_MAP } from '@/lib/mock/mockBodies';
 import { format } from 'date-fns';
 import { ReadingPaneHeader } from './ReadingPaneHeader';
 import { ReadingPaneSecurityBanner } from './ReadingPaneSecurityBanner';
@@ -19,6 +21,21 @@ interface ReadingPaneProps {
   onBack?: () => void;
 }
 
+function getInitialBody(id?: string | null, mail?: MailMessage | MailMessageMetadata) {
+  if (!id) return null;
+  if (mail && 'bodyHtml' in mail && (mail.bodyHtml || mail.bodyText)) {
+    return { bodyHtml: mail.bodyHtml, bodyText: mail.bodyText };
+  }
+  if (MOCK_BODIES_MAP[id]) {
+    return MOCK_BODIES_MAP[id];
+  }
+  const match = MOCK_EMAILS.find((e) => e.id === id);
+  if (match?.bodyHtml || match?.bodyText) {
+    return { bodyHtml: match.bodyHtml, bodyText: match.bodyText };
+  }
+  return null;
+}
+
 export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const selectedMailId = useMailStore((s) => s.selectedMailId);
   const selectedIds = useMailStore((s) => s.selectedIds);
@@ -30,12 +47,19 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const openReply = useComposeStore((s) => s.openReply);
   const openForward = useComposeStore((s) => s.openForward);
 
+  const currentId = activeMailId || selectedMailId;
+  const emailInStore = localEmails.find((e) => e.id === currentId);
+  const syncMockEmail = !emailInStore && currentId ? MOCK_EMAILS.find((e) => e.id === currentId) : null;
+  const [fallbackEmail, setFallbackEmail] = useState<MailMessage | null>(null);
+
+  const email = (emailInStore || syncMockEmail || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
+  const initialBody = useMemo(() => getInitialBody(currentId, email), [currentId, email]);
+
   const [allowExternalImages, setAllowExternalImages] = useState(false);
   const [hideHistory, setHideHistory] = useState(false);
   const [canvasLight, setCanvasLight] = useState(false);
-  const [fetchedBody, setFetchedBody] = useState<{ bodyHtml?: string; bodyText?: string } | null>(null);
+  const [fetchedBody, setFetchedBody] = useState<{ bodyHtml?: string; bodyText?: string } | null>(initialBody);
   const [isBodyLoading, setIsBodyLoading] = useState(false);
-  const [fallbackEmail, setFallbackEmail] = useState<MailMessage | null>(null);
   const [threadMessages, setThreadMessages] = useState<MailMessage[]>([]);
   const [expandedHistoryIds, setExpandedHistoryIds] = useState<string[]>([]);
 
@@ -45,13 +69,10 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       .map((e) => e.id);
   }, [localEmails, selectedFolderId]);
 
-  const currentId = activeMailId || selectedMailId;
-  const emailInStore = localEmails.find((e) => e.id === currentId);
-
-  // If email is not directly in local store (e.g. sub-thread message clicked or direct link), fetch it
+  // If email is not in local store and not in sync mock, fetch it
   useEffect(() => {
     if (!currentId) return;
-    if (emailInStore) {
+    if (emailInStore || syncMockEmail) {
       setFallbackEmail(null);
       return;
     }
@@ -64,13 +85,17 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId, emailInStore]);
+  }, [currentId, emailInStore, syncMockEmail]);
 
-  const email = (emailInStore || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
-
-  // Fetch full email body for the current active message
+  // Fetch full email body for the current active message (instant if already in memory)
   useEffect(() => {
     if (!currentId) return;
+    const immediate = getInitialBody(currentId, email);
+    if (immediate) {
+      setFetchedBody(immediate);
+      setIsBodyLoading(false);
+      return;
+    }
     let isCancelled = false;
     setIsBodyLoading(true);
     emailsApi.getEmailBody(currentId).then((body) => {
@@ -82,7 +107,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId]);
+  }, [currentId, email]);
 
   // Fetch full thread messages whenever threadId is active
   useEffect(() => {
