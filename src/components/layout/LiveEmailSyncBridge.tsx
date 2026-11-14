@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useSession } from '@/components/providers/SessionProvider';
 import { useEmailStream } from '@/hooks/useEmailStream';
 import { usePushSubscriptionSync } from '@/hooks/usePushSubscriptionSync';
@@ -14,7 +13,6 @@ import {
   shouldNotifyNewMail,
 } from '@/lib/liveSync';
 import { alertNewMail } from '@/lib/newMailAlert';
-import { pingStreamPresence, startStreamPresence } from '@/lib/streamPresence';
 import { useToastStore } from '@/stores/useToastStore';
 
 export function LiveEmailSyncBridge() {
@@ -24,16 +22,7 @@ export function LiveEmailSyncBridge() {
   useSyncScheduler();
   usePushSubscriptionSync(isAuthenticated);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const presence = startStreamPresence();
-    return () => presence.stop();
-  }, [isAuthenticated]);
-
   useEmailStream({
-    onConnected: () => {
-      if (isAuthenticated) pingStreamPresence();
-    },
     onMailboxChange: (data) => {
       if (!isAuthenticated) return;
       void handleMailboxChange(data);

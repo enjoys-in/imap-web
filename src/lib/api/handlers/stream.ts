@@ -1,5 +1,5 @@
 import { getClientConfig } from '@/config/clientConfig';
-import { apiClient, getAuthToken } from '../client';
+import { getAuthToken } from '../client';
 import type { StorageQuotaInfo } from './folderQuota';
 
 /**
@@ -68,27 +68,6 @@ export interface ConnectedEventPayload {
   time: string;
 }
 
-export interface StreamPingPayload {
-  visible: boolean;
-  folder: string | null;
-}
-
-let streamTabId: string | null = null;
-
-export function getStreamTabId(): string {
-  if (!streamTabId) {
-    streamTabId =
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-  }
-  return streamTabId;
-}
-
-export async function sendStreamPing(payload: StreamPingPayload): Promise<void> {
-  await apiClient.post('/stream/ping', { tabId: getStreamTabId(), ...payload });
-}
-
 export interface EmailStreamHandlers {
   onConnected?: (data: ConnectedEventPayload) => void;
   onMailboxChange?: (data: MailboxChangeEventPayload) => void;
@@ -112,9 +91,9 @@ export function subscribeToEmailStream(handlers: EmailStreamHandlers): () => voi
   const { apiUrl } = getClientConfig();
   const cleanApiUrl = apiUrl.replace(/\/+$/, '');
   const token = getAuthToken();
-  const params = new URLSearchParams({ tab: getStreamTabId() });
-  if (token) params.set('token', token);
-  const streamUrl = `${cleanApiUrl}/stream?${params.toString()}`;
+  const streamUrl = token
+    ? `${cleanApiUrl}/stream?${new URLSearchParams({ token }).toString()}`
+    : `${cleanApiUrl}/stream`;
 
   const eventSource = new EventSource(streamUrl, { withCredentials: true });
 
