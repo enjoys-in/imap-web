@@ -283,6 +283,8 @@ export function LoginView() {
       };
 
       const res = await accountsApi.setupAccountStream(payload, (event) => {
+        // SMTP is turned off: keep it out of the progress view entirely.
+        if (!smtpEnabled && event.step === 'smtp_verify') return;
         setSetupProgress(event.progress);
         setCurrentStep(event.step);
         setStepResults((prev) => ({ ...prev, [event.step]: event.status }));
@@ -528,7 +530,7 @@ export function LoginView() {
                 </button>
                 <div>
                   <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Setup Account</h2>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">IMAP & SMTP Autodiscovery</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">{smtpEnabled ? 'IMAP & SMTP Autodiscovery' : 'IMAP Autodiscovery'}</p>
                 </div>
               </div>
 
@@ -596,44 +598,37 @@ export function LoginView() {
                     {[
                       {
                         id: 'imap_connect',
-                        stepNumber: '1',
                         label: 'IMAP TLS Authentication',
                         activeText: `Connecting to ${imapHost || 'imap.server'}:${imapPort} (TLS 1.3)...`,
                         completedText: `TLS 1.3 verified. Port ${imapPort} authenticated.`,
                       },
                       {
                         id: 'smtp_verify',
-                        stepNumber: '2',
-                        label: smtpEnabled ? 'Outbound SMTP Handshake' : 'Outbound SMTP (skipped)',
-                        activeText: smtpEnabled
-                          ? `Testing STARTTLS on ${smtpHost || 'smtp.server'}:${smtpPort}...`
-                          : 'Skipping SMTP: sending is turned off for this account.',
-                        completedText: smtpEnabled
-                          ? `STARTTLS negotiated. Outbound relay verified.`
-                          : 'SMTP skipped. This account can read mail but not send.',
+                        label: 'Outbound SMTP Handshake',
+                        activeText: `Testing STARTTLS on ${smtpHost || 'smtp.server'}:${smtpPort}...`,
+                        completedText: `STARTTLS negotiated. Outbound relay verified.`,
                       },
                       {
                         id: 'mailbox_sync',
-                        stepNumber: '3',
                         label: 'Discovering Mailboxes',
                         activeText: 'Inspecting remote mailboxes (INBOX, Sent, Drafts)...',
                         completedText: '6 mailbox folders mapped & synchronized.',
                       },
                       {
                         id: 'email_fetch',
-                        stepNumber: '4',
                         label: 'Pre-fetching Initial Messages',
                         activeText: 'Syncing headers to encrypted offline database...',
                         completedText: 'IndexedDB cache primed for instant offline search.',
                       },
                       {
                         id: 'provision_account',
-                        stepNumber: '5',
                         label: 'Finalizing Security Tokens',
                         activeText: 'Issuing session access tokens & credentials...',
                         completedText: 'Security tokens active. Account provisioned.',
                       },
-                    ].map((step, idx, arr) => {
+                    ]
+                      .filter((step) => smtpEnabled || step.id !== 'smtp_verify')
+                      .map((step, idx, arr) => {
                       const stepOrder = ['init', 'imap_connect', 'smtp_verify', 'mailbox_sync', 'email_fetch', 'provision_account', 'complete'];
                       const isLast = idx === arr.length - 1;
 
@@ -696,7 +691,7 @@ export function LoginView() {
 
                             {status === 'pending' && (
                               <div className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700/80 text-neutral-400 dark:text-neutral-500 flex items-center justify-center font-mono text-[11px] font-semibold">
-                                {step.stepNumber}
+                                {idx + 1}
                               </div>
                             )}
                           </div>
@@ -719,17 +714,12 @@ export function LoginView() {
                               </span>
 
                               {/* Telemetry Status Pills */}
-                              {status === 'completed' && step.id === 'smtp_verify' && !smtpEnabled && (
-                                <span className="text-[10px] font-mono font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-500/10 px-1.5 py-0.5 rounded border border-neutral-500/30">
-                                  SKIPPED
-                                </span>
-                              )}
-                              {status === 'completed' && !(step.id === 'smtp_verify' && !smtpEnabled) && stepResults[step.id] === 'warning' && (
+                              {status === 'completed' && stepResults[step.id] === 'warning' && (
                                 <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
                                   WARNING
                                 </span>
                               )}
-                              {status === 'completed' && !(step.id === 'smtp_verify' && !smtpEnabled) && stepResults[step.id] !== 'warning' && (
+                              {status === 'completed' && stepResults[step.id] !== 'warning' && (
                                 <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
                                   VERIFIED
                                 </span>
@@ -898,7 +888,7 @@ export function LoginView() {
                             <strong>App Password:</strong> If your account has 2FA enabled, generate an App Password.
                           </li>
                           <li>
-                            <strong>Host & Ports:</strong> Check IMAP port ({imapPort}) and SMTP port ({smtpPort}) on {imapHost || 'server'}.
+                            <strong>Host & Ports:</strong> Check IMAP port ({imapPort}){smtpEnabled ? ` and SMTP port (${smtpPort})` : ''} on {imapHost || 'server'}.
                           </li>
                           <li>
                             <strong>Username:</strong> Ensure username matches your full email address ({email}).
