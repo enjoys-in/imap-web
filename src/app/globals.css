@@ -13,6 +13,7 @@
 }
 
 body {
+  font-family: var(--font-geist-sans), "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
   user-select: none;
@@ -130,5 +131,20 @@ body {
 
 .animate-bloom-2 {
   animation: bloom-drift-2 22s ease-in-out infinite;
+}
+
+@keyframes fluent-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+}
+
+.animate-fluent-enter {
+  animation: fluent-fade-slide 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

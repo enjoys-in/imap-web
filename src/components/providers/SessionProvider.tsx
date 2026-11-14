@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
 import { accountsApi, clearAuthToken } from '@/lib/api';
 import { Account } from '@/types';
@@ -34,16 +34,10 @@ export function useSession() {
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoginPage, setIsLoginPage] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
-      setIsLoginPage(true);
-      setIsLoading(false);
-    }
-  }, []);
+  const [isLoading, setIsLoading] = useState(!isLoginPage);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -52,6 +46,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('airsend_logged_out');
+      }
       setStatusText('Validating connection...');
       const profile = await accountsApi.getProfile();
 
@@ -135,6 +132,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       await accountsApi.logout();
     } finally {
       clearAuthToken();
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('airsend_logged_out', 'true');
+      }
       setUser(null);
       setAccount(null);
       setAccounts([]);
@@ -145,6 +145,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   if (isLoading && !isLoginPage) {
     return <AirSendSplashScreen statusMessage={statusText} />;
+  }
+
+  // Prevent flashing internal protected children if user is not authenticated
+  if (!isAuthenticated && !isLoginPage) {
+    return <AirSendSplashScreen statusMessage="Redirecting to sign in..." />;
   }
 
   return (
