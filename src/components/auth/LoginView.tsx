@@ -20,6 +20,11 @@ import {
   Sun,
   Moon,
   Terminal,
+  Check,
+  Copy,
+  RotateCw,
+  XCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { accountsApi, type AutodiscoverResult } from '@/lib/api';
 import { useSession } from '@/components/providers/SessionProvider';
@@ -71,6 +76,8 @@ export function LoginView() {
   const [isSetupRunning, setIsSetupRunning] = useState(false);
   const [setupProgress, setSetupProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('init');
+  const [failedStep, setFailedStep] = useState<string | null>(null);
+  const [copiedLogs, setCopiedLogs] = useState(false);
   const [setupLogs, setSetupLogs] = useState<{ id: string; time: string; text: string; status: 'running' | 'success' | 'warning' | 'error' }[]>([]);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 

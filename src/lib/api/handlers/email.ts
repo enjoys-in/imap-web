@@ -1,7 +1,7 @@
 import { apiClient } from '../client';
 import { MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
 import { MOCK_EMAILS } from '@/lib/mock';
-import { isLiveApiAvailable } from '@/config/clientConfig';
+import { isLiveApiAvailable, getClientConfig } from '@/config/clientConfig';
 import { getCachedEmailBody, saveCachedEmailBody } from '@/lib/idb/mailCacheDb';
 
 export interface SendEmailPayload {
@@ -475,7 +475,8 @@ export async function downloadAttachment(
 ): Promise<Blob> {
   const cleanUid = typeof uid === 'string' && uid.startsWith('msg-') ? uid.replace('msg-', '') : uid;
   const url = `/download-attachment?folder=${encodeURIComponent(folder)}&uid=${cleanUid}&part=${encodeURIComponent(part)}`;
-  const { apiUrl } = isLiveApiAvailable() ? { apiUrl: 'http://localhost:7654/api' } : { apiUrl: '' };
-  const res = await fetch(`${apiUrl}${url}`, { credentials: 'include' });
+  const { apiUrl } = getClientConfig();
+  const cleanApiUrl = apiUrl.replace(/\/+$/, '');
+  const res = await fetch(`${cleanApiUrl}${url}`, { credentials: 'include' });
   return res.blob();
 }

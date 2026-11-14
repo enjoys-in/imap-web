@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -43,9 +44,11 @@ export default function RootLayout({
       <body className="h-full overflow-hidden flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors duration-150">
         <ConfigProvider initialConfig={initialConfig}>
           <QueryProvider>
-            <SessionProvider>
-              <AppShell>{children}</AppShell>
-            </SessionProvider>
+            <Suspense fallback={null}>
+              <SessionProvider>
+                <AppShell>{children}</AppShell>
+              </SessionProvider>
+            </Suspense>
           </QueryProvider>
         </ConfigProvider>
       </body>

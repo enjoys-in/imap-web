@@ -61,9 +61,10 @@ export function subscribeToEmailStream(handlers: EmailStreamHandlers): () => voi
   }
 
   const { apiUrl } = getClientConfig();
+  const cleanApiUrl = apiUrl.replace(/\/+$/, '');
   const token = getAuthToken();
   const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
-  const streamUrl = `${apiUrl}/stream${tokenParam}`;
+  const streamUrl = `${cleanApiUrl}/stream${tokenParam}`;
 
   const eventSource = new EventSource(streamUrl, { withCredentials: true });
 
