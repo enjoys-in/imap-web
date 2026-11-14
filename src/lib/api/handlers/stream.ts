@@ -1,4 +1,4 @@
-import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
+import { getClientConfig } from '@/config/clientConfig';
 import { getAuthToken } from '../client';
 
 /**
@@ -56,7 +56,7 @@ export interface EmailStreamHandlers {
  * Returns an unsubscribe cleanup function.
  */
 export function subscribeToEmailStream(handlers: EmailStreamHandlers): () => void {
-  if (typeof window === 'undefined' || !isLiveApiAvailable()) {
+  if (typeof window === 'undefined') {
     return () => {};
   }
 

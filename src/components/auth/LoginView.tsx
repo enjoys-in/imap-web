@@ -202,39 +202,6 @@ export function LoginView() {
     setTimeout(() => setCopiedLogs(false), 2000);
   };
 
-  const handleProceedDemo = async () => {
-    setIsSubmitting(true);
-    try {
-      const userObj = {
-        id: `u-${Date.now()}`,
-        email: email.trim() || 'user@example.com',
-        displayName: displayName.trim() || email.split('@')[0] || 'Demo User',
-        display_name: displayName.trim() || email.split('@')[0] || 'Demo User',
-        mid: email.trim() || 'user@example.com',
-        role: 'user',
-      };
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('airsend_logged_out');
-        localStorage.setItem('airsend_active_user', JSON.stringify(userObj));
-        const newAccount = {
-          id: `acc-${Date.now()}`,
-          displayName: userObj.displayName,
-          email: userObj.email,
-          userName: userObj.email,
-          isDefault: true,
-          status: 'connected',
-          unreadCount: 0,
-          totalCount: 3,
-        };
-        localStorage.setItem('airsend_custom_accounts', JSON.stringify([newAccount]));
-      }
-      await refreshSession();
-      router.push('/mail/u/0#inbox');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleSetupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -911,17 +878,6 @@ export function LoginView() {
                           <RotateCw className="w-3.5 h-3.5" />
                           <span>Retry</span>
                         </FluentButton>
-                      </div>
-
-                      {/* Demo Mode Bypass */}
-                      <div className="text-center pt-1 border-t border-red-200/50 dark:border-red-900/30">
-                        <button
-                          type="button"
-                          onClick={handleProceedDemo}
-                          className="text-[11px] text-neutral-500 hover:text-[#0078d4] dark:hover:text-blue-400 underline cursor-pointer"
-                        >
-                          Continue into mailbox using demo/offline mode
-                        </button>
                       </div>
                     </div>
                   )}

@@ -1,5 +1,4 @@
 import { apiClient } from '../client';
-import { isLiveApiAvailable } from '@/config/clientConfig';
 
 export interface GeneralSettings {
   theme: 'dark' | 'light' | 'system';
@@ -34,7 +33,7 @@ const DEFAULT_GENERAL: GeneralSettings = {
 };
 
 const DEFAULT_MAIL: MailSettings = {
-  defaultSenderEmail: 'mullayam06@outlook.com',
+  defaultSenderEmail: '',
   signatureHtml: '<p>--<br/>Sent via AirSend Web</p>',
   composeFormat: 'html',
   readingPanePosition: 'right',
@@ -42,9 +41,6 @@ const DEFAULT_MAIL: MailSettings = {
 };
 
 export async function getGeneralSettings(): Promise<GeneralSettings> {
-  if (!isLiveApiAvailable()) {
-    return DEFAULT_GENERAL;
-  }
   try {
     const data = await apiClient.get<any>('/settings/general');
     return data?.result || data || DEFAULT_GENERAL;
@@ -63,9 +59,6 @@ export async function updateGeneralSettings(data: Partial<GeneralSettings>): Pro
 }
 
 export async function getMailSettings(): Promise<MailSettings> {
-  if (!isLiveApiAvailable()) {
-    return DEFAULT_MAIL;
-  }
   try {
     const data = await apiClient.get<any>('/settings/mail');
     return data?.result || data || DEFAULT_MAIL;
@@ -83,24 +76,11 @@ export async function updateMailSettings(data: Partial<MailSettings>): Promise<M
   }
 }
 
-export async function getMailRules(): Promise<MailRule[]> {
-  return [
-    {
-      id: 'rule-1',
-      name: 'Archive Newsletters',
-      enabled: true,
-      condition: 'from contains newsletter',
-      action: 'move to Archive',
-    },
-  ];
-}
-
-export async function createMailRule(rule: Omit<MailRule, 'id'>): Promise<MailRule> {
-  return { id: `rule-${Date.now()}`, ...rule };
-}
-
-export async function deleteMailRule(ruleId: string): Promise<boolean> {
-  return true;
+export async function getMailRules(accountId?: string): Promise<MailRule[]> {
+  const query = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
+  const data = await apiClient.get<any>(`/settings/rules${query}`);
+  const list = Array.isArray(data?.result) ? data.result : Array.isArray(data) ? data : data?.result?.rules;
+  return Array.isArray(list) ? list : [];
 }
 
 export {

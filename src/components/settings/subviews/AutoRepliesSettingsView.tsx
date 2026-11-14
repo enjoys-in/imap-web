@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Calendar, Clock, Check, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { useAccounts, useAutoReplies } from '@/hooks/useEmailsQuery';
 import { settingsApi } from '@/lib/api';
 import { useToastStore } from '@/stores';
@@ -12,24 +11,22 @@ import { cn } from '@/lib/utils';
 export function AutoRepliesSettingsView() {
   const queryClient = useQueryClient();
   const { data: accountsData } = useAccounts();
-  const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
-  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
+  const accounts = accountsData ?? [];
+  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || '');
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
-  const activeEmail = selectedAccount?.email || 'user@airsend.io';
+  const activeEmail = selectedAccount?.email || '';
 
-  const { data: serverSettings, isLoading } = useAutoReplies(activeEmail);
+  const { data: serverSettings, isLoading } = useAutoReplies(activeEmail || undefined);
 
   const [isEnabled, setIsEnabled] = useState(false);
   const [onlyDuringPeriod, setOnlyDuringPeriod] = useState(false);
-  const [startDate, setStartDate] = useState('2026-11-13');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState('11:30 PM');
-  const [endDate, setEndDate] = useState('2026-11-14');
+  const [endDate, setEndDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
   const [endTime, setEndTime] = useState('11:30 PM');
   const [onlyContacts, setOnlyContacts] = useState(false);
-  const [replyMessage, setReplyMessage] = useState(
-    "Hi,\n\nI am currently out of the office with limited access to email. I will respond to your message as soon as possible upon my return.\n\nBest regards,\nMulayam"
-  );
+  const [replyMessage, setReplyMessage] = useState(settingsApi.DEFAULT_AUTO_REPLIES.messageText);
   const [outsideOrg, setOutsideOrg] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const addToast = useToastStore((s) => s.addToast);

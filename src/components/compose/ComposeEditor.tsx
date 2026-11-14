@@ -4,6 +4,8 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { useComposeStore } from '@/stores';
 import { useRecentAttachmentsStore } from '@/stores/useRecentAttachmentsStore';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
+import { useSession } from '@/components/providers/SessionProvider';
 import { ComposeRichToolbar } from './ComposeRichToolbar';
 
 export function ComposeEditor() {
@@ -11,6 +13,8 @@ export function ComposeEditor() {
   const updateFields = useComposeStore((s) => s.updateFields);
   const addAttachment = useComposeStore((s) => s.addAttachment);
   const addRecent = useRecentAttachmentsStore((s) => s.addRecent);
+  const savedSignature = useGeneralSettingsStore((s) => s.emailSignature);
+  const { account } = useSession();
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [canvasLight, setCanvasLight] = useState(false);
@@ -90,8 +94,9 @@ export function ComposeEditor() {
   };
 
   const handleInsertSignature = () => {
-    const sig = '\n\n--\nMulayam\nmullayam06@outlook.com';
-    updateFields({ body: body + sig });
+    const text = savedSignature.trim() || [account?.displayName, account?.email].filter(Boolean).join('\n');
+    if (!text) return;
+    updateFields({ body: `${body}\n\n${savedSignature.trim() ? text : `--\n${text}`}` });
   };
 
   const handleAttachClick = () => {

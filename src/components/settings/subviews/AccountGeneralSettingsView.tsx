@@ -7,31 +7,33 @@ import { accountsApi } from '@/lib/api';
 import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
 import { useToastStore } from '@/stores/useToastStore';
 
+const NO_ACCOUNT = {
+  id: '',
+  email: '',
+  displayName: '',
+  imapHost: '',
+  imapPort: 993,
+  smtpHost: '',
+  smtpPort: 587,
+};
+
 export function AccountGeneralSettingsView() {
   const { data: accounts } = useAccounts();
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
   const saveFullSettings = useAccountSettingsStore((s) => s.saveFullSettings);
   const addToast = useToastStore((s) => s.addToast);
 
-  const [selectedAccId, setSelectedAccId] = useState<string>('acc-1');
+  const [selectedAccId, setSelectedAccId] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
 
-  const activeAccount = accounts?.find((a) => a.id === selectedAccId) || accounts?.[0] || {
-    id: 'acc-1',
-    email: 'mullayam06@outlook.com',
-    displayName: 'Mulayam S',
-    imapHost: 'outlook.office365.com',
-    imapPort: 993,
-    smtpHost: 'smtp.office365.com',
-    smtpPort: 587,
-  };
+  const activeAccount = accounts?.find((a) => a.id === selectedAccId) || accounts?.[0] || NO_ACCOUNT;
 
   const [form, setForm] = useState({
-    displayName: activeAccount.displayName || 'Mulayam S',
+    displayName: activeAccount.displayName || '',
     email: activeAccount.email,
-    imapHost: activeAccount.imapHost || 'outlook.office365.com',
+    imapHost: activeAccount.imapHost || '',
     imapPort: activeAccount.imapPort || 993,
-    smtpHost: activeAccount.smtpHost || 'smtp.office365.com',
+    smtpHost: activeAccount.smtpHost || '',
     smtpPort: activeAccount.smtpPort || 587,
     syncMode: 'idle',
     cacheDays: 30,
@@ -41,11 +43,11 @@ export function AccountGeneralSettingsView() {
     if (activeAccount) {
       setForm((prev) => ({
         ...prev,
-        displayName: activeAccount.displayName || 'Mulayam S',
+        displayName: activeAccount.displayName || '',
         email: activeAccount.email,
-        imapHost: activeAccount.imapHost || 'outlook.office365.com',
+        imapHost: activeAccount.imapHost || '',
         imapPort: activeAccount.imapPort || 993,
-        smtpHost: activeAccount.smtpHost || 'smtp.office365.com',
+        smtpHost: activeAccount.smtpHost || '',
         smtpPort: activeAccount.smtpPort || 587,
       }));
     }

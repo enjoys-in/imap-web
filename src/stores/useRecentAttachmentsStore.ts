@@ -10,29 +10,7 @@ export interface RecentAttachment {
 
 const STORAGE_KEY = 'airsend_recent_attachments';
 
-const DEFAULT_RECENTS: RecentAttachment[] = [
-  {
-    id: 'rec-1',
-    name: 'Quarterly_Review_2026.pdf',
-    size: 1468006, // ~1.4 MB
-    type: 'application/pdf',
-    lastUsedAt: '2026-11-13T10:00:00.000Z',
-  },
-  {
-    id: 'rec-2',
-    name: 'Architecture_Diagram_v2.png',
-    size: 870400, // ~850 KB
-    type: 'image/png',
-    lastUsedAt: '2026-11-12T15:30:00.000Z',
-  },
-  {
-    id: 'rec-3',
-    name: 'Contract_Agreement_Signed.docx',
-    size: 348160, // ~340 KB
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    lastUsedAt: '2026-11-11T12:00:00.000Z',
-  },
-];
+const DEFAULT_RECENTS: RecentAttachment[] = [];
 
 interface RecentAttachmentsState {
   recentAttachments: RecentAttachment[];

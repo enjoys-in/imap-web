@@ -24,7 +24,7 @@ export function MailCommandBarMoveMenu({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
-  const { data: serverFolders } = useFolders(selectedAccountId || 'acc-1');
+  const { data: serverFolders } = useFolders(selectedAccountId);
 
   const targetFolders = serverFolders && serverFolders.length > 0
     ? serverFolders.map((f: any) => ({ id: f.id, name: f.displayName || f.name }))

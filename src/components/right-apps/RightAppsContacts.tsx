@@ -1,34 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Mail, Phone, Building } from 'lucide-react';
+import { Search, Mail } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { useComposeStore } from '@/stores/useComposeStore';
-
-interface ContactCard {
-  id: string;
-  name: string;
-  email: string;
-  title: string;
-  company: string;
-  phone: string;
-}
-
-const MOCK_CONTACTS: ContactCard[] = [
-  { id: '1', name: 'Gaurav Raj', email: 'gaurav.raj@avelix.com', title: 'VP of Engineering', company: 'Avelix Tech', phone: '+91 98765 43210' },
-  { id: '2', name: 'Jeelan Basha Shaik', email: 'jeelan.shaik@contoso.com', title: 'Principal Architect', company: 'Contoso Cloud', phone: '+91 98123 45678' },
-  { id: '3', name: 'Thales Group HR', email: 'careers@thalesgroup.com', title: 'Talent Acquisition', company: 'Thales Defence', phone: '+33 1 57 77 80 00' },
-  { id: '4', name: 'Whitekraaft Recruitment', email: 'recruitment@whitekraaft.com', title: 'Recruitment Partner', company: 'Whitekraaft', phone: '+91 40 6789 0123' },
-  { id: '5', name: 'Oracle Talent', email: 'talent@oracle.com', title: 'Global Hiring', company: 'Oracle Corp', phone: '+1 650 506 7000' },
-];
+import { useMailContacts } from '@/hooks/useMailContacts';
 
 export function RightAppsContacts() {
   const [query, setQuery] = useState('');
   const openNew = useComposeStore((s) => s.openNew);
   const updateFields = useComposeStore((s) => s.updateFields);
 
-  const filtered = MOCK_CONTACTS.filter(
-    (c) => c.name.toLowerCase().includes(query.toLowerCase()) || c.email.toLowerCase().includes(query.toLowerCase()) || c.company.toLowerCase().includes(query.toLowerCase())
+  // Contacts are the people found in the user's own mail.
+  const contacts = useMailContacts();
+
+  const q = query.toLowerCase();
+  const filtered = contacts.filter(
+    (c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
   );
 
   const handleSendEmail = (email: string) => {
@@ -65,22 +53,13 @@ export function RightAppsContacts() {
               <Avatar name={contact.name} size="md" />
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs text-neutral-900 dark:text-white truncate">{contact.name}</h4>
-                <p className="text-[11px] text-neutral-500 truncate">{contact.title}</p>
               </div>
             </div>
 
             <div className="text-[11px] text-neutral-600 dark:text-neutral-400 space-y-1 pt-1 border-t border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-1.5 truncate">
-                <Building className="w-3 h-3 text-neutral-400 shrink-0" />
-                <span className="truncate">{contact.company}</span>
-              </div>
-              <div className="flex items-center gap-1.5 truncate">
                 <Mail className="w-3 h-3 text-neutral-400 shrink-0" />
                 <span className="truncate">{contact.email}</span>
-              </div>
-              <div className="flex items-center gap-1.5 truncate">
-                <Phone className="w-3 h-3 text-neutral-400 shrink-0" />
-                <span className="truncate">{contact.phone}</span>
               </div>
             </div>
 

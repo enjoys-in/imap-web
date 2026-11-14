@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { FileSignature, ChevronDown, Check, Settings, Edit3, X } from 'lucide-react';
 import { useComposeStore } from '@/stores';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
 
 interface SignatureOption {
@@ -13,12 +14,6 @@ interface SignatureOption {
   name: string;
   body: string;
 }
-
-const DEFAULT_SIGNATURES: SignatureOption[] = [
-  { id: 'work', name: 'Work', body: 'Best regards,\nMulayam S\nStaff Software Engineer\nAirSend Inc.' },
-  { id: 'personal', name: 'Personal', body: 'Warmly,\nMulayam\nSent from AirSend' },
-  { id: 'default', name: 'Default IMAP', body: '--\nMulayam S\nmullayam06@outlook.com' },
-];
 
 export function ComposeSignatureMenu({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +25,20 @@ export function ComposeSignatureMenu({ className }: { className?: string }) {
   const settingsSig = useGeneralSettingsStore((s) => s.emailSignature);
   const updateSettings = useGeneralSettingsStore((s) => s.updateSettings);
   const addToast = useToastStore((s) => s.addToast);
+  const { account } = useSession();
+
+  // Signature choices come from the user's saved signature and their real account details.
+  const signatureOptions = useMemo<SignatureOption[]>(() => {
+    const options: SignatureOption[] = [];
+    if (settingsSig.trim()) {
+      options.push({ id: 'saved', name: 'Saved signature', body: settingsSig });
+    }
+    const identity = [account?.displayName, account?.email].filter(Boolean).join('\n');
+    if (identity) {
+      options.push({ id: 'account', name: 'Account details', body: `--\n${identity}` });
+    }
+    return options;
+  }, [settingsSig, account?.displayName, account?.email]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +62,7 @@ export function ComposeSignatureMenu({ className }: { className?: string }) {
   };
 
   const handleOpenEdit = () => {
-    setCustomSig(settingsSig || DEFAULT_SIGNATURES[0].body);
+    setCustomSig(settingsSig || '');
     setIsEditing(true);
     setIsOpen(false);
   };
@@ -87,7 +96,10 @@ export function ComposeSignatureMenu({ className }: { className?: string }) {
           </div>
 
           <div className="py-0.5">
-            {DEFAULT_SIGNATURES.map((sig) => (
+            {signatureOptions.length === 0 && (
+              <div className="px-3 py-1.5 text-[11px] text-neutral-400">No signature saved yet</div>
+            )}
+            {signatureOptions.map((sig) => (
               <button
                 key={sig.id}
                 type="button"

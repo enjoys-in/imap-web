@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
 import { emailsApi, foldersApi } from '@/lib/api';
-import { MOCK_EMAILS_METADATA } from '@/lib/mock';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 import { useGeneralSettingsStore } from './useGeneralSettingsStore';
@@ -63,9 +62,8 @@ interface MailState {
 }
 
 function getInitialState() {
-  const defaultAccId = 'acc-1';
   let initialFolder = 'fld-inbox';
-  let initialMailId: string | null = 'msg-candidate-outreach';
+  let initialMailId: string | null = null;
 
   if (typeof window !== 'undefined') {
     const saved = getOpenMailSession(0);
@@ -75,19 +73,13 @@ function getInitialState() {
     }
   }
 
-  const initialList = MOCK_EMAILS_METADATA.filter((e) => e.accountId === defaultAccId);
-  initialList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const initialSlice = initialList.slice(0, 25);
-  if (!initialMailId && initialSlice.length > 0) {
-    initialMailId = initialSlice[0].id;
-  }
-
   return {
-    selectedAccountId: defaultAccId,
+    // Resolved from the signed-in session once it loads (see MailClientView).
+    selectedAccountId: '',
     selectedAccountIndex: 0,
     selectedFolderId: initialFolder,
     selectedMailId: initialMailId,
-    localEmails: initialSlice,
+    localEmails: [] as MailMessageMetadata[],
     isLoadingEmails: false,
   };
 }
@@ -117,7 +109,7 @@ export const useMailStore = create<MailState>((set, get) => ({
 
   fetchEmails: async (folderId, accountId) => {
     const fId = folderId || get().selectedFolderId || 'fld-inbox';
-    const aId = accountId || get().selectedAccountId || 'acc-1';
+    const aId = accountId || get().selectedAccountId || '';
     set({ isLoadingEmails: true, emailPage: 1 });
     try {
       const cached = await getCachedEmails(fId, aId);
@@ -126,7 +118,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       }
     } catch {}
     try {
-      const list = await emailsApi.getEmailsMetadata(fId, aId, 1, 25);
+      const list = await emailsApi.getEmailsMetadata(fId, aId || undefined, 1, 25);
       set({
         localEmails: list,
         emailPage: 1,
@@ -143,10 +135,10 @@ export const useMailStore = create<MailState>((set, get) => ({
     if (get().isLoadingMore || !get().hasMoreEmails) return;
     const nextPage = get().emailPage + 1;
     const fId = get().selectedFolderId || 'fld-inbox';
-    const aId = get().selectedAccountId || 'acc-1';
+    const aId = get().selectedAccountId || '';
     set({ isLoadingMore: true });
     try {
-      const nextBatch = await emailsApi.getEmailsMetadata(fId, aId, nextPage, 25);
+      const nextBatch = await emailsApi.getEmailsMetadata(fId, aId || undefined, nextPage, 25);
       const current = get().localEmails;
       const currentIds = new Set(current.map((e) => e.id));
       const fresh = nextBatch.filter((e) => !currentIds.has(e.id));
@@ -170,15 +162,15 @@ export const useMailStore = create<MailState>((set, get) => ({
   })),
   setSelectedAccount: (id) => set((s) => {
     if (s.selectedAccountId === id) return s;
-    const accountEmails = MOCK_EMAILS_METADATA.filter((e) => e.accountId === id);
-    accountEmails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const initialSlice = accountEmails.slice(0, 25);
+    // First resolution from the session: keep the restored folder/mail selection.
+    if (!s.selectedAccountId) return { selectedAccountId: id };
+    // Mail lists are per-mailbox; clear the previous account's list until the new one loads.
     return {
       selectedAccountId: id,
-      localEmails: initialSlice,
+      localEmails: [],
       emailPage: 1,
-      hasMoreEmails: accountEmails.length >= 25,
-      selectedMailId: initialSlice[0]?.id || null,
+      hasMoreEmails: true,
+      selectedMailId: null,
       selectedFolderId: 'fld-inbox',
       selectedIds: [],
     };

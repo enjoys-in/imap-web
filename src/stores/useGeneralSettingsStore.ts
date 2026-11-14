@@ -72,7 +72,7 @@ const DEFAULT_SETTINGS = {
   firstDayOfWeek: 'Sunday' as const,
   desktopNotifications: true,
   soundAlerts: true,
-  emailSignature: 'Best regards,\nMulayam | AirSend Team\nmullayam06@airsend.in',
+  emailSignature: '',
   emailThreading: true,
   downloadInlineImages: true,
   undoSendDelaySeconds: 5,
@@ -95,7 +95,7 @@ const DEFAULT_SETTINGS = {
   calendarRemindersEnabled: true,
   // Offline defaults
   allowOfflineAccess: true,
-  offlineAccount: 'mullayam06@outlook.com',
+  offlineAccount: '',
   offlineFoldersToSave: 'default_and_favorites',
   offlineDaysToSave: 30,
   offlineIncludeAttachments: true,

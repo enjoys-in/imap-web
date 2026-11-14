@@ -90,9 +90,12 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
 
   useEffect(() => {
     if (!targetEmail) return;
-    emailsApi.getEmailBody(targetEmail.id).then((b) => {
-      if (b.bodyHtml) setThreadBodies((prev) => ({ ...prev, [targetEmail.id]: b.bodyHtml || '' }));
-    });
+    emailsApi
+      .getEmailBody(targetEmail.id)
+      .then((b) => {
+        if (b.bodyHtml) setThreadBodies((prev) => ({ ...prev, [targetEmail.id]: b.bodyHtml || '' }));
+      })
+      .catch(() => {});
   }, [targetEmail]);
 
   const toggleExpand = (id: string) => {

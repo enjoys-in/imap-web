@@ -2,43 +2,23 @@
 
 import { useState } from 'react';
 import { CalendarEvent, CalendarViewMode, WorkspaceTab } from './types';
-import { INITIAL_EVENTS, INITIAL_TABS } from './mockData';
 import { WorkspaceItem } from './CalendarWorkspaceMenu';
 import { CalendarNotificationItem } from './CalendarNotificationsPopover';
 import { ProjectItem } from './CalendarSidebar';
 
-const DEFAULT_WORKSPACES: WorkspaceItem[] = [
-  { id: 'ws-1', name: 'Cansaas Studio', role: 'Owner', active: true },
-  { id: 'ws-2', name: 'Agus Ardhi Personal', role: 'Personal', active: false },
-  { id: 'ws-3', name: 'Acme Enterprise', role: 'Admin', active: false },
-];
-
-const DEFAULT_PROJECTS: ProjectItem[] = [
-  { id: 'p1', name: 'Totoro CRM System', color: 'bg-blue-600', icon: 'Q' },
-  { id: 'p2', name: 'Obake Dashboard', color: 'bg-emerald-600', icon: '★' },
-  { id: 'p3', name: 'Calcifer API Gateway', color: 'bg-amber-700', icon: '🔥' },
-  { id: 'p4', name: 'Ponyo Task Manager', color: 'bg-neutral-800', icon: '🐟' },
-];
-
-const DEFAULT_NOTIFICATIONS: CalendarNotificationItem[] = [
-  { id: 'n1', title: 'Design Sprint starting in 15m', time: '5m ago', read: false },
-  { id: 'n2', title: 'Nadia Chen accepted invitation to Moodboard Session', time: '1h ago', read: false },
-  { id: 'n3', title: 'Totoro CRM sprint 14 updated', time: '2h ago', read: true },
-];
-
 export function useCalendarState() {
-  const [tabs, setTabs] = useState<WorkspaceTab[]>(INITIAL_TABS);
-  const [activeTabId, setActiveTabId] = useState<string>('tab-2');
+  const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedProject, setSelectedProject] = useState('Totoro CRM System');
+  const [selectedProject, setSelectedProject] = useState('');
   const [activeEssential, setActiveEssential] = useState('calendar');
   const [viewMode, setViewMode] = useState<CalendarViewMode>('Week');
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
-  const [projects, setProjects] = useState<ProjectItem[]>(DEFAULT_PROJECTS);
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(DEFAULT_WORKSPACES);
-  const [notifications, setNotifications] = useState<CalendarNotificationItem[]>(DEFAULT_NOTIFICATIONS);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [notifications, setNotifications] = useState<CalendarNotificationItem[]>([]);
 
   // Modals & Popovers
   const [createModalOpen, setCreateModalOpen] = useState(false);

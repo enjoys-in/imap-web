@@ -22,7 +22,7 @@ export const DEFAULT_AUTO_REPLIES: AutoReplySettings = {
   onlyContacts: false,
   replyOutsideOrg: true,
   messageText:
-    'Hi,\n\nI am currently out of the office with limited access to email. I will respond to your message as soon as possible upon my return.\n\nBest regards,\nMulayam',
+    'Hi,\n\nI am currently out of the office with limited access to email. I will respond to your message as soon as possible upon my return.\n\nBest regards,',
   rateLimitDays: 1,
 };
 

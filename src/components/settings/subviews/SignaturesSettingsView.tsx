@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Bold, Italic, Underline, Link2, Check, Save } from 'lucide-react';
-import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { useAccounts } from '@/hooks/useEmailsQuery';
 import { useToastStore } from '@/stores';
 
@@ -12,22 +11,15 @@ interface Signature {
   body: string;
 }
 
-const DEFAULT_SIGNATURES: Record<string, Signature[]> = {
-  'acc-1': [
-    { id: 'sig-1', name: 'Work', body: "Best regards,\nMulayam S\nStaff Software Engineer\nAirSend Inc." },
-    { id: 'sig-2', name: 'Personal', body: "Warmly,\nMulayam\nSent from AirSend" },
-  ],
-};
-
 export function SignaturesSettingsView() {
   const { data: accountsData } = useAccounts();
-  const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
-  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
-  const [signatures, setSignatures] = useState<Signature[]>(DEFAULT_SIGNATURES['acc-1'] || []);
-  const [activeSigId, setActiveSigId] = useState<string>(signatures[0]?.id || 'sig-1');
+  const accounts = accountsData ?? [];
+  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || '');
+  const [signatures, setSignatures] = useState<Signature[]>([]);
+  const [activeSigId, setActiveSigId] = useState<string>('');
   const [newSigName, setNewSigName] = useState('');
-  const [forNewMessages, setForNewMessages] = useState('sig-1');
-  const [forReplies, setForReplies] = useState('sig-1');
+  const [forNewMessages, setForNewMessages] = useState('none');
+  const [forReplies, setForReplies] = useState('none');
   const addToast = useToastStore((s) => s.addToast);
 
   const activeSig = signatures.find((s) => s.id === activeSigId) || signatures[0];
@@ -39,7 +31,8 @@ export function SignaturesSettingsView() {
 
   const handleCreateSignature = () => {
     const name = newSigName.trim() || `Signature ${signatures.length + 1}`;
-    const newSig: Signature = { id: `sig-${Date.now()}`, name, body: 'Best regards,\nMulayam S' };
+    const owner = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
+    const newSig: Signature = { id: `sig-${Date.now()}`, name, body: `Best regards,\n${owner?.displayName || ''}`.trim() };
     setSignatures((prev) => [...prev, newSig]);
     setActiveSigId(newSig.id);
     setNewSigName('');

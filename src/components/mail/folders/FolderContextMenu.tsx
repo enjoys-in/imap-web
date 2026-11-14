@@ -79,7 +79,7 @@ export function FolderContextMenu({
         });
         if (!subName?.trim()) return;
         try {
-          const res = await foldersApi.createFolder(folder.accountId || 'acc-1', subName.trim(), folder.fullName || folder.displayName);
+          const res = await foldersApi.createFolder(folder.accountId, subName.trim(), folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
           addToast({ title: 'Subfolder Created', description: (res as any)?.message || `Created "${subName.trim()}" inside ${folder.displayName}.`, type: 'success' });
         } catch (err: any) {

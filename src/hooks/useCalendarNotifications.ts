@@ -38,7 +38,7 @@ export function useCalendarNotifications() {
           }
         }
       } catch {
-        // Silently handle offline/mock state
+        // Reminders are best-effort; try again on the next tick
       }
     };
 

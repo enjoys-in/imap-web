@@ -65,7 +65,7 @@ export function ProfileRecentMessages({
             <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between text-[10px] text-neutral-400">
               <span className="flex items-center gap-1 text-[#0078d4]">
                 <Mail className="w-3 h-3" />
-                <span>Outlook &bull; Mulayam S to {contactName}</span>
+                <span>From {msg.fromName || msg.fromAddress}</span>
               </span>
             </div>
           </div>

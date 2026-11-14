@@ -14,16 +14,18 @@ export function OfflineSettingsView() {
   const { data: accounts } = useAccounts();
 
   const [allowOffline, setAllowOffline] = useState(settings.allowOfflineAccess ?? true);
-  const [selectedAccount, setSelectedAccount] = useState(settings.offlineAccount || 'mullayam06@outlook.com');
+  const [selectedAccount, setSelectedAccount] = useState(settings.offlineAccount || '');
   const [foldersToSave, setFoldersToSave] = useState(settings.offlineFoldersToSave || 'default_and_favorites');
   const [daysToSave, setDaysToSave] = useState(settings.offlineDaysToSave || 30);
   const [includeAttachments, setIncludeAttachments] = useState(settings.offlineIncludeAttachments ?? true);
   const [backgroundSync, setBackgroundSync] = useState(settings.offlineBackgroundSync ?? true);
 
+  const effectiveAccount = selectedAccount || accounts?.[0]?.email || '';
+
   const handleSave = () => {
     updateSettings({
       allowOfflineAccess: allowOffline,
-      offlineAccount: selectedAccount,
+      offlineAccount: effectiveAccount,
       offlineFoldersToSave: foldersToSave,
       offlineDaysToSave: daysToSave,
       offlineIncludeAttachments: includeAttachments,
@@ -76,12 +78,11 @@ export function OfflineSettingsView() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <span className="text-xs text-neutral-600 dark:text-neutral-300 min-w-36">These settings apply to</span>
             <select
-              value={selectedAccount}
+              value={effectiveAccount}
               onChange={(e) => setSelectedAccount(e.target.value)}
               className={`${selectClass} min-w-[280px] max-w-md`}
             >
-              <option value="mullayam06@outlook.com">mullayam06@outlook.com</option>
-              {accounts?.map((acc) => acc.email !== 'mullayam06@outlook.com' && (
+              {accounts?.map((acc) => (
                 <option key={acc.id} value={acc.email}>{acc.email}</option>
               ))}
             </select>

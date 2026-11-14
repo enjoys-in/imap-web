@@ -1,8 +1,12 @@
 import { apiClient } from '../client';
 import { MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
-import { MOCK_EMAILS } from '@/lib/mock';
-import { isLiveApiAvailable, getClientConfig } from '@/config/clientConfig';
-import { getCachedEmailBody, saveCachedEmailBody } from '@/lib/idb/mailCacheDb';
+import { getClientConfig } from '@/config/clientConfig';
+import {
+  getCachedEmailBody,
+  saveCachedEmailBody,
+  getCachedEmailById,
+  getCachedThread,
+} from '@/lib/idb/mailCacheDb';
 
 export interface SendEmailPayload {
   to: string | string[];
@@ -47,39 +51,18 @@ export async function getEmailsMetadata(
   page = 1,
   limit = 25
 ): Promise<MailMessageMetadata[]> {
-  const getMockBatch = () => {
-    const filtered = MOCK_EMAILS.filter((e) => {
-      const matchFolder =
-        e.folderId === folderId || (folderId === 'fld-inbox' && (!e.folderId || e.folderId === 'fld-inbox'));
-      const matchAccount = !accountId || e.accountId === accountId;
-      return matchFolder && matchAccount;
-    });
-    // Sort latest date first (top)
-    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const start = (page - 1) * limit;
-    return filtered.slice(start, start + limit).map(({ bodyHtml, bodyText, ...meta }) => meta);
-  };
+  const url = `/fetch-emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}${
+    accountId ? `&accountId=${encodeURIComponent(accountId)}` : ''
+  }`;
+  const data = await apiClient.get<any>(url);
+  const rawList: MailMessage[] = Array.isArray(data?.result)
+    ? data.result
+    : Array.isArray(data)
+    ? data
+    : data?.result?.emails || data?.emails || [];
 
-  if (!isLiveApiAvailable()) {
-    return getMockBatch();
-  }
-
-  try {
-    const url = `/fetch-emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}${
-      accountId ? `&accountId=${encodeURIComponent(accountId)}` : ''
-    }`;
-    const data = await apiClient.get<any>(url);
-    const rawList: MailMessage[] = Array.isArray(data?.result)
-      ? data.result
-      : Array.isArray(data)
-      ? data
-      : data?.result?.emails || data?.emails || [];
-
-    const list = rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
-    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  } catch {
-    return getMockBatch();
-  }
+  const list = rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
+  return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 /**
@@ -90,33 +73,33 @@ export async function getEmails(
   page = 1,
   limit = 50
 ): Promise<MailMessage[]> {
-  try {
-    const url = `/emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}`;
-    const data = await apiClient.get<any>(url);
-    const rawList: MailMessage[] = Array.isArray(data?.result)
-      ? data.result
-      : Array.isArray(data)
-      ? data
-      : data?.result?.emails || data?.emails || [];
-    return rawList;
-  } catch {
-    return MOCK_EMAILS.filter((e) => e.folderId === folderId || folderId === 'fld-inbox');
-  }
+  const url = `/emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}`;
+  const data = await apiClient.get<any>(url);
+  const rawList: MailMessage[] = Array.isArray(data?.result)
+    ? data.result
+    : Array.isArray(data)
+    ? data
+    : data?.result?.emails || data?.emails || [];
+  return rawList;
 }
 
 /**
- * Fetch single email message by ID.
+ * Fetch a single email message by ID.
+ * The backend exposes messages through folder listings, so this resolves from
+ * the local cache populated by those listings and returns null on a miss.
  */
 export async function getEmailById(messageId: string): Promise<MailMessage | null> {
-  const match = MOCK_EMAILS.find((e) => e.id === messageId);
-  return match || null;
+  const meta = await getCachedEmailById(messageId);
+  if (!meta) return null;
+  const body = await getCachedEmailBody(messageId);
+  return { ...meta, bodyHtml: body?.bodyHtml, bodyText: body?.bodyText };
 }
 
 /**
- * Fetch thread messages.
+ * Fetch thread messages (oldest first) from the local cache of fetched listings.
  */
 export async function getThreadMessages(threadId: string): Promise<MailMessage[]> {
-  const matches = MOCK_EMAILS.filter((e) => e.threadId === threadId || e.id === threadId);
+  const matches = await getCachedThread(threadId);
   return matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
@@ -126,21 +109,20 @@ export async function getThreadMessages(threadId: string): Promise<MailMessage[]
 export async function getEmailConversation(
   threadIdOrMailId: string
 ): Promise<ThreadConversation | null> {
-  const root = MOCK_EMAILS.find(
-    (e) => e.id === threadIdOrMailId || e.threadId === threadIdOrMailId
-  );
-  if (!root) return null;
-  const threadId = root.threadId || `thread-${root.id}`;
+  const root = await getEmailById(threadIdOrMailId);
+  const threadId = root?.threadId || threadIdOrMailId;
   const messages = await getThreadMessages(threadId);
+  const first = messages[0] || root;
+  if (!first) return null;
 
   return {
     threadId,
-    subject: root.subject,
+    subject: first.subject,
     totalMessages: messages.length,
     unreadCount: messages.filter((m) => !m.isRead).length,
     messages,
-    rootMessageId: messages[0]?.id || root.id,
-    lastActivityDate: messages[messages.length - 1]?.date || root.date,
+    rootMessageId: first.id,
+    lastActivityDate: messages[messages.length - 1]?.date || first.date,
   };
 }
 
@@ -157,33 +139,19 @@ export async function getEmailBody(
     return cached;
   }
 
-  if (!isLiveApiAvailable()) {
-    const match = MOCK_EMAILS.find((e) => e.id === messageId);
-    const body = { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
-    saveCachedEmailBody(messageId, body);
-    return body;
-  }
+  const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
+  const folderParam = folder ? `&folder=${encodeURIComponent(folder)}` : '';
+  const data = await apiClient.get<any>(`/fetch-email-body?uid=${uid}${folderParam}`);
+  const body = data?.result || data;
 
-  try {
-    const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-    const folderParam = folder ? `&folder=${encodeURIComponent(folder)}` : '';
-    const data = await apiClient.get<any>(`/fetch-email-body?uid=${uid}${folderParam}`);
-    const body = data?.result || data;
+  const result = {
+    bodyHtml: body?.bodyHtml || '',
+    bodyText: body?.bodyText || '',
+    attachments: body?.attachments || [],
+  };
 
-    const result = {
-      bodyHtml: body?.bodyHtml || '',
-      bodyText: body?.bodyText || '',
-      attachments: body?.attachments || [],
-    };
-
-    saveCachedEmailBody(messageId, result);
-    return result;
-  } catch {
-    const match = MOCK_EMAILS.find((e) => e.id === messageId);
-    const body = { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText };
-    saveCachedEmailBody(messageId, body);
-    return body;
-  }
+  saveCachedEmailBody(messageId, result);
+  return result;
 }
 
 /**

@@ -5,6 +5,7 @@ import { useComposeStore } from '@/stores/useComposeStore';
 import { useMailStore } from '@/stores/useMailStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
+import { useSession } from '@/components/providers/SessionProvider';
 import { MailMessage } from '@/types';
 
 export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement | null>) {
@@ -13,6 +14,7 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     originalMessageId, threadId, draftId, draftStatus,
     updateFields,
   } = useComposeStore();
+  const { user, account } = useSession();
 
   const isFocusedRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -44,13 +46,13 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     const draftMsg: MailMessage = {
       id: currentDraftId,
       folderId: 'fld-drafts',
-      accountId: 'acc-1',
+      accountId: useMailStore.getState().selectedAccountId,
       uid: Math.floor(Math.random() * 10000),
       threadId: isReplyOrForward && threadId ? threadId : `draft-thread-${Date.now()}`,
       inReplyTo: isReplyOrForward ? originalMessageId : undefined,
       subject: subject.trim() || '(No subject)',
-      fromName: 'Alex Morgan',
-      fromAddress: 'alex.morgan@contoso.com',
+      fromName: user?.display_name || account?.displayName || '',
+      fromAddress: user?.email || account?.email || '',
       to: to.trim() || '',
       cc: cc.trim() || undefined,
       bcc: bcc.trim() || undefined,
@@ -111,7 +113,7 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
       draftStatus: 'saved',
       lastSavedTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
-  }, [hasContent, clearTimers, updateFields, mode, draftId, threadId, originalMessageId, subject, to, cc, bcc, body, attachments, getHash]);
+  }, [hasContent, clearTimers, updateFields, mode, draftId, threadId, originalMessageId, subject, to, cc, bcc, body, attachments, getHash, user, account]);
 
   // Handle focus/blur events on compose modal container
   const handleFocusCapture = useCallback(() => {

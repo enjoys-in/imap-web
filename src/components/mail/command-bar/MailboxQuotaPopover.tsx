@@ -29,8 +29,11 @@ export function MailboxQuotaPopover({ isHighlighted }: MailboxQuotaPopoverProps)
     }
   }, [isOpen]);
 
-  const usedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : 4235;
-  const totalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : 15360;
+  // No quota reported by the server: show nothing rather than made-up numbers.
+  if (!quota?.storage?.limit) return null;
+
+  const usedMb = quota.storage.used ? Math.round(quota.storage.used / (1024 * 1024)) : 0;
+  const totalMb = Math.round(quota.storage.limit / (1024 * 1024));
   const pct = quota?.storage?.percentage !== undefined ? Math.round(quota.storage.percentage) : Math.round((usedMb / totalMb) * 100);
 
   return (

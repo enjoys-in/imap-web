@@ -6,8 +6,6 @@ import { useMailStore, useComposeStore } from '@/stores';
 import { emailsApi } from '@/lib/api';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
-import { MOCK_EMAILS } from '@/lib/mock';
-import { MOCK_BODIES_MAP } from '@/lib/mock/mockBodies';
 import { format } from 'date-fns';
 import { ReadingPaneHeader } from './ReadingPaneHeader';
 import { ReadingPaneSecurityBanner } from './ReadingPaneSecurityBanner';
@@ -31,13 +29,6 @@ function getInitialBody(id?: string | null, mail?: MailMessage | MailMessageMeta
   if (mail && 'bodyHtml' in mail && (mail.bodyHtml || mail.bodyText)) {
     return { bodyHtml: mail.bodyHtml, bodyText: mail.bodyText };
   }
-  if (MOCK_BODIES_MAP[id]) {
-    return MOCK_BODIES_MAP[id];
-  }
-  const match = MOCK_EMAILS.find((e) => e.id === id);
-  if (match?.bodyHtml || match?.bodyText) {
-    return { bodyHtml: match.bodyHtml, bodyText: match.bodyText };
-  }
   return null;
 }
 
@@ -56,10 +47,9 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const { account, accounts } = useSession();
   const myEmails = useMemo(() => getUserEmails(account?.email, accounts), [account?.email, accounts]);
   const emailInStore = localEmails.find((e) => e.id === currentId);
-  const syncMockEmail = !emailInStore && currentId ? MOCK_EMAILS.find((e) => e.id === currentId) : null;
   const [fallbackEmail, setFallbackEmail] = useState<MailMessage | null>(null);
 
-  const email = (emailInStore || syncMockEmail || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
+  const email = (emailInStore || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
   const initialBody = useMemo(() => getInitialBody(currentId, email), [currentId, email]);
 
   const [allowExternalImages, setAllowExternalImages] = useState(false);
@@ -76,10 +66,10 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       .map((e) => e.id);
   }, [localEmails, selectedFolderId]);
 
-  // If email is not in local store and not in sync mock, fetch it
+  // If the email is not in the local store, resolve it from the local cache
   useEffect(() => {
     if (!currentId) return;
-    if (emailInStore || syncMockEmail) {
+    if (emailInStore) {
       setFallbackEmail(null);
       return;
     }
@@ -92,7 +82,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId, emailInStore, syncMockEmail]);
+  }, [currentId, emailInStore]);
 
   // Fetch full email body for the current active message (instant if already in memory)
   useEffect(() => {
@@ -105,12 +95,20 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     }
     let isCancelled = false;
     setIsBodyLoading(true);
-    emailsApi.getEmailBody(currentId).then((body) => {
-      if (!isCancelled) {
-        setFetchedBody(body);
-        setIsBodyLoading(false);
-      }
-    });
+    emailsApi
+      .getEmailBody(currentId)
+      .then((body) => {
+        if (!isCancelled) {
+          setFetchedBody(body);
+          setIsBodyLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setFetchedBody(null);
+          setIsBodyLoading(false);
+        }
+      });
     return () => {
       isCancelled = true;
     };

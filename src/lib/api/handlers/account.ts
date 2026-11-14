@@ -1,8 +1,7 @@
 import { apiClient, clearAuthToken, setAuthToken } from '../client';
 import { Account } from '@/types';
-import { MOCK_ACCOUNTS } from '@/lib/mock';
-import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
-import { detectPresetByEmail } from '@/lib/emailServerPresets';
+import { clearCachedEmails } from '@/lib/idb/mailCacheDb';
+import { getClientConfig } from '@/config/clientConfig';
 
 export { autodiscover, type AutodiscoverResult } from './autodiscover';
 
@@ -84,7 +83,7 @@ export interface SetupProgressEvent {
  * Initiates first-time setup with live SSE streaming updates.
  * Emits progress events for IMAP authentication, SMTP verification,
  * mailbox discovery, email pre-fetching, and token issuance.
- * Gracefully executes progressive multi-stage verification if streaming is unavailable.
+ * Falls back to the plain `/validate` endpoint if streaming is unavailable.
  */
 export async function setupAccountStream(
   config: any,
@@ -163,213 +162,90 @@ export async function setupAccountStream(
       }
     }
   } catch (streamErr: any) {
-    // If backend explicitly rejected credentials or threw auth error, propagate to user
+    // Credential / auth failures are final; surface them to the user.
     const errMsg = streamErr?.message || '';
     if (errMsg.includes('401') || errMsg.toLowerCase().includes('password') || errMsg.toLowerCase().includes('credential')) {
       throw streamErr;
     }
+    // Any other failure (stream unsupported, network blip): retry via the plain validate endpoint.
   }
 
-  // Graceful fallback to production-grade progressive verification engine
-  return runProgressiveVerification(config, onProgress);
+  return validateViaApi(config, onProgress);
 }
 
 /**
- * High-reliability multi-stage verification pipeline for IMAP/SMTP accounts.
- * Probes protocols sequentially with realistic diagnostic telemetry.
+ * Non-streaming setup path: provisions the account through the real `/validate`
+ * endpoint and reports honest progress. Never fabricates a user, token or
+ * mailbox list — if the server does not confirm the account, this throws.
  */
-async function runProgressiveVerification(
+async function validateViaApi(
   config: any,
   onProgress: (event: SetupProgressEvent) => void
 ): Promise<{ user: any; token: string; mailboxes: any[] }> {
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const email = (config.imap_username || config.email || '').trim();
-  const domain = email.includes('@') ? email.split('@')[1] : 'mail.server';
-  const imapHost = config.imap_host || `imap.${domain}`;
-  const smtpHost = config.smtp_host || `smtp.${domain}`;
-  const imapPort = config.imap_port || 993;
-  const smtpPort = config.smtp_port || 587;
 
-  // Stage 1: DNS & Server Discovery (12%)
-  onProgress({
-    step: 'init',
-    status: 'running',
-    message: `[INIT] Resolving mail servers for ${domain} (${imapHost}, ${smtpHost})...`,
-    progress: 12,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(320);
-
-  // Stage 2: IMAP TLS Authentication (35%)
   onProgress({
     step: 'imap_connect',
     status: 'running',
-    message: `[IMAP] Connecting to ${imapHost}:${imapPort} (TLS 1.3 / SSL: ${config.imap_secure ? 'Yes' : 'No'})...`,
-    progress: 25,
+    message: `[IMAP] Verifying credentials for ${email} with the server...`,
+    progress: 30,
     timestamp: new Date().toISOString(),
   });
-  await delay(380);
 
-  // Probe live backend /validate or /authenticate if available
-  let validatedData: any = null;
+  let data: any;
   try {
-    validatedData = await apiClient.post<any>('/validate', config, { skipAuth: true });
-  } catch (apiErr: any) {
-    const errText = apiErr?.message || '';
-    if (
-      errText.includes('401') ||
-      errText.toLowerCase().includes('unauthorized') ||
-      errText.toLowerCase().includes('password') ||
-      errText.toLowerCase().includes('authentication')
-    ) {
-      onProgress({
-        step: 'imap_connect',
-        status: 'error',
-        message: `[IMAP] Authentication failed: Bad credentials for ${email}`,
-        progress: 25,
-        timestamp: new Date().toISOString(),
-      });
-      throw new Error(`Authentication failed for ${email}. Please check your password or generate an App Password.`);
-    }
-    // If backend is offline or returns 404/500 on mock route, proceed smoothly
+    data = await apiClient.post<any>('/validate', config, { skipAuth: true });
+  } catch (err: any) {
+    onProgress({
+      step: 'imap_connect',
+      status: 'error',
+      message: `[IMAP] ${err?.message || 'Verification failed'}`,
+      progress: 30,
+      timestamp: new Date().toISOString(),
+    });
+    throw err;
   }
 
-  onProgress({
-    step: 'imap_connect',
-    status: 'success',
-    message: `[IMAP] TLS handshake verified. Authentication accepted for ${email}.`,
-    progress: 40,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(340);
+  const result = data?.result || data;
+  const token: string | undefined = result?.token || data?.token;
+  const user = result?.user || data?.user;
+  const mailboxes: any[] = result?.mailboxes || data?.mailboxes || [];
 
-  // Stage 3: Outbound SMTP Handshake (65%)
-  onProgress({
-    step: 'smtp_verify',
-    status: 'running',
-    message: `[SMTP] Probing outbound relay ${smtpHost}:${smtpPort} (STARTTLS)...`,
-    progress: 55,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(360);
+  if (token) {
+    setAuthToken(token);
+  }
 
-  onProgress({
-    step: 'smtp_verify',
-    status: 'success',
-    message: `[SMTP] STARTTLS negotiation verified. Outbound relay authorized.`,
-    progress: 68,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(320);
-
-  // Stage 4: Discovering Mailboxes (82%)
-  onProgress({
-    step: 'mailbox_sync',
-    status: 'running',
-    message: `[SYNC] Inspecting mailbox hierarchy via IMAP LIST...`,
-    progress: 78,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(350);
-
-  onProgress({
-    step: 'mailbox_sync',
-    status: 'success',
-    message: `[SYNC] Discovered 6 standard mailboxes (INBOX, Sent, Drafts, Archive, Junk, Trash).`,
-    progress: 86,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(300);
-
-  // Stage 5: Pre-fetching Initial Messages & Caching (94%)
-  onProgress({
-    step: 'email_fetch',
-    status: 'running',
-    message: `[CACHE] Initializing encrypted IndexedDB storage & pre-fetching recent headers...`,
-    progress: 92,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(300);
-
-  onProgress({
-    step: 'email_fetch',
-    status: 'success',
-    message: `[CACHE] Mailbox cache synchronized. Fast offline search enabled.`,
-    progress: 96,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(250);
-
-  // Stage 6: Finalizing Security Tokens (100%)
-  onProgress({
-    step: 'provision_account',
-    status: 'running',
-    message: `[AUTH] Issuing cryptographic session tokens & activating workspace...`,
-    progress: 99,
-    timestamp: new Date().toISOString(),
-  });
-  await delay(250);
-
-  const displayName = config.display_name || email.split('@')[0] || 'User';
-  const userObj = validatedData?.user || {
-    id: `u-${Date.now()}`,
-    email: email,
-    displayName: displayName,
-    display_name: displayName,
-    mid: email,
-    role: 'user',
-  };
-  const token = validatedData?.token || `token-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  setAuthToken(token);
+  // The session is cookie- or token-based; without either we are not signed in.
+  if (!user && !token) {
+    const message = data?.message || 'The server did not return a session for this account.';
+    onProgress({
+      step: 'error',
+      status: 'error',
+      message: `[AUTH] ${message}`,
+      progress: 30,
+      timestamp: new Date().toISOString(),
+    });
+    throw new Error(message);
+  }
 
   if (typeof window !== 'undefined') {
     try {
       sessionStorage.removeItem('airsend_logged_out');
-      localStorage.setItem('airsend_active_user', JSON.stringify(userObj));
-      const newAccount: Account = {
-        id: `acc-${Date.now()}`,
-        displayName: displayName,
-        email: email,
-        userName: email,
-        imapHost: config.imap_host || 'localhost',
-        imapPort: Number(config.imap_port) || 993,
-        imapSecurity: config.imap_secure ? 'SslOnConnect' : 'StartTls',
-        smtpHost: config.smtp_host || 'localhost',
-        smtpPort: Number(config.smtp_port) || 587,
-        smtpSecurity: config.smtp_secure ? 'SslOnConnect' : 'StartTls',
-        isDefault: true,
-      };
-      localStorage.setItem('airsend_custom_accounts', JSON.stringify([newAccount]));
     } catch {}
   }
-
-  const defaultMailboxes = [
-    { id: 'inbox', name: 'INBOX', unread: 0, total: 3 },
-    { id: 'sent', name: 'Sent', unread: 0, total: 0 },
-    { id: 'drafts', name: 'Drafts', unread: 0, total: 0 },
-    { id: 'archive', name: 'Archive', unread: 0, total: 0 },
-    { id: 'junk', name: 'Junk', unread: 0, total: 0 },
-    { id: 'trash', name: 'Trash', unread: 0, total: 0 },
-  ];
-
-  const finalResult = {
-    user: userObj,
-    token,
-    mailboxes: validatedData?.mailboxes || defaultMailboxes,
-  };
 
   onProgress({
     step: 'complete',
     status: 'success',
-    message: `[DONE] Account configured successfully! Ready to access inbox.`,
+    message: '[DONE] Account configured successfully! Ready to access inbox.',
     progress: 100,
     timestamp: new Date().toISOString(),
-    user: userObj,
+    user,
     token,
-    mailboxes: finalResult.mailboxes,
+    mailboxes,
   });
 
-  return finalResult;
+  return { user, token: token || '', mailboxes };
 }
 
 /**
@@ -398,9 +274,12 @@ export async function logout(): Promise<{ success: boolean }> {
     await apiClient.post('/logout');
   } finally {
     clearAuthToken();
+    // The local mail cache belongs to the signed-in mailbox; never leak it to the next session.
+    await clearCachedEmails();
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('airsend_logged_out', 'true');
+        // Legacy keys written by the removed offline/demo flow.
         localStorage.removeItem('airsend_active_user');
         localStorage.removeItem('airsend_custom_accounts');
       } catch {}
@@ -409,76 +288,67 @@ export async function logout(): Promise<{ success: boolean }> {
   return { success: true };
 }
 
-export const DEFAULT_MOCK_USER = {
-  id: 'u-1',
-  email: 'mullayam06@outlook.com',
-  displayName: 'Mullayam Singh',
-  display_name: 'Mullayam Singh',
-  mid: 'mullayam06@outlook.com',
-  role: 'user',
-};
+function hasIdentity(value: any): boolean {
+  return Boolean(value && (value.email || value.mid));
+}
 
 /**
- * Fetch current authenticated user profile and live mailbox counts.
+ * Fetch the current authenticated user profile.
+ * Resolves to `null` when signed out; rejects when the server rejects the session.
  */
 export async function getProfile(): Promise<any> {
   if (typeof window !== 'undefined' && sessionStorage.getItem('airsend_logged_out') === 'true') {
     return null;
   }
 
-  // If a custom account was provisioned in local storage, prioritize it
-  if (typeof window !== 'undefined') {
-    try {
-      const activeUser = localStorage.getItem('airsend_active_user');
-      if (activeUser) {
-        return JSON.parse(activeUser);
-      }
-    } catch {}
-  }
-
-  if (!isLiveApiAvailable()) {
-    return DEFAULT_MOCK_USER;
-  }
-
-  try {
-    const data = await apiClient.get<any>('/me', {}, DEFAULT_MOCK_USER);
-    const profile = data?.result || data?.user || data;
-    return (profile && (profile.email || profile.mid)) ? profile : DEFAULT_MOCK_USER;
-  } catch {
-    return DEFAULT_MOCK_USER;
-  }
+  const data = await apiClient.get<any>('/me');
+  const raw = data?.result ?? data?.user ?? data;
+  if (hasIdentity(raw)) return raw;
+  if (hasIdentity(raw?.user)) return raw.user;
+  return null;
 }
 
 /**
- * Fetch all configured email accounts.
+ * Builds an Account from the session profile for single-mailbox backends.
+ * Only uses values the server actually returned.
+ */
+function accountFromProfile(profile: any): Account {
+  const email: string = profile.email || profile.mid || '';
+  const secure = (value: any) => (value === false || value === 'false' ? 'StartTls' : 'SslOnConnect');
+  return {
+    id: String(profile.id ?? profile.accountId ?? email),
+    displayName: profile.displayName || profile.display_name || profile.name || email,
+    email,
+    userName: profile.imap_username || profile.userName || email,
+    imapHost: profile.imap_host || profile.imapHost || '',
+    imapPort: Number(profile.imap_port ?? profile.imapPort) || 0,
+    imapSecurity: secure(profile.imap_secure ?? profile.imapSecure),
+    smtpHost: profile.smtp_host || profile.smtpHost || '',
+    smtpPort: Number(profile.smtp_port ?? profile.smtpPort) || 0,
+    smtpSecurity: profile.smtp_secure === true || profile.smtpSecure === true ? 'SslOnConnect' : 'StartTls',
+    isDefault: true,
+  };
+}
+
+/**
+ * Fetch all configured email accounts. Backends without a multi-account
+ * endpoint expose the signed-in mailbox through the session profile instead.
  */
 export async function getAccounts(): Promise<Account[]> {
-  if (typeof window !== 'undefined') {
-    try {
-      const customAccounts = localStorage.getItem('airsend_custom_accounts');
-      if (customAccounts) {
-        const parsed = JSON.parse(customAccounts);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {}
-  }
-
-  if (!isLiveApiAvailable()) {
-    return MOCK_ACCOUNTS;
-  }
   try {
-    const data = await apiClient.get<any>('/accounts', {}, MOCK_ACCOUNTS);
+    const data = await apiClient.get<any>('/accounts');
     const list = Array.isArray(data?.result)
       ? data.result
       : Array.isArray(data)
       ? data
-      : data?.result?.accounts || data?.accounts || MOCK_ACCOUNTS;
-    return Array.isArray(list) ? list : MOCK_ACCOUNTS;
+      : data?.result?.accounts || data?.accounts;
+    if (Array.isArray(list) && list.length > 0) return list;
   } catch {
-    return MOCK_ACCOUNTS;
+    // `/accounts` is optional; fall through to the session profile.
   }
+
+  const profile = await getProfile();
+  return profile ? [accountFromProfile(profile)] : [];
 }
 
 /**
@@ -493,49 +363,24 @@ export async function getAccountById(id: string): Promise<Account | null> {
  * Create a new email account.
  */
 export async function createAccount(data: CreateAccountDto): Promise<Account> {
-  try {
-    const res = await apiClient.post<any>('/accounts', data);
-    return res?.result || res;
-  } catch {
-    return {
-      id: `acc-${Date.now()}`,
-      displayName: data.displayName,
-      email: data.email,
-      userName: data.username,
-      imapHost: data.imapHost,
-      imapPort: data.imapPort,
-      imapSecurity: data.useSsl ? 'SslOnConnect' : 'StartTls',
-      smtpHost: data.smtpHost,
-      smtpPort: data.smtpPort,
-      smtpSecurity: data.useSsl ? 'SslOnConnect' : 'StartTls',
-      isDefault: false,
-    };
-  }
+  const res = await apiClient.post<any>('/accounts', data);
+  return res?.result || res;
 }
 
 /**
  * Update an existing account.
  */
 export async function updateAccount(id: string, data: Partial<Account>): Promise<Account> {
-  try {
-    const res = await apiClient.patch<any>(`/accounts/${id}`, data);
-    return res?.result || res;
-  } catch {
-    const existing = MOCK_ACCOUNTS.find((a) => a.id === id) || MOCK_ACCOUNTS[0];
-    return { ...existing, ...data };
-  }
+  const res = await apiClient.patch<any>(`/accounts/${id}`, data);
+  return res?.result || res;
 }
 
 /**
  * Remove an account from AirSend.
  */
 export async function deleteAccount(id: string): Promise<boolean> {
-  try {
-    await apiClient.delete(`/accounts/${id}`);
-    return true;
-  } catch {
-    return true;
-  }
+  await apiClient.delete(`/accounts/${id}`);
+  return true;
 }
 
 /**
@@ -550,8 +395,8 @@ export async function testAccountConnection(
       success: res?.success ?? true,
       message: res?.message || 'Connected to IMAP and SMTP servers successfully.',
     };
-  } catch {
-    return { success: true, message: 'Connected to IMAP and SMTP servers successfully.' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Connection test failed.' };
   }
 }
 
@@ -563,7 +408,7 @@ export async function syncAccount(id: string): Promise<{ synced: boolean; timest
     await apiClient.get('/sync-all');
     return { synced: true, timestamp: new Date().toISOString() };
   } catch {
-    return { synced: true, timestamp: new Date().toISOString() };
+    return { synced: false, timestamp: new Date().toISOString() };
   }
 }
 

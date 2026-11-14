@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { PerAccountSettings } from '@/types/perAccountSettings';
-import { getDefaultPerAccountSettings } from '@/lib/mock/accountSettingsData';
+import { getDefaultPerAccountSettings } from '@/lib/accountSettingsDefaults';
 
 const STORAGE_KEY = 'airsend_per_account_settings';
 
@@ -39,10 +39,12 @@ function persistSettings(data: Record<string, PerAccountSettings>) {
 export const useAccountSettingsStore = create<AccountSettingsStoreState>((set, get) => ({
   settingsByAccount: loadPersistedSettings(),
 
-  getSettings: (accountId: string, email = 'mullayam06@outlook.com') => {
+  getSettings: (accountId: string, email = '') => {
     const existing = get().settingsByAccount[accountId];
     if (existing) return existing;
     const def = getDefaultPerAccountSettings(accountId, email);
+    // Nothing to key the defaults on until the session has resolved an account.
+    if (!accountId) return def;
     set((state) => {
       const next = { ...state.settingsByAccount, [accountId]: def };
       persistSettings(next);

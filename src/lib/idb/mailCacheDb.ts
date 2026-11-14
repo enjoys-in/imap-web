@@ -23,13 +23,22 @@ const schema: any = {
   email_bodies: 'id,cachedAt',
 };
 
+const DB_NAME = 'airsend-mail-cache-v2';
+// Earlier builds seeded this database with mock mail; drop it so none of it can resurface.
+const LEGACY_DB_NAMES = ['airsend-mail-cache'];
+
 let idbInstance: IDB<MailDbTables> | null = null;
 
 function getIdb(): IDB<MailDbTables> | null {
   if (typeof window === 'undefined') return null;
   if (!idbInstance) {
     try {
-      idbInstance = new IDB<MailDbTables>(schema, 'airsend-mail-cache', 1);
+      for (const legacy of LEGACY_DB_NAMES) {
+        try {
+          window.indexedDB?.deleteDatabase(legacy);
+        } catch {}
+      }
+      idbInstance = new IDB<MailDbTables>(schema, DB_NAME, 1);
     } catch (err) {
       console.warn('[IndexedDB] Initialization failed:', err);
       return null;
@@ -62,6 +71,37 @@ export async function getCachedEmails(folderId?: string, accountId?: string): Pr
     });
   } catch (err) {
     console.warn('[IndexedDB] Failed to retrieve cached emails:', err);
+    return [];
+  }
+}
+
+function stripCachedAt(record: CachedEmailMetadata): MailMessageMetadata {
+  const meta: Partial<CachedEmailMetadata> = { ...record };
+  delete meta.cachedAt;
+  return meta as MailMessageMetadata;
+}
+
+export async function getCachedEmailById(id: string): Promise<MailMessageMetadata | null> {
+  const idb = getIdb();
+  if (!idb) return null;
+  try {
+    const record = (await idb.getItemByKey('emails', id)) as unknown as CachedEmailMetadata | undefined;
+    if (!record) return null;
+    return stripCachedAt(record);
+  } catch (err) {
+    console.warn('[IndexedDB] Failed to get cached email:', err);
+    return null;
+  }
+}
+
+export async function getCachedThread(threadId: string): Promise<MailMessageMetadata[]> {
+  const idb = getIdb();
+  if (!idb || !threadId) return [];
+  try {
+    const all = (await idb.getAllItems('emails')) as unknown as CachedEmailMetadata[];
+    return all.filter((e) => e.threadId === threadId).map(stripCachedAt);
+  } catch (err) {
+    console.warn('[IndexedDB] Failed to get cached thread:', err);
     return [];
   }
 }

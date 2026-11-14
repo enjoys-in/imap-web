@@ -1,46 +1,38 @@
 'use client';
 
 import React, { useState } from 'react';
-import { HardDrive, Trash2, CheckCircle2 } from 'lucide-react';
-import { MOCK_ACCOUNTS } from '@/lib/mock';
-import { useAccounts, useQuota } from '@/hooks/useEmailsQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import { HardDrive, Trash2 } from 'lucide-react';
+import { useAccounts, useFolders, useQuota } from '@/hooks/useEmailsQuery';
 import { useMailStore, useToastStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
 
-interface FolderStorageItem {
-  id: string;
-  name: string;
-  sizeMb: number;
-}
-
 export function StorageSettingsView() {
+  const queryClient = useQueryClient();
   const { data: accountsData } = useAccounts();
   const { data: quota } = useQuota();
-  const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
-  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
-  const [folderSizes, setFolderSizes] = useState<FolderStorageItem[]>([
-    { id: 'fld-inbox', name: 'Inbox', sizeMb: 2840 },
-    { id: 'fld-sent', name: 'Sent Items', sizeMb: 850 },
-    { id: 'fld-archive', name: 'Archive', sizeMb: 450 },
-    { id: 'fld-trash', name: 'Deleted Items', sizeMb: 95 },
-    { id: 'fld-junk', name: 'Junk Email', sizeMb: 25 },
-  ]);
+  const accounts = accountsData ?? [];
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const activeAccountId = selectedAccountId || accounts[0]?.id || '';
+  const { data: folders = [] } = useFolders(activeAccountId);
   const emptyFolder = useMailStore((s) => s.emptyFolder);
   const addToast = useToastStore((s) => s.addToast);
 
-  const realUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
-  const realTotalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
-
-  const totalUsedMb = realUsedMb ?? folderSizes.reduce((sum, f) => sum + f.sizeMb, 0);
-  const totalQuotaMb = realTotalMb ?? 15360; // 15 GB default
-  const percentUsed = quota?.storage?.percentage !== undefined ? Math.round(quota.storage.percentage) : Math.round((totalUsedMb / totalQuotaMb) * 100);
+  const totalUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
+  const totalQuotaMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
+  const hasQuota = totalUsedMb !== undefined && totalQuotaMb !== undefined && totalQuotaMb > 0;
+  const percentUsed = hasQuota
+    ? quota?.storage?.percentage !== undefined
+      ? Math.round(quota.storage.percentage)
+      : Math.round((totalUsedMb / totalQuotaMb) * 100)
+    : 0;
 
   const handleEmpty = async (folderId: string, name: string) => {
     emptyFolder(folderId);
     try {
       const res = await foldersApi.emptyFolder(folderId);
-      setFolderSizes((prev) => prev.map((f) => (f.id === folderId ? { ...f, sizeMb: 0 } : f)));
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
       addToast({
         title: 'Folder emptied',
         description: res?.message || `Emptied all items in ${name}`,
@@ -66,7 +58,7 @@ export function StorageSettingsView() {
       <div className="p-3 bg-neutral-50 dark:bg-[#1a1a1a] rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <label className="font-semibold text-neutral-700 dark:text-neutral-300">Select account:</label>
         <select
-          value={selectedAccountId}
+          value={activeAccountId}
           onChange={(e) => setSelectedAccountId(e.target.value)}
           className="h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
         >
@@ -83,46 +75,60 @@ export function StorageSettingsView() {
             <HardDrive className="w-4 h-4 text-[#0078d4]" />
             <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100">Mailbox storage</span>
           </div>
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">
-            {(totalUsedMb / 1024).toFixed(1)} GB of {(totalQuotaMb / 1024).toFixed(0)} GB used ({percentUsed}%)
-          </span>
+          {hasQuota && (
+            <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+              {(totalUsedMb / 1024).toFixed(1)} GB of {(totalQuotaMb / 1024).toFixed(0)} GB used ({percentUsed}%)
+            </span>
+          )}
         </div>
 
-        {/* Minimized Progress Bar with True Full-Track Gradient */}
-        <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative">
-          <div
-            className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
-            style={{ width: `${percentUsed}%` }}
-          >
-            <div
-              className="absolute inset-y-0 left-0"
-              style={{
-                width: `${percentUsed > 0 ? (100 / percentUsed) * 100 : 100}%`,
-                background: QUOTA_FULL_GRADIENT,
-              }}
-            />
-          </div>
-        </div>
+        {hasQuota ? (
+          <>
+            {/* Minimized Progress Bar with True Full-Track Gradient */}
+            <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden relative">
+              <div
+                className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
+                style={{ width: `${percentUsed}%` }}
+              >
+                <div
+                  className="absolute inset-y-0 left-0"
+                  style={{
+                    width: `${percentUsed > 0 ? (100 / percentUsed) * 100 : 100}%`,
+                    background: QUOTA_FULL_GRADIENT,
+                  }}
+                />
+              </div>
+            </div>
 
-        <p className="text-[11px] text-neutral-500">
-          You have {((totalQuotaMb - totalUsedMb) / 1024).toFixed(1)} GB of free space available.
-        </p>
+            <p className="text-[11px] text-neutral-500">
+              You have {((totalQuotaMb - totalUsedMb) / 1024).toFixed(1)} GB of free space available.
+            </p>
+          </>
+        ) : (
+          <p className="text-[11px] text-neutral-500">Storage quota is not reported by this mail server.</p>
+        )}
       </div>
 
       {/* Breakdown per Folder */}
       <div className="space-y-2">
-        <h3 className="font-bold text-neutral-900 dark:text-neutral-100">Folder storage breakdown</h3>
+        <h3 className="font-bold text-neutral-900 dark:text-neutral-100">Folders</h3>
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-[#1c1c1c] overflow-hidden">
-          {folderSizes.map((f) => (
+          {folders.length === 0 && (
+            <div className="p-3 text-[11px] text-neutral-500">No folders to show.</div>
+          )}
+          {folders.map((f) => (
             <div key={f.id} className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-[#222222] transition-colors">
               <div>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200 block">{f.name}</span>
-                <span className="text-[11px] text-neutral-500">{f.sizeMb > 1024 ? `${(f.sizeMb / 1024).toFixed(1)} GB` : `${f.sizeMb} MB`}</span>
+                <span className="font-medium text-neutral-800 dark:text-neutral-200 block">{f.displayName}</span>
+                <span className="text-[11px] text-neutral-500">
+                  {f.totalCount} {f.totalCount === 1 ? 'message' : 'messages'}
+                  {f.unreadCount > 0 ? ` · ${f.unreadCount} unread` : ''}
+                </span>
               </div>
 
-              {(f.id === 'fld-trash' || f.id === 'fld-junk') && f.sizeMb > 0 && (
+              {(f.special === 'Trash' || f.special === 'Junk') && f.totalCount > 0 && (
                 <button
-                  onClick={() => handleEmpty(f.id, f.name)}
+                  onClick={() => handleEmpty(f.id, f.displayName)}
                   className="px-2.5 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded flex items-center gap-1 font-medium transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

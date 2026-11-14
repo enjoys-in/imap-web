@@ -27,17 +27,8 @@ export function JunkSettingsView() {
   const [trustContacts, setTrustContacts] = useState(true);
   const [isTraining, setIsTraining] = useState(false);
 
-  const [blocked, setBlocked] = useState<string[]>([
-    'spammer@marketing-blast.com',
-    'promo@unsolicited-deals.net',
-    'lottery-winner@phish-notice.org',
-  ]);
-  const [safe, setSafe] = useState<string[]>([
-    'talent@hackajob.com',
-    'noreply@thalesgroup.com',
-    'mullayam06@outlook.com',
-    'support@github.com',
-  ]);
+  const [blocked, setBlocked] = useState<string[]>([]);
+  const [safe, setSafe] = useState<string[]>([]);
   const [newBlocked, setNewBlocked] = useState('');
   const [newSafe, setNewSafe] = useState('');
   const addToast = useToastStore((s) => s.addToast);

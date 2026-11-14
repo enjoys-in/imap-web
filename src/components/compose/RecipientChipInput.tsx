@@ -3,19 +3,13 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
 import { EditableRecipientChip } from './EditableRecipientChip';
+import { useMailContacts } from '@/hooks/useMailContacts';
 
 export interface Recipient {
   id: string;
   name: string;
   email: string;
 }
-
-const SUGGESTIONS = [
-  { name: 'Jeelan Basha Shaik', email: 'jeelan.shaik@recruitment.com' },
-  { name: 'Gaurav Raj', email: 'gaurav.raj@avelix.com' },
-  { name: 'Phil Kell', email: 'phil@hackajob.com' },
-  { name: 'Whitekraaft Recruitment', email: 'recruitment@whitekraaft.com' },
-];
 
 export function parseRecipientText(raw: string): Recipient[] {
   if (!raw || !raw.trim()) return [];
@@ -61,6 +55,7 @@ export function RecipientChipInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const contacts = useMailContacts();
   const recipients = useMemo(() => parseRecipientText(value), [value]);
 
   const addRecipient = (name: string, email: string) => {
@@ -101,7 +96,7 @@ export function RecipientChipInput({
     }
   };
 
-  const filteredSuggestions = SUGGESTIONS.filter((s) => {
+  const filteredSuggestions = contacts.filter((s) => {
     const q = inputValue.toLowerCase().trim();
     if (!q) return false;
     return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);

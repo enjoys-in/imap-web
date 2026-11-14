@@ -25,9 +25,6 @@ export function getUserEmails(
       }
     }
   }
-  // Standard user session accounts
-  list.add('mullayam06@outlook.com');
-  list.add('mullayam06@airsend.in');
   return Array.from(list);
 }
 

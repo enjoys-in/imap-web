@@ -6,6 +6,7 @@ import { useUiStore } from '@/stores/useUiStore';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { usePaneResize } from '@/hooks/usePaneResize';
 import { getAccountByUserIndex } from '@/lib/accountRouter';
+import { useSession } from '@/components/providers/SessionProvider';
 import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
 import { MailCommandBar } from './command-bar/MailCommandBar';
 import { FolderSidebar } from './folders/FolderSidebar';
@@ -29,7 +30,9 @@ export function MailClientView({
   currentMailId,
 }: MailClientViewProps) {
   const parsedUserIndex = typeof userIndex === 'string' ? parseInt(userIndex, 10) || 0 : userIndex;
-  const activeAccount = getAccountByUserIndex(parsedUserIndex);
+  const { accounts } = useSession();
+  const activeAccount = getAccountByUserIndex(accounts, parsedUserIndex);
+  const activeAccountId = activeAccount?.id ?? '';
 
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
   const selectedMailId = useMailStore((s) => s.selectedMailId);
@@ -57,10 +60,11 @@ export function MailClientView({
     : selectedFolderId || 'fld-inbox';
 
   useEffect(() => {
-    setSelectedAccount(activeAccount.id);
+    if (!activeAccountId) return;
+    setSelectedAccount(activeAccountId);
     setSelectedAccountIndex(parsedUserIndex);
-    fetchEmails(activeFolderId, activeAccount.id);
-  }, [activeAccount.id, parsedUserIndex, fetchEmails, setSelectedAccount, setSelectedAccountIndex, activeFolderId]);
+    fetchEmails(activeFolderId, activeAccountId);
+  }, [activeAccountId, parsedUserIndex, fetchEmails, setSelectedAccount, setSelectedAccountIndex, activeFolderId]);
 
   useMailClientHashSync(parsedUserIndex);
 

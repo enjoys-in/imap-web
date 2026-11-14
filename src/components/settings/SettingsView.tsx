@@ -9,12 +9,12 @@ export function SettingsView() {
   const { theme, toggleTheme } = useUiStore();
   const { data: accounts } = useAccounts();
   const currentAccount = accounts?.[0] || {
-    displayName: 'Mulayam',
-    email: 'mullayam06@outlook.com',
-    imapHost: 'outlook.office365.com',
-    imapPort: 993,
-    smtpHost: 'smtp.office365.com',
-    smtpPort: 587,
+    displayName: '',
+    email: '',
+    imapHost: '',
+    imapPort: 0,
+    smtpHost: '',
+    smtpPort: 0,
   };
 
   return (

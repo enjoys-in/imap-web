@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, ArrowRight } from 'lucide-react';
-import { useToastStore } from '@/stores';
+import { useToastStore, useMailStore } from '@/stores';
+import { settingsApi } from '@/lib/api';
 
 interface EmailRule {
   id: string;
@@ -12,14 +13,22 @@ interface EmailRule {
   enabled: boolean;
 }
 
-const DEFAULT_RULES: EmailRule[] = [
-  { id: 'rule-1', name: 'Move recruitment outreach', condition: 'Sender contains "recruitment"', action: 'Move to Archive', enabled: true },
-  { id: 'rule-2', name: 'Flag contract proposals', condition: 'Subject contains "Contract"', action: 'Flag message', enabled: true },
-  { id: 'rule-3', name: 'Mark automated newsletters as read', condition: 'Sender contains "no-reply"', action: 'Mark as read', enabled: false },
-];
-
 export function RulesSettingsView() {
-  const [rules, setRules] = useState<EmailRule[]>(DEFAULT_RULES);
+  const selectedAccountId = useMailStore((s) => s.selectedAccountId);
+  const [rules, setRules] = useState<EmailRule[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    settingsApi
+      .getMailRules(selectedAccountId || undefined)
+      .then((list) => {
+        if (!cancelled) setRules(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAccountId]);
   const [isAdding, setIsAdding] = useState(false);
   const [ruleName, setRuleName] = useState('');
   const [conditionType, setConditionType] = useState('sender');
@@ -133,6 +142,11 @@ export function RulesSettingsView() {
 
       {/* Rules List */}
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-[#1c1c1c] overflow-hidden">
+        {rules.length === 0 && (
+          <div className="p-4 text-center text-neutral-400 border border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg">
+            No rules yet.
+          </div>
+        )}
         {rules.map((rule) => (
           <div key={rule.id} className="p-3.5 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-[#222222] transition-colors">
             <div className="space-y-1">

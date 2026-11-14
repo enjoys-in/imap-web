@@ -49,7 +49,7 @@ export function TopHeaderProfileMenu() {
                 {user?.display_name || account?.displayName || 'AirSend User'}
               </p>
               <p className="text-[11px] text-neutral-400 truncate">
-                {user?.email || account?.email || 'user@airsend.io'}
+                {user?.email || account?.email || ''}
               </p>
             </div>
           </div>

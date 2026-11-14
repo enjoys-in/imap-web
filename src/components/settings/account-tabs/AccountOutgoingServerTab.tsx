@@ -45,7 +45,7 @@ export function AccountOutgoingServerTab({ settings, onChange }: AccountOutgoing
 
           <div className="flex items-baseline justify-between border-b border-neutral-100 dark:border-neutral-800 pb-1.5">
             <span className="text-neutral-500">Server Name:</span>
-            <span className="font-mono font-medium text-[#0078d4]">{settings.serverName || 'mail.enjoys.in'}</span>
+            <span className="font-mono font-medium text-[#0078d4]">{settings.serverName || '<not specified>'}</span>
           </div>
 
           <div className="flex items-baseline justify-between border-b border-neutral-100 dark:border-neutral-800 pb-1.5">

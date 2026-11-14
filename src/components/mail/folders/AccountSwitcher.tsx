@@ -14,7 +14,7 @@ export function AccountSwitcher() {
 
   const currentAccount =
     accounts?.find((a) => a.id === selectedAccountId) ||
-    accounts?.[0] || { displayName: 'Mulayam', email: 'mullayam06@outlook.com' };
+    accounts?.[0] || { displayName: '', email: '' };
 
   return (
     <div className="relative select-none">

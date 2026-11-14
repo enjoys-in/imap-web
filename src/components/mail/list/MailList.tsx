@@ -7,7 +7,7 @@ import { MailListItem } from './MailListItem';
 import { MailListHeader } from './MailListHeader';
 import { MailItemContextMenu } from './MailItemContextMenu';
 import { MailThreadSubItems } from './MailThreadSubItems';
-import { MOCK_THREAD_SUB_MESSAGES } from '@/lib/mock/emails';
+import { useSession } from '@/components/providers/SessionProvider';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
@@ -36,7 +36,8 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
   } = useMailStore();
 
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
-  const cardsRows = getSettings(selectedAccountId).appearance.cardsViewRows;
+  const { account } = useSession();
+  const cardsRows = getSettings(selectedAccountId, account?.email).appearance.cardsViewRows;
 
   const [contextMenu, setContextMenu] = useState<{
     email: MailMessageMetadata | MailMessage;
@@ -108,9 +109,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
 
             {unpinnedEmails.map((email) => {
               const isExpanded = expandedThreadIds.has(email.id);
-              const mockSub = MOCK_THREAD_SUB_MESSAGES[email.threadId || email.id] || [];
-              const dynamicSub = localEmails.filter((e) => e.threadId === email.threadId && e.id !== email.id);
-              const subEmails = dynamicSub.length > 0 ? dynamicSub : mockSub;
+              const subEmails = localEmails.filter((e) => e.threadId === email.threadId && e.id !== email.id);
               const hasThread = Boolean(email.isThread || subEmails.length > 0 || (email.threadCount && email.threadCount > 1));
 
               return (

@@ -6,7 +6,6 @@ import { resolveEndpointUrl, isDirectBaseUrlRoute } from './directBaseRoutes';
 export { getAuthToken, setAuthToken, clearAuthToken } from './tokenStorage';
 export { moldApiResponse, type ApiResponse } from './moldResponse';
 export { DIRECT_BASE_URL_ROUTES, isDirectBaseUrlRoute, resolveEndpointUrl } from './directBaseRoutes';
-export { api } from './legacyApi';
 
 export interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;
@@ -18,12 +17,10 @@ export interface ApiRequestOptions extends RequestInit {
  * - Bearer authorization headers
  * - Direct baseUrl routing for public autodiscover / autoconfig routes
  * - Standardized JSON molding: enforces { success, message, result }
- * - Graceful fallback to mock data when backend is unreachable or offline
  */
 export async function apiRequest<T>(
   endpoint: string,
-  options: ApiRequestOptions = {},
-  fallback?: T
+  options: ApiRequestOptions = {}
 ): Promise<T> {
   const config = getClientConfig();
   const token = getAuthToken();
@@ -56,92 +53,82 @@ export async function apiRequest<T>(
     }
   }
 
-  try {
-    const res = await fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers,
-    });
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers,
+  });
 
-    const contentType = res.headers.get('content-type') || '';
+  const contentType = res.headers.get('content-type') || '';
 
-    if (contentType.includes('application/json')) {
-      const json = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
-        if (json && typeof json === 'object') {
-          errorMsg = json.message || json.error || errorMsg;
-        }
-        throw new Error(errorMsg);
-      }
-
-      const molded = moldApiResponse<T>(json, res.status, res.statusText);
-      return molded as unknown as T;
-    }
+  if (contentType.includes('application/json')) {
+    const json = await res.json().catch(() => null);
 
     if (!res.ok) {
-      const errorText = await res.text().catch(() => '');
-      throw new Error(errorText || `HTTP ${res.status}: ${res.statusText}`);
+      let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+      if (json && typeof json === 'object') {
+        errorMsg = json.message || json.error || errorMsg;
+      }
+      throw new Error(errorMsg);
     }
 
-    const text = await res.text();
-    return text as unknown as T;
-  } catch (err) {
-    if (fallback !== undefined) {
-      return fallback;
-    }
-    throw err;
+    const molded = moldApiResponse<T>(json, res.status, res.statusText);
+    return molded as unknown as T;
   }
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => '');
+    throw new Error(errorText || `HTTP ${res.status}: ${res.statusText}`);
+  }
+
+  const text = await res.text();
+  return text as unknown as T;
 }
 
 export const apiClient = {
-  get<T>(endpoint: string, options?: ApiRequestOptions, fallback?: T): Promise<T> {
-    return apiRequest<T>(endpoint, { ...options, method: 'GET' }, fallback);
+  get<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+    return apiRequest<T>(endpoint, { ...options, method: 'GET' });
   },
 
-  post<T>(endpoint: string, body?: any, options?: ApiRequestOptions, fallback?: T): Promise<T> {
+  post<T>(endpoint: string, body?: any, options?: ApiRequestOptions): Promise<T> {
     return apiRequest<T>(
       endpoint,
       {
         ...options,
         method: 'POST',
         body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
-      },
-      fallback
+      }
     );
   },
 
-  put<T>(endpoint: string, body?: any, options?: ApiRequestOptions, fallback?: T): Promise<T> {
+  put<T>(endpoint: string, body?: any, options?: ApiRequestOptions): Promise<T> {
     return apiRequest<T>(
       endpoint,
       {
         ...options,
         method: 'PUT',
         body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
-      },
-      fallback
+      }
     );
   },
 
-  patch<T>(endpoint: string, body?: any, options?: ApiRequestOptions, fallback?: T): Promise<T> {
+  patch<T>(endpoint: string, body?: any, options?: ApiRequestOptions): Promise<T> {
     return apiRequest<T>(
       endpoint,
       {
         ...options,
         method: 'PATCH',
         body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
-      },
-      fallback
+      }
     );
   },
 
-  delete<T>(endpoint: string, options?: ApiRequestOptions, fallback?: T): Promise<T> {
-    return apiRequest<T>(endpoint, { ...options, method: 'DELETE' }, fallback);
+  delete<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+    return apiRequest<T>(endpoint, { ...options, method: 'DELETE' });
   },
 
-  async unwrap<T>(endpoint: string, options?: ApiRequestOptions, fallback?: T): Promise<T> {
-    const res = await apiRequest<any>(endpoint, options, fallback);
+  async unwrap<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+    const res = await apiRequest<any>(endpoint, options);
     return (res?.result !== undefined ? res.result : res) as T;
   },
 };

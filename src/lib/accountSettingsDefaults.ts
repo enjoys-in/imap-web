@@ -1,10 +1,9 @@
 import { PerAccountSettings } from '@/types/perAccountSettings';
 
 export function getDefaultPerAccountSettings(
-  accountId = 'acc-1',
-  email = 'mullayam06@outlook.com'
+  accountId: string,
+  email = ''
 ): PerAccountSettings {
-  const isAirsend = email.includes('airsend.in');
   return {
     accountId,
     incoming: {
@@ -84,10 +83,10 @@ export function getDefaultPerAccountSettings(
       onRequestAction: 'ask',
     },
     outgoingSmtp: {
-      description: isAirsend ? 'AirSend Dedicated SMTP' : '<not specified>',
-      serverName: isAirsend ? 'mail.enjoys.in' : 'smtp.office365.com',
+      description: '<not specified>',
+      serverName: '',
       port: 587,
-      userName: isAirsend ? 'mullayam06@airsend.in' : email,
+      userName: email,
       authMethod: 'Normal password',
       connectionSecurity: 'STARTTLS',
       isDefault: true,

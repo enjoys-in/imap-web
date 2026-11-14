@@ -14,32 +14,7 @@ interface NotificationEntry {
   type: 'mail' | 'calendar' | 'system';
 }
 
-const INITIAL_NOTIFICATIONS: NotificationEntry[] = [
-  {
-    id: 'notif-1',
-    title: 'Sarah Jenkins sent an email',
-    detail: 'Q3 Product Roadmap Review & Sprint Planning',
-    time: '35m ago',
-    isRead: false,
-    type: 'mail',
-  },
-  {
-    id: 'notif-2',
-    title: 'Upcoming Meeting in 25 min',
-    detail: 'Sprint Planning & Backlog Grooming (Teams)',
-    time: '25m ago',
-    isRead: false,
-    type: 'calendar',
-  },
-  {
-    id: 'notif-3',
-    title: 'CI/CD Pipeline Succeeded',
-    detail: 'Release v2.4.0-rc1 passed all tests',
-    time: '2h ago',
-    isRead: true,
-    type: 'system',
-  },
-];
+const INITIAL_NOTIFICATIONS: NotificationEntry[] = [];
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
@@ -124,6 +99,9 @@ export function NotificationCenter() {
             </div>
 
             <div className="max-h-72 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+              {notifications.length === 0 && (
+                <div className="p-6 text-center text-xs text-neutral-400">No notifications</div>
+              )}
               {notifications.map((item) => (
                 <div
                   key={item.id}

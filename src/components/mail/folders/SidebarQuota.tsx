@@ -30,8 +30,11 @@ export function SidebarQuota({
   const realUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
   const realTotalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
 
-  const usedMb = propUsedMb ?? realUsedMb ?? 4235;
-  const totalMb = propTotalMb ?? realTotalMb ?? 15360;
+  const usedMb = propUsedMb ?? realUsedMb;
+  const totalMb = propTotalMb ?? realTotalMb;
+
+  // No quota reported by the server: show nothing rather than made-up numbers.
+  if (usedMb === undefined || !totalMb) return null;
 
   const pct = quota?.storage?.percentage !== undefined
     ? Math.round(quota.storage.percentage)

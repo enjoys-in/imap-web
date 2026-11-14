@@ -52,8 +52,3 @@ export function getClientConfig(): AppConfig {
     apiUrl,
   };
 }
-
-export function isLiveApiAvailable(): boolean {
-  const config = getClientConfig();
-  return Boolean(config.apiUrl);
-}

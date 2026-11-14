@@ -42,7 +42,7 @@ export function FolderSidebar({
   const { data: accounts } = useAccounts();
 
   const userIdx = typeof accountIndex === 'number' ? accountIndex : 0;
-  const primaryAccount = accounts?.[userIdx] || accounts?.[0] || { id: 'acc-1', email: 'mullayam06@outlook.com' };
+  const primaryAccount = accounts?.[userIdx] || accounts?.[0] || { id: selectedAccountId, email: '' };
   const otherAccounts = accounts?.filter((_, idx) => idx !== userIdx) || [];
   const appVersion = getClientConfig().appVersion || '1.0.0';
 

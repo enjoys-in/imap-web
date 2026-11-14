@@ -12,11 +12,7 @@ interface MiniEvent {
   color: string;
 }
 
-const INITIAL_EVENTS: MiniEvent[] = [
-  { id: '1', title: 'Sprint Backlog Planning', start: '10:00 AM', end: '11:00 AM', color: '#0078d4' },
-  { id: '2', title: '1:1 Sync with Tech Lead', start: '02:30 PM', end: '03:00 PM', color: '#107c41' },
-  { id: '3', title: 'Client Architecture Review', start: '04:00 PM', end: '05:00 PM', color: '#5c2d91' },
-];
+const INITIAL_EVENTS: MiniEvent[] = [];
 
 export function RightAppsCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -161,6 +157,11 @@ export function RightAppsCalendar() {
             </div>
           </div>
         ))}
+        {events.length === 0 && (
+          <div className="h-24 flex items-center justify-center text-neutral-400 text-center">
+            <p>No events yet</p>
+          </div>
+        )}
       </div>
     </div>
   );

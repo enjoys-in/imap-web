@@ -25,24 +25,7 @@ interface CalendarNotificationState {
   simulateUpcomingReminder: () => void;
 }
 
-const INITIAL_REMINDERS: CalendarReminder[] = [
-  {
-    id: 'rem-1',
-    appointmentId: 'apt-1',
-    title: 'Sprint Planning & Backlog Grooming',
-    timeStr: 'In 15 minutes (2:00 PM)',
-    location: 'Microsoft Teams Meeting',
-    isRead: false,
-  },
-  {
-    id: 'rem-2',
-    appointmentId: 'apt-2',
-    title: 'Architecture Sync: IMAP IDLE',
-    timeStr: 'Today at 3:30 PM',
-    location: 'Conference Room 4B / Hybrid',
-    isRead: false,
-  },
-];
+const INITIAL_REMINDERS: CalendarReminder[] = [];
 
 export const useCalendarNotificationStore = create<CalendarNotificationState>((set, get) => ({
   reminders: INITIAL_REMINDERS,
