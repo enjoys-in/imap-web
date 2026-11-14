@@ -4,6 +4,7 @@ import type {
   MailboxExpungeEventPayload,
   MessageFlagsEventPayload,
 } from '@/lib/api/handlers/stream';
+import type { MailFolder } from '@/types';
 import { findRegisteredFolderByPath } from '@/lib/folders';
 import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { invalidateQuota, setInboxQuota } from '@/lib/queryClientRef';
@@ -16,11 +17,16 @@ type KnownTotals = FolderEvent & { totalCount: number; unreadCount: number };
 const hasTotals = (event: FolderEvent): event is KnownTotals =>
   typeof event.totalCount === 'number' && typeof event.unreadCount === 'number';
 
-async function applyTotals(event: FolderEvent, options: { immediate?: boolean } = {}): Promise<void> {
+async function applyTotals(
+  event: FolderEvent,
+  options: { immediate?: boolean; resync?: boolean } = {}
+): Promise<void> {
   const { selectedAccountId, selectedFolderId } = useMailStore.getState();
   const folders = useFolderStore.getState();
 
-  if (hasTotals(event)) {
+  if (options.resync) {
+    await folders.syncFolders(selectedAccountId, selectedFolderId);
+  } else if (hasTotals(event)) {
     await folders.applyServerCounts(
       [{ path: event.path, totalCount: event.totalCount, unreadCount: event.unreadCount }],
       selectedFolderId
@@ -35,9 +41,16 @@ async function applyTotals(event: FolderEvent, options: { immediate?: boolean } 
   else invalidateQuota();
 }
 
+const addedCount = (event: MailboxChangeEventPayload): number =>
+  event.newCount ?? Math.max(0, event.count - event.prevCount);
+
 export function newMessageCount(event: MailboxChangeEventPayload): number {
-  if (event.reason) return 0;
-  return event.newCount ?? Math.max(0, event.count - event.prevCount);
+  return event.reason ? 0 : addedCount(event);
+}
+
+export function folderListChanged(event: MailboxChangeEventPayload, known: MailFolder | undefined): boolean {
+  if (!known) return true;
+  return event.newCount === 0 && event.totalCount === 0 && event.unreadCount === 0;
 }
 
 export function shouldNotifyNewMail(event: MailboxChangeEventPayload): boolean {
@@ -50,10 +63,13 @@ export async function handleMailboxChange(event: MailboxChangeEventPayload): Pro
   const { selectedAccountId, selectedFolderId } = useMailStore.getState();
   const changed = findRegisteredFolderByPath(event.path, selectedAccountId);
 
-  await applyTotals(event, { immediate: true });
+  await applyTotals(event, { immediate: true, resync: folderListChanged(event, changed) });
 
-  if (changed && changed.id === selectedFolderId) {
+  if (!changed) return;
+  if (changed.id === selectedFolderId) {
     await useMailStore.getState().refreshFolder(changed.id);
+  } else if (addedCount(event) > 0) {
+    await invalidateFolderSync(changed.id);
   }
 }
 
