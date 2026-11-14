@@ -1,23 +1,21 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
-import { useMailStore, useUiStore } from '@/stores';
+import React, { useState, useEffect } from 'react';
+import { useMailStore } from '@/stores';
+import { useUiStore } from '@/stores/useUiStore';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { usePaneResize } from '@/hooks/usePaneResize';
-import { ResizeHandle } from '@/components/ui/ResizeHandle';
-import { FolderSidebar } from './folders';
-import { MailList } from './list';
-import { ReadingPane, ReadingPaneSkeleton } from './reading-pane';
-import { PopoutReadingModal } from './reading-pane/PopoutReadingModal';
-import { MailCommandBar } from './command-bar';
+import { getAccountByUserIndex } from '@/lib/accountRouter';
+import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
+import { MailCommandBar } from './command-bar/MailCommandBar';
+import { FolderSidebar } from './folders/FolderSidebar';
 import { RightAppsRail } from '@/components/right-apps/RightAppsRail';
 import { RightAppsPanel } from '@/components/right-apps/RightAppsPanel';
-import { getAccountByUserIndex } from '@/lib/accountRouter';
-import { folderIdToSlug } from '@/lib/folderSlugUtils';
-import { cn } from '@/lib/utils';
-import { saveOpenMailSession } from '@/lib/storage/mailSessionStorage';
-import { ArrowLeft } from 'lucide-react';
+import { PopoutReadingModal } from './reading-pane/PopoutReadingModal';
+import { ResizeHandle } from '@/components/ui/ResizeHandle';
 import { useMailClientHashSync } from './useMailClientHashSync';
+import { MailClientLayoutContent } from './layout/MailClientLayoutContent';
+import { cn } from '@/lib/utils';
 
 interface MailClientViewProps {
   userIndex?: number | string;
@@ -25,27 +23,38 @@ interface MailClientViewProps {
   currentMailId?: string;
 }
 
-export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }: MailClientViewProps) {
+export function MailClientView({
+  userIndex = 0,
+  currentFolderId,
+  currentMailId,
+}: MailClientViewProps) {
   const parsedUserIndex = typeof userIndex === 'string' ? parseInt(userIndex, 10) || 0 : userIndex;
   const activeAccount = getAccountByUserIndex(parsedUserIndex);
 
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
   const selectedMailId = useMailStore((s) => s.selectedMailId);
-  const setSelectedFolder = useMailStore((s) => s.setSelectedFolder);
-  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const setSelectedAccount = useMailStore((s) => s.setSelectedAccount);
   const setSelectedAccountIndex = useMailStore((s) => s.setSelectedAccountIndex);
+  const setSelectedFolder = useMailStore((s) => s.setSelectedFolder);
+  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const fetchEmails = useMailStore((s) => s.fetchEmails);
 
   const isSidebarOpen = useUiStore((s) => s.isSidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
-  const { sidebarWidth, mailListWidth, handleSidebarResize, handleMailListResize, resetSidebar, resetMailList } = usePaneResize();
+  const {
+    sidebarWidth, mailListWidth, mailListHeight,
+    handleSidebarResize, handleMailListResize, handleMailListVerticalResize,
+    resetSidebar, resetMailList, resetMailListHeight,
+  } = usePaneResize();
 
   const readingPaneLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
   const [popoutMailId, setPopoutMailId] = useState<string | null>(null);
 
-  const activeFolderId = currentFolderId || selectedFolderId || 'fld-inbox';
-  const hasSelectedMail = Boolean(currentMailId || selectedMailId);
+  const activeFolderId = currentFolderId
+    ? currentFolderId.startsWith('fld-')
+      ? currentFolderId
+      : slugToFolderId(currentFolderId)
+    : selectedFolderId || 'fld-inbox';
 
   useEffect(() => {
     setSelectedAccount(activeAccount.id);
@@ -55,79 +64,69 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
 
   useMailClientHashSync(parsedUserIndex);
 
-  const handleFolderChange = (folderId: string) => {
-    const slug = folderIdToSlug(folderId);
-    setSelectedFolder(folderId);
+  useEffect(() => {
+    const handleOpenPopout = (e: CustomEvent<{ mailId: string }>) => {
+      if (e.detail?.mailId) setPopoutMailId(e.detail.mailId);
+    };
+    window.addEventListener('airsend:open-mail-popout', handleOpenPopout as EventListener);
+    return () => window.removeEventListener('airsend:open-mail-popout', handleOpenPopout as EventListener);
+  }, []);
+
+  const hasSelectedMail = Boolean(currentMailId || selectedMailId);
+
+  const handleBackToList = () => {
     setSelectedMail(null);
-    saveOpenMailSession(parsedUserIndex, folderId, slug, null);
-    if (isSidebarOpen) toggleSidebar();
+    const slug = folderIdToSlug(activeFolderId);
     if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
   };
 
   const handleMailChange = (mailId: string) => {
-    if (readingPaneLayout === 'popoutOnly') {
-      setPopoutMailId(mailId);
-      return;
-    }
-    const slug = folderIdToSlug(activeFolderId);
     setSelectedMail(mailId);
-    saveOpenMailSession(parsedUserIndex, activeFolderId, slug, mailId);
-    if (typeof window !== 'undefined') window.location.hash = `#${slug}/${mailId}`;
+    if (readingPaneLayout === 'popoutOnly') setPopoutMailId(mailId);
   };
 
-  const handleBackToList = () => {
-    const slug = folderIdToSlug(activeFolderId);
+  const handleFolderChange = (folderId: string) => {
+    setSelectedFolder(folderId);
     setSelectedMail(null);
-    saveOpenMailSession(parsedUserIndex, activeFolderId, slug, null);
+    const slug = folderIdToSlug(folderId);
     if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative w-full">
+    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full">
       <MailCommandBar />
-      <div className="flex-1 flex overflow-hidden relative w-full">
+      <div className="flex-1 flex overflow-hidden relative w-full h-full">
         {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={toggleSidebar} />}
 
-        <div className={cn('fixed inset-y-0 left-0 z-40 md:static md:z-auto transition-transform duration-200 ease-in-out md:translate-x-0', isSidebarOpen ? 'translate-x-0' : '-translate-x-full')}>
+        <div className={cn(
+          'fixed inset-y-0 left-0 z-40 md:static md:z-auto transition-transform duration-200 ease-in-out md:translate-x-0 shrink-0',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}>
           <FolderSidebar activeFolderId={activeFolderId} accountIndex={parsedUserIndex} onSelectFolder={handleFolderChange} width={sidebarWidth} />
         </div>
-        <ResizeHandle onResize={handleSidebarResize} onDoubleClick={resetSidebar} className="hidden md:block" />
 
-        <div
-          className={cn(
-            'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 select-none transition-all',
-            readingPaneLayout === 'fillScreen' && hasSelectedMail ? 'hidden' : 'w-full md:w-auto',
-            hasSelectedMail ? 'hidden md:flex' : 'flex'
-          )}
-          style={{ width: readingPaneLayout === 'fillScreen' && hasSelectedMail ? 0 : mailListWidth }}
-        >
-          <MailList activeFolderId={activeFolderId} onSelectMail={handleMailChange} activeMailId={currentMailId || selectedMailId || undefined} />
-        </div>
+        <ResizeHandle orientation="vertical" onResize={handleSidebarResize} onDoubleClick={resetSidebar} className="hidden md:block" />
 
-        {readingPaneLayout !== 'fillScreen' && (
-          <ResizeHandle onResize={handleMailListResize} onDoubleClick={resetMailList} className="hidden md:block" />
-        )}
-
-        <div className={cn('flex-1 flex flex-col overflow-hidden bg-white dark:bg-neutral-900', !hasSelectedMail ? 'hidden md:flex' : 'flex')}>
-          <div className="md:hidden flex items-center gap-2 p-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-850">
-            <button onClick={handleBackToList} className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Messages</span>
-            </button>
-          </div>
-
-          <Suspense fallback={<ReadingPaneSkeleton />}>
-            <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
-          </Suspense>
-        </div>
+        <MailClientLayoutContent
+          readingPaneLayout={readingPaneLayout}
+          hasSelectedMail={hasSelectedMail}
+          activeFolderId={activeFolderId}
+          activeMailId={currentMailId || selectedMailId || undefined}
+          mailListWidth={mailListWidth}
+          mailListHeight={mailListHeight}
+          onSelectMail={handleMailChange}
+          onBackToList={handleBackToList}
+          onMailListResize={handleMailListResize}
+          onMailListVerticalResize={handleMailListVerticalResize}
+          onResetMailList={resetMailList}
+          onResetMailListHeight={resetMailListHeight}
+        />
 
         <RightAppsRail />
         <RightAppsPanel />
       </div>
 
-      {popoutMailId && (
-        <PopoutReadingModal mailId={popoutMailId} onClose={() => setPopoutMailId(null)} />
-      )}
+      {popoutMailId && <PopoutReadingModal mailId={popoutMailId} onClose={() => setPopoutMailId(null)} />}
     </div>
   );
 }

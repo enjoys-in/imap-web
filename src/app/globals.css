@@ -76,3 +76,59 @@ body {
     transparent 16px
   );
 }
+
+/* ──────────────── Fluent & Windows 11 Login Animations ──────────────── */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes shadow-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.28;
+  }
+  50% {
+    transform: scale(0.82);
+    opacity: 0.16;
+  }
+}
+
+@keyframes bloom-drift-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(30px, -25px) scale(1.08) rotate(4deg);
+  }
+}
+
+@keyframes bloom-drift-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(-35px, 20px) scale(1.05) rotate(-3deg);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 4.5s ease-in-out infinite;
+}
+
+.animate-shadow-scale {
+  animation: shadow-scale 4.5s ease-in-out infinite;
+}
+
+.animate-bloom-1 {
+  animation: bloom-drift-1 18s ease-in-out infinite;
+}
+
+.animate-bloom-2 {
+  animation: bloom-drift-2 22s ease-in-out infinite;
+}
+

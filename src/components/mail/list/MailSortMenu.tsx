@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, ArrowDownUp } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { useMailStore, MailSortField, MailSortDirection } from '@/stores';
+import { MailSortLayoutOptions } from './MailSortLayoutOptions';
 import { cn } from '@/lib/utils';
 
 export function MailSortMenu() {
@@ -35,7 +36,6 @@ export function MailSortMenu() {
   const currentLabel = `By ${fieldLabels[sortField] || 'Date'}`;
 
   const handleSelectField = (field: MailSortField) => {
-    // If selecting same field, keep direction; if switching, default date/size to desc, from/subject to asc
     const defaultDir: MailSortDirection = field === 'from' || field === 'subject' ? 'asc' : 'desc';
     const nextDir = field === sortField ? sortDirection : defaultDir;
     setSortConfig(field, nextDir);
@@ -58,14 +58,14 @@ export function MailSortMenu() {
             ? 'text-[#0078d4] dark:text-blue-400 bg-neutral-200/50 dark:bg-neutral-800'
             : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white'
         )}
-        title="Sort and order messages"
+        title="Sort, order and layout"
       >
         <span>{currentLabel}</span>
         <ChevronDown className="w-3 h-3 opacity-70" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700/80 rounded-lg shadow-xl py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700/80 rounded-lg shadow-xl py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             Sort by
           </div>
@@ -120,6 +120,8 @@ export function MailSortMenu() {
             <span>{sortField === 'date' ? 'Oldest on top' : sortField === 'size' ? 'Smallest on top' : 'A to Z'}</span>
             {sortDirection === 'asc' && <Check className="w-3.5 h-3.5 text-[#0078d4] dark:text-blue-400" />}
           </button>
+
+          <MailSortLayoutOptions onSelect={() => setIsOpen(false)} />
         </div>
       )}
     </div>
