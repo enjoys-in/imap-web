@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 import { legacyFolderParamToSlug } from '@/lib/folders';
 
+export const dynamic = 'force-dynamic';
+export const instant = false;
+
 interface MailPageProps {
   searchParams: Promise<{ folder?: string; id?: string }>;
 }
