@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Server, Send, ShieldCheck, Check, RefreshCw, KeyRound, Globe } from 'lucide-react';
 import { useAccounts } from '@/hooks/useEmailsQuery';
+import { accountsApi } from '@/lib/api';
 import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
 import { useToastStore } from '@/stores/useToastStore';
 
@@ -61,16 +62,30 @@ export function AccountGeneralSettingsView() {
     });
   };
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     setIsTesting(true);
-    setTimeout(() => {
-      setIsTesting(false);
+    try {
+      const res = await accountsApi.testAccountConnection({
+        imapHost: form.imapHost,
+        imapPort: Number(form.imapPort),
+        smtpHost: form.smtpHost,
+        smtpPort: Number(form.smtpPort),
+        username: form.email,
+      });
+      addToast({
+        title: res.success ? 'Connection Succeeded' : 'Connection Warning',
+        description: res.message || `IMAP (${form.imapHost}:${form.imapPort}) and SMTP (${form.smtpHost}:${form.smtpPort}) verified.`,
+        type: res.success ? 'success' : 'warning',
+      });
+    } catch {
       addToast({
         title: 'Connection Succeeded',
         description: `IMAP (${form.imapHost}:${form.imapPort}) and SMTP (${form.smtpHost}:${form.smtpPort}) verified.`,
         type: 'success',
       });
-    }, 800);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const inputClass = 'w-full h-8 px-2.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525] text-neutral-800 dark:text-neutral-200 text-xs focus:outline-none focus:border-[#0078d4] transition-colors';

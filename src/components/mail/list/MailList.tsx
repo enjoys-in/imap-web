@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useMailStore } from '@/stores';
 import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
 import { MailListItem } from './MailListItem';
@@ -10,9 +10,9 @@ import { MailThreadSubItems } from './MailThreadSubItems';
 import { MOCK_THREAD_SUB_MESSAGES } from '@/lib/mock/emails';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import { parseEmailSearchQuery, matchesEmailFilter } from '@/lib/searchParser';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
+import { useMailListFilterSort } from './useMailListFilterSort';
 
 interface MailListProps {
   activeFolderId?: string;
@@ -25,32 +25,20 @@ interface MailListProps {
 export function MailList({ activeFolderId, activeMailId, onSelectMail, width, isWideLayout }: MailListProps) {
   const generalReadingLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
   const effectiveIsWide = isWideLayout ?? (generalReadingLayout === 'fillScreen' || generalReadingLayout === 'popoutOnly');
-  const localEmails = useMailStore((s) => s.localEmails);
-  const serverSearchResults = useMailStore((s) => s.serverSearchResults);
-  const isSearchingServer = useMailStore((s) => s.isSearchingServer);
-  const clearSearch = useMailStore((s) => s.clearSearch);
+
   const selectedMailId = useMailStore((s) => s.selectedMailId);
   const selectedIds = useMailStore((s) => s.selectedIds);
   const searchQuery = useMailStore((s) => s.searchQuery);
-  const filterTab = useMailStore((s) => s.filterTab);
-
+  const isSearchingServer = useMailStore((s) => s.isSearchingServer);
+  const clearSearch = useMailStore((s) => s.clearSearch);
   const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const toggleSelectId = useMailStore((s) => s.toggleSelectId);
-
-  const handleToggleFlag = useCallback((id: string) => {
-    dispatchMailAction({ action: 'toggle-flag', targetEmailId: id });
-  }, []);
-  const handleTogglePin = useCallback((id: string) => {
-    dispatchMailAction({ action: 'toggle-pin', targetEmailId: id });
-  }, []);
-  const handleToggleRead = useCallback((id: string) => {
-    dispatchMailAction({ action: 'toggle-read', targetEmailId: id });
-  }, []);
-  const handleDelete = useCallback((id: string) => {
-    dispatchMailAction({ action: 'delete', targetEmailId: id });
-  }, []);
-
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
+  const localEmails = useMailStore((s) => s.localEmails);
+  const hasMoreEmails = useMailStore((s) => s.hasMoreEmails);
+  const isLoadingMore = useMailStore((s) => s.isLoadingMore);
+  const loadMoreEmails = useMailStore((s) => s.loadMoreEmails);
+
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
   const cardsRows = getSettings(selectedAccountId).appearance.cardsViewRows;
 
@@ -60,30 +48,9 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
   } | null>(null);
 
   const activeId = activeMailId || selectedMailId;
-
-  const filteredEmails = useMemo(() => {
-    const list = serverSearchResults !== null ? serverSearchResults : localEmails;
-    const filter = parseEmailSearchQuery(searchQuery);
-
-    return list.filter((e) => {
-      if (!serverSearchResults && activeFolderId && activeFolderId !== 'fld-inbox' && e.folderId !== activeFolderId) return false;
-      if (filterTab === 'unread' && e.isRead) return false;
-      if (filterTab === 'flagged' && !e.isFlagged) return false;
-      if (filterTab === 'pinned' && !e.isPinned) return false;
-      if (filterTab === 'attachments' && !e.hasAttachments) return false;
-      return searchQuery.trim() ? matchesEmailFilter(e, filter) : true;
-    });
-  }, [localEmails, serverSearchResults, activeFolderId, filterTab, searchQuery]);
-
-  const pinnedEmails = useMemo(() => filteredEmails.filter((e) => e.isPinned), [filteredEmails]);
-  const unpinnedEmails = useMemo(() => filteredEmails.filter((e) => !e.isPinned), [filteredEmails]);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const currentIds = useMemo(() => filteredEmails.map((e) => e.id), [filteredEmails]);
 
-  const handleSelect = useCallback(
-    (id: string) => (onSelectMail ? onSelectMail(id) : setSelectedMail(id === activeId ? null : id)),
-    [onSelectMail, setSelectedMail, activeId]
-  );
+  const { filteredEmails, pinnedEmails, unpinnedEmails, currentIds } = useMailListFilterSort(activeFolderId);
 
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set());
 
@@ -96,10 +63,10 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
     });
   }, []);
 
-  const handleContextMenu = (e: React.MouseEvent, email: MailMessageMetadata | MailMessage) => {
-    e.preventDefault();
-    setContextMenu({ email, position: { x: e.clientX, y: e.clientY } });
-  };
+  const handleSelect = useCallback(
+    (id: string) => (onSelectMail ? onSelectMail(id) : setSelectedMail(id === activeId ? null : id)),
+    [onSelectMail, setSelectedMail, activeId]
+  );
 
   return (
     <div
@@ -112,9 +79,9 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
         <div className="px-3 py-1.5 bg-blue-50/80 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/60 flex items-center justify-between text-xs text-blue-900 dark:text-blue-300">
           <div className="flex items-center gap-1.5 truncate">
             {isSearchingServer && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />}
-            <span className="truncate">Search: <strong className="font-semibold">{searchQuery}</strong> ({filteredEmails.length} results)</span>
+            <span className="truncate">Search: <strong className="font-semibold">{searchQuery}</strong> ({filteredEmails.length})</span>
           </div>
-          <button onClick={clearSearch} className="text-blue-700 dark:text-blue-400 hover:text-red-600 dark:hover:text-red-400 text-[11px] underline shrink-0 cursor-pointer ml-2">Clear</button>
+          <button onClick={clearSearch} className="text-blue-700 dark:text-blue-400 hover:text-red-600 text-[11px] underline shrink-0 cursor-pointer ml-2">Clear</button>
         </div>
       )}
 
@@ -125,10 +92,12 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
               <MailListItem
                 key={`pin-${email.id}`} email={email} isSelected={email.id === activeId}
                 isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
-                isWideLayout={effectiveIsWide}
-                cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
-                onToggleFlag={handleToggleFlag} onTogglePin={handleTogglePin} onToggleRead={handleToggleRead}
-                onDelete={handleDelete} onContextMenu={handleContextMenu}
+                isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect}
+                onToggleCheck={toggleSelectId} onToggleFlag={(id) => dispatchMailAction({ action: 'toggle-flag', targetEmailId: id })}
+                onTogglePin={(id) => dispatchMailAction({ action: 'toggle-pin', targetEmailId: id })}
+                onToggleRead={(id) => dispatchMailAction({ action: 'toggle-read', targetEmailId: id })}
+                onDelete={(id) => dispatchMailAction({ action: 'delete', targetEmailId: id })}
+                onContextMenu={(e, em) => { e.preventDefault(); setContextMenu({ email: em, position: { x: e.clientX, y: e.clientY } }); }}
               />
             ))}
           </div>
@@ -138,7 +107,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
           <div>
             <div className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-bold text-neutral-800 dark:text-white bg-neutral-100 dark:bg-[#252525] border-y border-neutral-200 dark:border-neutral-800">
               <ChevronDown className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-300" />
-              <span>This Month</span>
+              <span>Messages</span>
             </div>
 
             {unpinnedEmails.map((email) => {
@@ -154,10 +123,12 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
                     email={email} isSelected={email.id === activeId}
                     isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
                     isThread={hasThread} isThreadExpanded={isExpanded} onToggleThreadExpand={handleToggleThreadExpand}
-                    isWideLayout={effectiveIsWide}
-                    cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
-                    onToggleFlag={handleToggleFlag} onTogglePin={handleTogglePin} onToggleRead={handleToggleRead}
-                    onDelete={handleDelete} onContextMenu={handleContextMenu}
+                    isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect}
+                    onToggleCheck={toggleSelectId} onToggleFlag={(id) => dispatchMailAction({ action: 'toggle-flag', targetEmailId: id })}
+                    onTogglePin={(id) => dispatchMailAction({ action: 'toggle-pin', targetEmailId: id })}
+                    onToggleRead={(id) => dispatchMailAction({ action: 'toggle-read', targetEmailId: id })}
+                    onDelete={(id) => dispatchMailAction({ action: 'delete', targetEmailId: id })}
+                    onContextMenu={(e, em) => { e.preventDefault(); setContextMenu({ email: em, position: { x: e.clientX, y: e.clientY } }); }}
                   />
                   {subEmails.length > 0 && (
                     <MailThreadSubItems
@@ -176,14 +147,37 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
             <p>No messages found</p>
           </div>
         )}
+
+        {/* Load More Pagination */}
+        {hasMoreEmails && (
+          <div className="p-3 flex justify-center border-t border-neutral-100 dark:border-neutral-800">
+            <button
+              type="button"
+              onClick={() => loadMoreEmails()}
+              disabled={isLoadingMore}
+              className="px-3.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-750 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0078d4]" />
+                  <span>Loading older messages...</span>
+                </>
+              ) : (
+                <span>Load next 25 messages</span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {!hasMoreEmails && filteredEmails.length > 0 && (
+          <div className="py-3 text-center text-[11px] text-neutral-400 dark:text-neutral-500">
+            All messages loaded ({filteredEmails.length})
+          </div>
+        )}
       </div>
 
       {contextMenu && (
-        <MailItemContextMenu
-          email={contextMenu.email}
-          position={contextMenu.position}
-          onClose={() => setContextMenu(null)}
-        />
+        <MailItemContextMenu email={contextMenu.email} position={contextMenu.position} onClose={() => setContextMenu(null)} />
       )}
     </div>
   );

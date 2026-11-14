@@ -217,7 +217,11 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
         onShowBlockedContent={() => setAllowExternalImages(true)}
       />
 
-      <ReadingPaneAttachments attachments={email.attachments} />
+      <ReadingPaneAttachments
+        attachments={email.attachments}
+        folder={email.folderId}
+        uid={email.uid || email.id}
+      />
 
       <div className="flex-1 overflow-y-auto">
         {isBodyLoading ? (
@@ -327,7 +331,11 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
                       >
                         <div className="overflow-hidden">
                           <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f]">
-                            <ReadingPaneAttachments attachments={histMsg.attachments} />
+                            <ReadingPaneAttachments
+                              attachments={histMsg.attachments}
+                              folder={histMsg.folderId || email.folderId}
+                              uid={histMsg.uid || histMsg.id}
+                            />
                             <SandboxedEmailBody
                               bodyHtml={histMsg.bodyHtml || ''}
                               bodyText={histMsg.bodyText || histMsg.preview}

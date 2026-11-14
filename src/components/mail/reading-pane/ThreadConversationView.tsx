@@ -170,7 +170,11 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
               >
                 <div className="overflow-hidden">
                   <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-                    <ReadingPaneAttachments attachments={msg.attachments} />
+                    <ReadingPaneAttachments
+                      attachments={msg.attachments}
+                      folder={msg.folderId || 'INBOX'}
+                      uid={msg.uid || msg.id}
+                    />
                     <SandboxedEmailBody bodyHtml={bodyContent} allowExternalImages={true} />
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { HardDrive, ExternalLink, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
+import { useQuota } from '@/hooks/useEmailsQuery';
 
 interface MailboxQuotaPopoverProps {
   isHighlighted?: boolean;
@@ -13,6 +14,7 @@ interface MailboxQuotaPopoverProps {
 export function MailboxQuotaPopover({ isHighlighted }: MailboxQuotaPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { data: quota } = useQuota();
 
   // Close when clicking outside
   useEffect(() => {
@@ -27,9 +29,9 @@ export function MailboxQuotaPopover({ isHighlighted }: MailboxQuotaPopoverProps)
     }
   }, [isOpen]);
 
-  const usedMb = 4235; // 4.13 GB
-  const totalMb = 15360; // 15 GB
-  const pct = Math.round((usedMb / totalMb) * 100);
+  const usedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : 4235;
+  const totalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : 15360;
+  const pct = quota?.storage?.percentage !== undefined ? Math.round(quota.storage.percentage) : Math.round((usedMb / totalMb) * 100);
 
   return (
     <div ref={containerRef} className="relative inline-block">

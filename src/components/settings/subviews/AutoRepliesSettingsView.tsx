@@ -1,19 +1,25 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, Calendar, Clock } from 'lucide-react';
+import { Save, Calendar, Clock, Check } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { useAccounts } from '@/hooks/useEmailsQuery';
 import { useToastStore } from '@/stores';
+import { cn } from '@/lib/utils';
 
 export function AutoRepliesSettingsView() {
   const { data: accountsData } = useAccounts();
   const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
+  
   const [isEnabled, setIsEnabled] = useState(false);
   const [onlyDuringPeriod, setOnlyDuringPeriod] = useState(false);
-  const [startDate, setStartDate] = useState('2026-11-15T09:00');
-  const [endDate, setEndDate] = useState('2026-11-20T17:00');
+  const [startDate, setStartDate] = useState('2026-11-13');
+  const [startTime, setStartTime] = useState('11:30 PM');
+  const [endDate, setEndDate] = useState('2026-11-14');
+  const [endTime, setEndTime] = useState('11:30 PM');
+  const [onlyContacts, setOnlyContacts] = useState(false);
+  
   const [replyMessage, setReplyMessage] = useState(
     "Hi,\n\nI am currently out of the office with limited access to email. I will respond to your message as soon as possible upon my return.\n\nBest regards,\nMulayam"
   );
@@ -23,122 +29,227 @@ export function AutoRepliesSettingsView() {
   const handleSave = () => {
     addToast({
       title: isEnabled ? 'Automatic replies turned on' : 'Automatic replies saved',
-      description: isEnabled ? 'Out of office autoreply is active.' : 'Autoreply disabled.',
+      description: isEnabled
+        ? `Out of office active${onlyDuringPeriod ? ` until ${endDate} ${endTime}` : ''}.`
+        : 'Automatic replies are turned off.',
       type: 'success',
     });
   };
 
+  const selectClass =
+    'h-8 px-2.5 bg-white dark:bg-[#222222] border border-neutral-300 dark:border-neutral-700/80 rounded text-xs text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-[#0078d4] transition-colors cursor-pointer';
+
+  const timeOptions = [
+    '12:00 AM', '12:30 AM', '01:00 AM', '01:30 AM', '02:00 AM', '02:30 AM',
+    '03:00 AM', '03:30 AM', '04:00 AM', '04:30 AM', '05:00 AM', '05:30 AM',
+    '06:00 AM', '06:30 AM', '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM',
+    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+    '12:00 PM', '12:30 PM', '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
+    '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM',
+    '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM',
+    '09:00 PM', '09:30 PM', '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM',
+  ];
+
   return (
-    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none">
-      <div>
-        <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Automatic replies</h2>
-        <p className="text-neutral-500 mt-0.5">Use automatic replies to let others know you're on vacation or unavailable.</p>
+    <div className="max-w-4xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none pb-12">
+      {/* Header */}
+      <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            Automatic replies
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            Turn on automatic replies to let people know you&apos;re away.
+          </p>
+        </div>
+        <button
+          onClick={handleSave}
+          className="h-8 px-4 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+        >
+          <Save className="w-3.5 h-3.5" />
+          <span>Save</span>
+        </button>
       </div>
 
-      {/* Account Selector */}
-      <div className="p-3 bg-neutral-50 dark:bg-[#1a1a1a] rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-        <label className="font-semibold text-neutral-700 dark:text-neutral-300">Select account:</label>
+      {/* Account Selector Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <span className="text-xs text-neutral-600 dark:text-neutral-300 min-w-36">
+          These settings apply to
+        </span>
         <select
           value={selectedAccountId}
           onChange={(e) => setSelectedAccountId(e.target.value)}
-          className="h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
+          className={`${selectClass} min-w-[280px] max-w-md`}
         >
           {accounts.map((a) => (
-            <option key={a.id} value={a.id}>{a.email} ({a.accountType || 'IMAP'})</option>
+            <option key={a.id} value={a.id}>
+              {a.email}
+            </option>
           ))}
         </select>
       </div>
 
-      {/* Main Toggle */}
-      <div className="space-y-3">
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="radio"
-            name="autoReplyToggle"
-            checked={!isEnabled}
-            onChange={() => setIsEnabled(false)}
-            className="accent-[#0078d4] w-4 h-4"
-          />
-          <span className="font-medium text-neutral-800 dark:text-neutral-200">Don't send automatic replies</span>
-        </label>
-
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="radio"
-            name="autoReplyToggle"
-            checked={isEnabled}
-            onChange={() => setIsEnabled(true)}
-            className="accent-[#0078d4] w-4 h-4"
-          />
-          <span className="font-medium text-neutral-800 dark:text-neutral-200">Turn on automatic replies</span>
+      {/* Main Toggle Switch matching screenshot */}
+      <div className="pt-2">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div className="relative inline-flex items-center">
+            <input
+              type="checkbox"
+              checked={isEnabled}
+              onChange={(e) => setIsEnabled(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-5 bg-neutral-300 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0078d4]" />
+          </div>
+          <span className="font-semibold text-xs text-neutral-900 dark:text-neutral-100">
+            Automatic replies
+          </span>
         </label>
       </div>
 
-      {/* Scheduled Time Period */}
-      {isEnabled && (
-        <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-[#1a1a1a]">
-          <label className="flex items-center gap-2 cursor-pointer font-medium">
+      {/* Settings Container */}
+      <div
+        className={cn(
+          'space-y-4 pt-1 transition-opacity duration-150',
+          !isEnabled && 'opacity-50 pointer-events-none'
+        )}
+      >
+        {/* Checkbox: Send replies only during a time period */}
+        <div className="space-y-3">
+          <label className="flex items-center gap-2.5 cursor-pointer">
             <input
               type="checkbox"
               checked={onlyDuringPeriod}
+              disabled={!isEnabled}
               onChange={(e) => setOnlyDuringPeriod(e.target.checked)}
-              className="accent-[#0078d4] rounded"
+              className="w-4 h-4 rounded border-neutral-400 dark:border-neutral-600 accent-[#0078d4] cursor-pointer"
             />
-            <span>Send replies only during a time period</span>
+            <span className="text-xs text-neutral-800 dark:text-neutral-200">
+              Send replies only during a time period
+            </span>
           </label>
 
-          {onlyDuringPeriod && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-5">
-              <div>
-                <label className="block text-neutral-500 mb-1">Start time:</label>
+          {/* Start and End date/time rows matching screenshot */}
+          <div
+            className={cn(
+              'space-y-2.5 pl-6 max-w-xl transition-opacity',
+              !onlyDuringPeriod && 'opacity-50 pointer-events-none'
+            )}
+          >
+            {/* Start Row */}
+            <div className="flex items-center gap-3">
+              <span className="w-12 text-neutral-500 dark:text-neutral-400 text-xs">
+                Start
+              </span>
+              <div className="relative flex-1">
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
+                  className={`${selectClass} w-full`}
                 />
               </div>
-              <div>
-                <label className="block text-neutral-500 mb-1">End time:</label>
-                <input
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
-                />
+              <div className="w-32">
+                <select
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className={`${selectClass} w-full`}
+                >
+                  {timeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          )}
 
-          {/* Autoreply Message Editor */}
-          <div>
-            <label className="block font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Reply message:</label>
-            <textarea
-              value={replyMessage}
-              onChange={(e) => setReplyMessage(e.target.value)}
-              rows={5}
-              className="w-full p-2.5 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded-md text-xs resize-y"
-            />
+            {/* End Row */}
+            <div className="flex items-center gap-3">
+              <span className="w-12 text-neutral-500 dark:text-neutral-400 text-xs">
+                End
+              </span>
+              <div className="relative flex-1">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={`${selectClass} w-full`}
+                />
+              </div>
+              <div className="w-32">
+                <select
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className={`${selectClass} w-full`}
+                >
+                  {timeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
+        {/* Checkbox: Send replies only to contacts */}
+        <div className="pt-1">
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyContacts}
+              disabled={!isEnabled}
+              onChange={(e) => setOnlyContacts(e.target.checked)}
+              className="w-4 h-4 rounded border-neutral-400 dark:border-neutral-600 accent-[#0078d4] cursor-pointer"
+            />
+            <span className="text-xs text-neutral-800 dark:text-neutral-200">
+              Send replies only to contacts
+            </span>
+          </label>
+        </div>
+
+        {/* Message Editor */}
+        <div className="pt-2 space-y-1.5 max-w-2xl">
+          <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
+            Send a reply once to each sender with the following message:
+          </label>
+          <textarea
+            value={replyMessage}
+            disabled={!isEnabled}
+            onChange={(e) => setReplyMessage(e.target.value)}
+            rows={6}
+            placeholder="Write your automatic reply message..."
+            className="w-full p-3 bg-white dark:bg-[#222222] border border-neutral-300 dark:border-neutral-700/80 rounded-md text-xs text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-[#0078d4] transition-colors resize-y leading-relaxed"
+          />
+        </div>
+
+        {/* Checkbox: Send replies outside my organization */}
+        <div className="pt-1">
+          <label className="flex items-center gap-2.5 cursor-pointer">
             <input
               type="checkbox"
               checked={outsideOrg}
+              disabled={!isEnabled}
               onChange={(e) => setOutsideOrg(e.target.checked)}
-              className="accent-[#0078d4] rounded"
+              className="w-4 h-4 rounded border-neutral-400 dark:border-neutral-600 accent-[#0078d4] cursor-pointer"
             />
-            <span>Send replies outside my organization</span>
+            <span className="text-xs text-neutral-800 dark:text-neutral-200">
+              Send replies outside my organization
+            </span>
           </label>
         </div>
-      )}
+      </div>
 
-      <div>
+      {/* Save Button */}
+      <div className="pt-4">
         <button
           onClick={handleSave}
-          className="h-8 px-4 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium flex items-center gap-1.5 cursor-pointer shadow-xs"
+          className="h-9 px-5 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors text-xs"
         >
-          <Save className="w-3.5 h-3.5" /><span>Save</span>
+          <Save className="w-4 h-4" />
+          <span>Save Changes</span>
         </button>
       </div>
     </div>

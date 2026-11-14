@@ -29,14 +29,8 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
   }, [to, subject, body, attachments]);
 
   const clearTimers = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
   }, []);
 
   const saveDraft = useCallback(async (isImmediateAttachment = false) => {

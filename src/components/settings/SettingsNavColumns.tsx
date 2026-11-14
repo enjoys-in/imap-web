@@ -36,11 +36,17 @@ const CATEGORIES: CategoryItem[] = [
     ],
   },
   {
-    id: 'general', label: 'General', href: '/settings/general', icon: Settings,
+    id: 'general', label: 'General', href: '/settings/general/language', icon: Settings,
     subcategories: [
+      { id: 'language', label: 'Language and time', href: '/settings/general/language' },
       { id: 'appearance', label: 'Appearance', href: '/settings/general' },
       { id: 'notifications', label: 'Notifications', href: '/settings/general/notifications' },
-      { id: 'language', label: 'Language & time', href: '/settings/general/language' },
+      { id: 'accessibility', label: 'Accessibility', href: '/settings/general/accessibility' },
+      { id: 'privacy', label: 'Privacy and data', href: '/settings/general/privacy' },
+      { id: 'search', label: 'Search', href: '/settings/general/search' },
+      { id: 'offline', label: 'Offline', href: '/settings/general/offline' },
+      { id: 'startup', label: 'Start up', href: '/settings/general/startup' },
+      { id: 'about', label: 'About AirSend', href: '/settings/general/about' },
     ],
   },
   {

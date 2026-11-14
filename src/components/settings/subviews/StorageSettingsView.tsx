@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { HardDrive, Trash2, CheckCircle2 } from 'lucide-react';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
-import { useAccounts } from '@/hooks/useEmailsQuery';
+import { useAccounts, useQuota } from '@/hooks/useEmailsQuery';
 import { useMailStore, useToastStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
@@ -16,6 +16,7 @@ interface FolderStorageItem {
 
 export function StorageSettingsView() {
   const { data: accountsData } = useAccounts();
+  const { data: quota } = useQuota();
   const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
   const [folderSizes, setFolderSizes] = useState<FolderStorageItem[]>([
@@ -28,9 +29,12 @@ export function StorageSettingsView() {
   const emptyFolder = useMailStore((s) => s.emptyFolder);
   const addToast = useToastStore((s) => s.addToast);
 
-  const totalUsedMb = folderSizes.reduce((sum, f) => sum + f.sizeMb, 0);
-  const totalQuotaMb = 15360; // 15 GB
-  const percentUsed = Math.round((totalUsedMb / totalQuotaMb) * 100);
+  const realUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
+  const realTotalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
+
+  const totalUsedMb = realUsedMb ?? folderSizes.reduce((sum, f) => sum + f.sizeMb, 0);
+  const totalQuotaMb = realTotalMb ?? 15360; // 15 GB default
+  const percentUsed = quota?.storage?.percentage !== undefined ? Math.round(quota.storage.percentage) : Math.round((totalUsedMb / totalQuotaMb) * 100);
 
   const handleEmpty = (folderId: string, name: string) => {
     emptyFolder(folderId);

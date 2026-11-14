@@ -144,37 +144,16 @@ export function MailItemContextMenu({
         targetEmail: em,
       }),
     onFindFromSender: (em) =>
-      dispatchMailAction({
-        action: 'find-from-sender',
-        targetEmailId: em.id,
-        targetEmail: em,
-        senderAddress: em.fromAddress,
-      }),
+      dispatchMailAction({ action: 'find-from-sender', targetEmailId: em.id, targetEmail: em, senderAddress: em.fromAddress }),
     onCreateTask: (em) =>
-      dispatchMailAction({
-        action: 'create-task',
-        targetEmailId: em.id,
-        targetEmail: em,
-      }),
+      dispatchMailAction({ action: 'create-task', targetEmailId: em.id, targetEmail: em }),
     onAddContact: (em) =>
-      dispatchMailAction({
-        action: 'add-contact',
-        targetEmailId: em.id,
-        targetEmail: em,
-      }),
+      dispatchMailAction({ action: 'add-contact', targetEmailId: em.id, targetEmail: em }),
     onViewSource: (em) =>
-      dispatchMailAction({
-        action: 'view-source',
-        targetEmailId: em.id,
-        targetEmail: em,
-      }),
+      dispatchMailAction({ action: 'view-source', targetEmailId: em.id, targetEmail: em }),
     onToast: (title, desc, type = 'info') => {
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('airsend:toast', {
-            detail: { title, description: desc, type },
-          })
-        );
+        window.dispatchEvent(new CustomEvent('airsend:toast', { detail: { title, description: desc, type } }));
       }
     },
   };

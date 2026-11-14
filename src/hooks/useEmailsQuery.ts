@@ -4,6 +4,12 @@ import {
   foldersApi,
   emailsApi,
   calendarApi,
+  capabilitiesApi,
+  jobsApi,
+  type StorageQuotaInfo,
+  type ServerCapabilityReport,
+  type ConnectionStatusResponse,
+  type ImapJobInfo,
 } from '@/lib/api';
 import { MailFolder, MailMessageMetadata, Account, Appointment } from '@/types';
 
@@ -49,3 +55,38 @@ export function useAppointments() {
     staleTime: 60000,
   });
 }
+
+export function useQuota(folder = 'INBOX') {
+  return useQuery<StorageQuotaInfo>({
+    queryKey: ['quota', folder],
+    queryFn: () => foldersApi.getQuota(folder),
+    staleTime: 30000,
+  });
+}
+
+export function useServerCapabilities() {
+  return useQuery<ServerCapabilityReport | null>({
+    queryKey: ['serverCapabilities'],
+    queryFn: () => capabilitiesApi.getServerCapabilities(),
+    staleTime: 600000, // 10 minutes
+  });
+}
+
+export function useConnectionStatus() {
+  return useQuery<ConnectionStatusResponse>({
+    queryKey: ['connectionStatus'],
+    queryFn: () => accountsApi.getConnectionStatus(),
+    refetchInterval: 15000, // refresh every 15s
+    staleTime: 10000,
+  });
+}
+
+export function useJobList(limit = 20) {
+  return useQuery<ImapJobInfo[]>({
+    queryKey: ['jobs', limit],
+    queryFn: () => jobsApi.listJobs(limit),
+    refetchInterval: 5000, // poll when jobs might be active
+    staleTime: 3000,
+  });
+}
+

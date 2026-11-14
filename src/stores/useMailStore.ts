@@ -7,6 +7,8 @@ import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 import { useGeneralSettingsStore } from './useGeneralSettingsStore';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
+export type MailSortField = 'date' | 'from' | 'subject' | 'size';
+export type MailSortDirection = 'desc' | 'asc';
 
 interface MailState {
   selectedAccountId: string;
@@ -14,15 +16,22 @@ interface MailState {
   selectedFolderId: string;
   selectedMailId: string | null;
   filterTab: MailFilterTab;
+  sortField: MailSortField;
+  sortDirection: MailSortDirection;
   searchQuery: string;
   isSearchingServer: boolean;
   serverSearchResults: MailMessageMetadata[] | null;
   selectedIds: string[];
   localEmails: MailMessageMetadata[];
   isLoadingEmails: boolean;
+  emailPage: number;
+  hasMoreEmails: boolean;
+  isLoadingMore: boolean;
   lastSnapshot: MailMessageMetadata[] | null;
 
   fetchEmails: (folderId?: string, accountId?: string) => Promise<void>;
+  loadMoreEmails: () => Promise<void>;
+  setSortConfig: (field: MailSortField, direction: MailSortDirection) => void;
   setLocalEmails: (emails: MailMessageMetadata[]) => void;
   addOrSelectEmail: (email: MailMessageMetadata) => void;
   setSelectedAccount: (id: string) => void;
@@ -67,8 +76,10 @@ function getInitialState() {
   }
 
   const initialList = MOCK_EMAILS_METADATA.filter((e) => e.accountId === defaultAccId);
-  if (!initialMailId && initialList.length > 0) {
-    initialMailId = initialList[0].id;
+  initialList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const initialSlice = initialList.slice(0, 25);
+  if (!initialMailId && initialSlice.length > 0) {
+    initialMailId = initialSlice[0].id;
   }
 
   return {
@@ -76,7 +87,7 @@ function getInitialState() {
     selectedAccountIndex: 0,
     selectedFolderId: initialFolder,
     selectedMailId: initialMailId,
-    localEmails: initialList,
+    localEmails: initialSlice,
     isLoadingEmails: false,
   };
 }
@@ -89,17 +100,25 @@ export const useMailStore = create<MailState>((set, get) => ({
   selectedFolderId: initialState.selectedFolderId,
   selectedMailId: initialState.selectedMailId,
   filterTab: 'all',
+  sortField: 'date',
+  sortDirection: 'desc',
   searchQuery: '',
   isSearchingServer: false,
   serverSearchResults: null,
   selectedIds: [],
   localEmails: initialState.localEmails,
   isLoadingEmails: false,
+  emailPage: 1,
+  hasMoreEmails: true,
+  isLoadingMore: false,
   lastSnapshot: null,
+
+  setSortConfig: (field, direction) => set({ sortField: field, sortDirection: direction }),
 
   fetchEmails: async (folderId, accountId) => {
     const fId = folderId || get().selectedFolderId || 'fld-inbox';
     const aId = accountId || get().selectedAccountId || 'acc-1';
+    set({ isLoadingEmails: true, emailPage: 1 });
     try {
       const cached = await getCachedEmails(fId, aId);
       if (cached.length > 0 && get().localEmails.length === 0) {
@@ -107,11 +126,40 @@ export const useMailStore = create<MailState>((set, get) => ({
       }
     } catch {}
     try {
-      const list = await emailsApi.getEmailsMetadata(fId, aId);
-      set({ localEmails: list, isLoadingEmails: false });
+      const list = await emailsApi.getEmailsMetadata(fId, aId, 1, 25);
+      set({
+        localEmails: list,
+        emailPage: 1,
+        hasMoreEmails: list.length >= 25,
+        isLoadingEmails: false,
+      });
       saveCachedEmails(list);
     } catch {
       set({ isLoadingEmails: false });
+    }
+  },
+
+  loadMoreEmails: async () => {
+    if (get().isLoadingMore || !get().hasMoreEmails) return;
+    const nextPage = get().emailPage + 1;
+    const fId = get().selectedFolderId || 'fld-inbox';
+    const aId = get().selectedAccountId || 'acc-1';
+    set({ isLoadingMore: true });
+    try {
+      const nextBatch = await emailsApi.getEmailsMetadata(fId, aId, nextPage, 25);
+      const current = get().localEmails;
+      const currentIds = new Set(current.map((e) => e.id));
+      const fresh = nextBatch.filter((e) => !currentIds.has(e.id));
+      const merged = [...current, ...fresh];
+      set({
+        localEmails: merged,
+        emailPage: nextPage,
+        hasMoreEmails: nextBatch.length >= 25,
+        isLoadingMore: false,
+      });
+      saveCachedEmails(fresh);
+    } catch {
+      set({ isLoadingMore: false });
     }
   },
 
@@ -123,10 +171,14 @@ export const useMailStore = create<MailState>((set, get) => ({
   setSelectedAccount: (id) => set((s) => {
     if (s.selectedAccountId === id) return s;
     const accountEmails = MOCK_EMAILS_METADATA.filter((e) => e.accountId === id);
+    accountEmails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const initialSlice = accountEmails.slice(0, 25);
     return {
       selectedAccountId: id,
-      localEmails: accountEmails,
-      selectedMailId: accountEmails[0]?.id || null,
+      localEmails: initialSlice,
+      emailPage: 1,
+      hasMoreEmails: accountEmails.length >= 25,
+      selectedMailId: initialSlice[0]?.id || null,
       selectedFolderId: 'fld-inbox',
       selectedIds: [],
     };
@@ -287,18 +339,35 @@ export const useMailStore = create<MailState>((set, get) => ({
     emailsApi.copyEmail(emailId, folderId, original.folderId).catch(() => {});
   },
   categorizeEmail: (emailId, category) => {
+    const email = get().localEmails.find((m) => m.id === emailId);
+    const existing = email?.categoryKeywords || [];
+    let addFlags: string[] | undefined;
+    let removeFlags: string[] | undefined;
+
+    if (!category) {
+      removeFlags = existing.length > 0 ? existing : undefined;
+    } else if (existing.includes(category)) {
+      removeFlags = [category];
+    } else {
+      addFlags = [category];
+    }
+
     set((s) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => {
         if (m.id !== emailId) return m;
         if (!category) return { ...m, categoryKeywords: [] };
-        const existing = m.categoryKeywords || [];
-        const next = existing.includes(category)
-          ? existing.filter((c) => c !== category)
-          : [...existing, category];
+        const ex = m.categoryKeywords || [];
+        const next = ex.includes(category)
+          ? ex.filter((c) => c !== category)
+          : [...ex, category];
         return { ...m, categoryKeywords: next };
       }),
     }));
+
+    if (addFlags || removeFlags) {
+      emailsApi.handleCustomFlags([emailId], addFlags, removeFlags).catch(() => {});
+    }
   },
   snoozeEmail: (id, _until) => set((s) => ({
     lastSnapshot: s.localEmails,

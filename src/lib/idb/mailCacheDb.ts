@@ -98,3 +98,15 @@ export async function getCachedCount(): Promise<number> {
     return 0;
   }
 }
+
+export async function clearCachedEmails(): Promise<void> {
+  const idb = getIdb();
+  if (!idb) return;
+  try {
+    await idb.clearTable('emails');
+    await idb.clearTable('email_bodies');
+  } catch (err) {
+    console.warn('[IndexedDB] Failed to clear cached emails:', err);
+  }
+}
+

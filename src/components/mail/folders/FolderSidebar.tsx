@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronRight, Plus, User } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, ChevronRight, Plus, User, FolderPlus } from 'lucide-react';
 import { useMailStore } from '@/stores';
 import { useFolders, useAccounts } from '@/hooks/useEmailsQuery';
 import { FolderItem } from './FolderItem';
@@ -11,6 +12,7 @@ import { SidebarQuota } from './SidebarQuota';
 import { MailFolder } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
 import { getClientConfig } from '@/config/clientConfig';
+import { foldersApi } from '@/lib/api';
 
 interface FolderSidebarProps {
   activeFolderId?: string;
@@ -30,6 +32,27 @@ export function FolderSidebar({
   const setStoreFolder = useMailStore((s) => s.setSelectedFolder);
   const moveEmailToFolder = useMailStore((s) => s.moveEmailToFolder);
   const addToast = useToastStore((s) => s.addToast);
+  const queryClient = useQueryClient();
+
+  const handleCreateFolder = async () => {
+    const name = window.prompt('Enter new folder name:');
+    if (!name?.trim()) return;
+    try {
+      await foldersApi.createFolder(activeAccId, name.trim());
+      queryClient.invalidateQueries({ queryKey: ['folders', activeAccId] });
+      addToast({
+        title: 'Folder Created',
+        description: `Created folder "${name.trim()}".`,
+        type: 'success',
+      });
+    } catch {
+      addToast({
+        title: 'Failed to create folder',
+        description: 'Could not create folder on the server.',
+        type: 'error',
+      });
+    }
+  };
 
   const [contextMenu, setContextMenu] = useState<{ folder: MailFolder; position: { x: number; y: number }; isFav: boolean } | null>(null);
   const [isFavOpen, setIsFavOpen] = useState(true);
@@ -152,8 +175,16 @@ export function FolderSidebar({
           })}
         </div>
 
-        {/* Add Account Button */}
-        <div className="pt-2">
+        {/* Action Buttons: New folder & Add account */}
+        <div className="pt-2 space-y-1">
+          <button
+            type="button"
+            onClick={handleCreateFolder}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded hover:bg-neutral-200/70 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-left"
+          >
+            <FolderPlus className="w-4 h-4 text-blue-500" />
+            <span>New folder</span>
+          </button>
           <Link href="/settings/accounts" className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded hover:bg-neutral-200/70 dark:hover:bg-neutral-800 transition-colors">
             <Plus className="w-4 h-4" />
             <span>Add account</span>

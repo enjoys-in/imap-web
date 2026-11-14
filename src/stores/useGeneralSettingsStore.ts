@@ -41,6 +41,27 @@ export interface GeneralSettingsState {
   pushIncludePreview: boolean;
   badgeCountEnabled: boolean;
   calendarRemindersEnabled: boolean;
+  // Offline settings
+  allowOfflineAccess: boolean;
+  offlineAccount: string;
+  offlineFoldersToSave: string;
+  offlineDaysToSave: number;
+  offlineIncludeAttachments: boolean;
+  offlineBackgroundSync: boolean;
+  // Accessibility settings
+  reduceMotion: boolean;
+  highContrast: boolean;
+  keyboardShortcuts: boolean;
+  // Privacy & Data
+  shareDiagnostics: boolean;
+  connectedServices: boolean;
+  // Search settings
+  searchScope: 'all_folders' | 'current_folder';
+  includeDeletedInSearch: boolean;
+  saveSearchHistory: boolean;
+  // Startup settings
+  startupFolder: 'inbox' | 'last_opened' | 'calendar';
+  restorePreviousWindows: boolean;
   updateSettings: (partial: Partial<Omit<GeneralSettingsState, 'updateSettings'>>) => void;
 }
 
@@ -72,6 +93,27 @@ const DEFAULT_SETTINGS = {
   pushIncludePreview: true,
   badgeCountEnabled: true,
   calendarRemindersEnabled: true,
+  // Offline defaults
+  allowOfflineAccess: true,
+  offlineAccount: 'mullayam06@outlook.com',
+  offlineFoldersToSave: 'default_and_favorites',
+  offlineDaysToSave: 30,
+  offlineIncludeAttachments: true,
+  offlineBackgroundSync: true,
+  // Accessibility defaults
+  reduceMotion: false,
+  highContrast: false,
+  keyboardShortcuts: true,
+  // Privacy & Data defaults
+  shareDiagnostics: false,
+  connectedServices: true,
+  // Search defaults
+  searchScope: 'all_folders' as const,
+  includeDeletedInSearch: false,
+  saveSearchHistory: true,
+  // Startup defaults
+  startupFolder: 'inbox' as const,
+  restorePreviousWindows: true,
 };
 
 function loadSettings() {

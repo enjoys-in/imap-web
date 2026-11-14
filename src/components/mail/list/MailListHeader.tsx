@@ -7,6 +7,8 @@ import {
 import { useMailStore, MailFilterTab } from '@/stores';
 import { cn } from '@/lib/utils';
 
+import { MailSortMenu } from './MailSortMenu';
+
 interface MailListHeaderProps {
   totalEmailsCount: number;
   currentEmailIds: string[];
@@ -62,10 +64,7 @@ export function MailListHeader({ totalEmailsCount, currentEmailIds, isWideLayout
         </div>
 
         <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 text-xs">
-          <button className="flex items-center gap-1 text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">
-            <span>By Date</span>
-            <ChevronDown className="w-3 h-3" />
-          </button>
+          <MailSortMenu />
         </div>
       </div>
 

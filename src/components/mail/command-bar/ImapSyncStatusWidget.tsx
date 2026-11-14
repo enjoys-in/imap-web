@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { useMailStore } from '@/stores';
+import { RefreshCw, CheckCircle2, ChevronDown, ChevronUp, Server } from 'lucide-react';
+import { useMailStore, useToastStore } from '@/stores';
+import { useConnectionStatus } from '@/hooks/useEmailsQuery';
+import { foldersApi } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 export function ImapSyncStatusWidget() {
@@ -11,17 +14,29 @@ export function ImapSyncStatusWidget() {
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
   const fetchEmails = useMailStore((s) => s.fetchEmails);
+  const addToast = useToastStore((s) => s.addToast);
+  const queryClient = useQueryClient();
+  const { data: connStatus } = useConnectionStatus();
 
   const triggerSync = async () => {
     setStatus('syncing');
     try {
+      await foldersApi.syncCompleteMailbox();
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['quota'] });
       await fetchEmails(selectedFolderId || 'fld-inbox', selectedAccountId || undefined);
-    } catch (_) {
+      addToast({
+        title: 'Mailbox Synchronized',
+        description: 'All folders and counts updated from the IMAP server.',
+        type: 'success',
+      });
+    } catch {
       // Fallback
     } finally {
       setTimeout(() => {
         setStatus('connected');
-      }, 900);
+      }, 700);
     }
   };
 
@@ -30,9 +45,12 @@ export function ImapSyncStatusWidget() {
     setStatus('syncing');
     const timer = setTimeout(() => {
       setStatus('connected');
-    }, 800);
+    }, 600);
     return () => clearTimeout(timer);
   }, [selectedFolderId]);
+
+  const isConnected = connStatus?.connected ?? true;
+  const isIdling = connStatus?.idling ?? false;
 
   return (
     <div className="fixed bottom-2 right-12 z-30 select-none text-xs">
@@ -67,28 +85,32 @@ export function ImapSyncStatusWidget() {
         ) : (
           <>
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400 opacity-60' : 'bg-rose-400 opacity-60'}`} />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
             </span>
             <span className="font-medium text-[11px] text-neutral-700 dark:text-neutral-300">
-              Connected
+              {isConnected ? (isIdling ? 'Connected (IDLE)' : 'Connected') : 'Offline'}
             </span>
           </>
         )}
       </button>
 
-      {/* Static Logs Card (Subtle right-click or toggle) */}
+      {/* Dynamic Logs Card (Subtle right-click or toggle) */}
       {showLogs && (
-        <div className="absolute bottom-8 right-0 w-64 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-xl p-3 text-[11px] space-y-1.5 animate-in fade-in duration-100">
+        <div className="absolute bottom-8 right-0 w-72 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-xl p-3 text-[11px] space-y-1.5 animate-in fade-in duration-100">
           <div className="font-semibold text-neutral-800 dark:text-neutral-200 pb-1 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-            <span>IMAP Connection Logs</span>
-            <button onClick={() => setShowLogs(false)} className="text-neutral-400 hover:text-neutral-600">✕</button>
+            <span className="flex items-center gap-1.5">
+              <Server className="w-3.5 h-3.5 text-blue-500" />
+              <span>IMAP Connection Logs</span>
+            </span>
+            <button onClick={() => setShowLogs(false)} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">✕</button>
           </div>
           <div className="font-mono text-[10px] space-y-1 text-neutral-500 dark:text-neutral-400">
-            <div>✓ Looking for server: imap.airsend.in:993</div>
-            <div>✓ Connecting to server: TLS 1.3</div>
-            <div className="text-emerald-500">✓ Connected: Authenticated</div>
-            <div className="text-blue-500">✓ Synchronizing: All folders up to date</div>
+            <div>✓ Socket state: {isConnected ? 'OPEN (TLS 1.3)' : 'CLOSED'}</div>
+            <div>✓ IDLE state: {isIdling ? 'RUNNING (Push Events)' : 'INACTIVE'}</div>
+            <div>✓ Active Mailbox: {connStatus?.currentMailbox || selectedFolderId || 'INBOX'}</div>
+            <div className="text-emerald-500">✓ Authentication: Valid JWT Session</div>
+            <div className="text-blue-500">✓ Multi-Engine TTL Cache: Active</div>
           </div>
         </div>
       )}

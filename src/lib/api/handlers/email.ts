@@ -45,15 +45,23 @@ export async function getEmailsMetadata(
   folderId: string,
   accountId?: string,
   page = 1,
-  limit = 50
+  limit = 25
 ): Promise<MailMessageMetadata[]> {
-  if (!isLiveApiAvailable()) {
-    return MOCK_EMAILS.filter((e) => {
+  const getMockBatch = () => {
+    const filtered = MOCK_EMAILS.filter((e) => {
       const matchFolder =
         e.folderId === folderId || (folderId === 'fld-inbox' && (!e.folderId || e.folderId === 'fld-inbox'));
       const matchAccount = !accountId || e.accountId === accountId;
       return matchFolder && matchAccount;
-    }).map(({ bodyHtml, bodyText, ...meta }) => meta);
+    });
+    // Sort latest date first (top)
+    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const start = (page - 1) * limit;
+    return filtered.slice(start, start + limit).map(({ bodyHtml, bodyText, ...meta }) => meta);
+  };
+
+  if (!isLiveApiAvailable()) {
+    return getMockBatch();
   }
 
   try {
@@ -65,14 +73,10 @@ export async function getEmailsMetadata(
       ? data
       : data?.emails || data?.result?.emails || data?.result || [];
 
-    return rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
+    const list = rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
+    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {
-    return MOCK_EMAILS.filter((e) => {
-      const matchFolder =
-        e.folderId === folderId || (folderId === 'fld-inbox' && (!e.folderId || e.folderId === 'fld-inbox'));
-      const matchAccount = !accountId || e.accountId === accountId;
-      return matchFolder && matchAccount;
-    }).map(({ bodyHtml, bodyText, ...meta }) => meta);
+    return getMockBatch();
   }
 }
 

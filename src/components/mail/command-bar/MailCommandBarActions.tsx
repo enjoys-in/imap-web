@@ -21,10 +21,11 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useMailStore } from '@/stores';
+import { useFolders } from '@/hooks/useEmailsQuery';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 import { cn } from '@/lib/utils';
 
-const FOLDERS = [
+const DEFAULT_FOLDERS = [
   { id: 'fld-inbox', name: 'Inbox' },
   { id: 'fld-archive', name: 'Archive' },
   { id: 'fld-junk', name: 'Junk Email' },
@@ -40,7 +41,11 @@ const SNOOZE_PRESETS = [
 ];
 
 export function MailCommandBarActions() {
-  const { selectedIds, selectedMailId, localEmails, lastSnapshot } = useMailStore();
+  const { selectedIds, selectedMailId, localEmails, lastSnapshot, selectedAccountId } = useMailStore();
+  const { data: serverFolders } = useFolders(selectedAccountId || 'acc-1');
+  const targetFolders = serverFolders && serverFolders.length > 0
+    ? serverFolders.map((f: any) => ({ id: f.id, name: f.displayName || f.name }))
+    : DEFAULT_FOLDERS;
 
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const [isSnoozeOpen, setIsSnoozeOpen] = useState(false);
@@ -120,7 +125,7 @@ export function MailCommandBarActions() {
         </button>
         {isMoveOpen && hasTarget && (
           <div className="absolute left-0 top-full mt-1 w-44 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-            {FOLDERS.map((f) => (
+            {targetFolders.map((f) => (
               <button
                 key={f.id}
                 onClick={() => {

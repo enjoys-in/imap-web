@@ -10,6 +10,7 @@ import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
 import { ComposeEditor } from './ComposeEditor';
 import { useComposeDraftSync } from './useComposeDraftSync';
+import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
 import { MailMessage } from '@/types';
 
@@ -31,6 +32,7 @@ export function ComposeModal() {
   const close = useComposeStore((s) => s.close);
   const startPendingSend = useUndoSendStore((s) => s.startPendingSend);
 
+  const { user, account } = useSession();
   const { handleFocusCapture, handleBlurCapture } = useComposeDraftSync(containerRef);
 
   if (!isOpen) return null;
@@ -62,8 +64,8 @@ export function ComposeModal() {
       threadId: resolvedThreadId,
       inReplyTo: isReplyOrForward ? originalMessageId : undefined,
       subject: subject || '(No subject)',
-      fromName: 'Alex Morgan',
-      fromAddress: 'alex.morgan@contoso.com',
+      fromName: user?.display_name || account?.displayName || 'AirSend User',
+      fromAddress: user?.email || account?.email || 'user@airsend.io',
       to: to || 'recipient@contoso.com',
       date: new Date().toISOString(),
       size: body.length + 1024,

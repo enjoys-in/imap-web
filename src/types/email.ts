@@ -32,6 +32,7 @@ export interface MailAttachment {
   contentId?: string | null;
   isInline: boolean;
   downloadUrl?: string;
+  part?: string;
 }
 
 export interface AddressItem {
