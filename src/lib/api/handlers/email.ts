@@ -202,7 +202,7 @@ export async function saveDraft(payload: DraftPayload): Promise<{ id: string }> 
     const res = await apiClient.post<any>('/append-message', {
       mailbox: findRegisteredSpecialFolder('Drafts')?.fullName ?? 'Drafts',
       rawMessage: raw,
-      flags: ['\\Draft'],
+      flags: ['\\Draft', '\\Seen'],
     });
     return { id: res?.result?.uid ? `msg-${res.result.uid}` : payload.id || `draft-${Date.now()}` };
   } catch {

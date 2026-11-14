@@ -3,7 +3,7 @@
 import { useSession } from '@/components/providers/SessionProvider';
 import { useEmailStream } from '@/hooks/useEmailStream';
 import { useSyncScheduler } from '@/hooks/useSyncManager';
-import { handleMailboxChange, handleMailboxExpunge, handleMessageFlags, newMessageCount } from '@/lib/liveSync';
+import { handleMailboxChange, handleMailboxExpunge, handleMessageFlags, shouldNotifyNewMail } from '@/lib/liveSync';
 import { useToastStore } from '@/stores/useToastStore';
 
 export function LiveEmailSyncBridge() {
@@ -16,7 +16,7 @@ export function LiveEmailSyncBridge() {
     onMailboxChange: (data) => {
       if (!isAuthenticated) return;
       void handleMailboxChange(data);
-      if (newMessageCount(data) > 0) {
+      if (shouldNotifyNewMail(data)) {
         addToast({
           title: 'New Email Received',
           description: `Folder "${data.path}" updated (${data.count} messages)`,

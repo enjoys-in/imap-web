@@ -40,6 +40,12 @@ export function newMessageCount(event: MailboxChangeEventPayload): number {
   return event.newCount ?? Math.max(0, event.count - event.prevCount);
 }
 
+export function shouldNotifyNewMail(event: MailboxChangeEventPayload): boolean {
+  if (newMessageCount(event) === 0) return false;
+  const { selectedAccountId } = useMailStore.getState();
+  return findRegisteredFolderByPath(event.path, selectedAccountId)?.special === 'Inbox';
+}
+
 export async function handleMailboxChange(event: MailboxChangeEventPayload): Promise<void> {
   const { selectedAccountId, selectedFolderId } = useMailStore.getState();
   const changed = findRegisteredFolderByPath(event.path, selectedAccountId);
