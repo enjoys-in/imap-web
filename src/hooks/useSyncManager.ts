@@ -124,7 +124,7 @@ export function useSyncScheduler(): void {
     return () => clearInterval(interval);
   }, [updateCooldown]);
 
-  // Auto-sync every 5 minutes (300,000ms)
+  // Auto-sync every 30 minutes (1,800,000ms)
   useEffect(() => {
     const checkAndAutoSync = () => {
       const lastSync = Math.max(
@@ -139,7 +139,7 @@ export function useSyncScheduler(): void {
 
     const autoSyncInterval = setInterval(() => {
       checkAndAutoSync();
-    }, 15000); // Check every 15s to be accurate
+    }, 60000); // Check every 60s
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {

@@ -23,9 +23,19 @@ export const STORAGE_KEYS = {
   ACTIVE_USER: 'airsend_active_user',
   CUSTOM_ACCOUNTS: 'airsend_custom_accounts',
   THEME: 'airsend_theme',
+  LAST_MANUAL_SYNC: 'airsend_last_manual_sync_timestamp',
+  LAST_AUTO_SYNC: 'airsend_last_auto_sync_timestamp',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+
+/**
+ * Synchronization Intervals and Cooldowns
+ */
+export const SYNC_CONFIG = {
+  MANUAL_COOLDOWN_MS: 2 * 60 * 1000, // 2 minutes cooldown between manual clicks
+  AUTO_SYNC_INTERVAL_MS: 30 * 60 * 1000, // 30 minutes auto-sync interval for /sync-all
+} as const;
 
 /**
  * Application Custom Events

@@ -1,12 +1,10 @@
 'use client';
 
 import { create } from 'zustand';
+import { STORAGE_KEYS, SYNC_CONFIG } from '@/constants';
 
-export const MANUAL_SYNC_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes (120,000 ms)
-export const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000 ms)
-
-const STORAGE_KEY_LAST_MANUAL = 'airsend_last_manual_sync_timestamp';
-const STORAGE_KEY_LAST_AUTO = 'airsend_last_auto_sync_timestamp';
+export const MANUAL_SYNC_COOLDOWN_MS = SYNC_CONFIG.MANUAL_COOLDOWN_MS; // 2 minutes (120,000 ms)
+export const AUTO_SYNC_INTERVAL_MS = SYNC_CONFIG.AUTO_SYNC_INTERVAL_MS; // 30 minutes (1,800,000 ms)
 
 function getStoredTimestamp(key: string): number | null {
   if (typeof window === 'undefined') return null;
@@ -45,8 +43,9 @@ interface SyncState {
 export const useSyncStore = create<SyncState>((set, get) => {
   return {
     isSyncing: false,
-    lastManualSyncTime: null,
-    lastAutoSyncTime: null,
+    lastManualSyncTime: getStoredTimestamp(STORAGE_KEYS.LAST_MANUAL_SYNC),
+    // Initialize to stored timestamp or current time on mount so it waits a full 30 minutes before firing
+    lastAutoSyncTime: getStoredTimestamp(STORAGE_KEYS.LAST_AUTO_SYNC) ?? (typeof window !== 'undefined' ? Date.now() : null),
     cooldownRemaining: 0,
     isBlocked: false,
 
@@ -54,7 +53,7 @@ export const useSyncStore = create<SyncState>((set, get) => {
 
     recordManualSync: () => {
       const now = Date.now();
-      setStoredTimestamp(STORAGE_KEY_LAST_MANUAL, now);
+      setStoredTimestamp(STORAGE_KEYS.LAST_MANUAL_SYNC, now);
       set({
         lastManualSyncTime: now,
         cooldownRemaining: Math.ceil(MANUAL_SYNC_COOLDOWN_MS / 1000), // 120 seconds
@@ -64,13 +63,13 @@ export const useSyncStore = create<SyncState>((set, get) => {
 
     recordAutoSync: () => {
       const now = Date.now();
-      setStoredTimestamp(STORAGE_KEY_LAST_AUTO, now);
+      setStoredTimestamp(STORAGE_KEYS.LAST_AUTO_SYNC, now);
       set({ lastAutoSyncTime: now });
     },
 
     updateCooldown: () => {
       const state = get();
-      const stored = state.lastManualSyncTime ?? getStoredTimestamp(STORAGE_KEY_LAST_MANUAL);
+      const stored = state.lastManualSyncTime ?? getStoredTimestamp(STORAGE_KEYS.LAST_MANUAL_SYNC);
 
       let cooldownRemaining = 0;
       let isBlocked = state.isSyncing;

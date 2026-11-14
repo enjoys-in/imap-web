@@ -2,22 +2,14 @@
 
 import { create } from 'zustand';
 import {
-  createCalendar,
-  getCalendars,
-  onboardCalendarUser,
-  toCalendarServiceError,
-  updateCalendar,
-  CalendarServiceError,
-  type NewCalendarInput,
-  type UserCalendar,
+  createCalendar, getCalendars, onboardCalendarUser,
+  toCalendarServiceError, updateCalendar, CalendarServiceError,
+  type NewCalendarInput, type UserCalendar,
 } from '@/lib/api/handlers/calendar';
 import { checkCalendarHealth } from '@/lib/api/handlers/calendarHealth';
 import {
-  getCachedCalendars,
-  saveCachedCalendars,
-  getAllCachedAccountStatuses,
-  saveAccountCalendarStatus,
-  getCachedCalendarHealth,
+  getCachedCalendars, saveCachedCalendars,
+  getAllCachedAccountStatuses, saveAccountCalendarStatus, getCachedCalendarHealth,
 } from '@/lib/idb/calendarCacheDb';
 
 export type CalendarsStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -60,9 +52,7 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
   initFromCache: async () => {
     try {
       const [cachedCals, cachedStatuses, cachedHealth] = await Promise.all([
-        getCachedCalendars(),
-        getAllCachedAccountStatuses(),
-        getCachedCalendarHealth(),
+        getCachedCalendars(), getAllCachedAccountStatuses(), getCachedCalendarHealth(),
       ]);
       const statusMap: Record<string, boolean> = {};
       cachedStatuses.forEach((s) => { statusMap[s.email] = s.hasCalendar; });
@@ -150,9 +140,7 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
       const targetEmail = (email || res?.email || '').trim();
       const domain = typeof res?.tenant_id === 'string' && res.tenant_id
         ? res.tenant_id
-        : targetEmail.includes('@')
-        ? targetEmail.split('@')[1].trim().toLowerCase()
-        : null;
+        : targetEmail.includes('@') ? targetEmail.split('@')[1].trim().toLowerCase() : null;
 
       if (targetEmail) {
         const clean = targetEmail.toLowerCase().trim();
