@@ -11,6 +11,7 @@ import {
   getCachedCalendars, saveCachedCalendars,
   getAllCachedAccountStatuses, saveAccountCalendarStatus, getCachedCalendarHealth,
 } from '@/lib/idb/calendarCacheDb';
+import { STORAGE_KEYS } from '@/constants';
 
 export type CalendarsStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -56,12 +57,14 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
       ]);
       const statusMap: Record<string, boolean> = {};
       cachedStatuses.forEach((s) => { statusMap[s.email] = s.hasCalendar; });
+      const raw = typeof window !== 'undefined' ? window.sessionStorage.getItem(STORAGE_KEYS.LAST_CALENDAR_HEALTH) : null;
+      const sessionCheck = raw ? parseInt(raw, 10) : null;
 
       set((prev) => ({
         calendars: prev.calendars.length > 0 ? prev.calendars : cachedCals,
         accountCalendarStatus: { ...statusMap, ...prev.accountCalendarStatus },
         isHealthy: cachedHealth?.isHealthy ?? prev.isHealthy,
-        lastHealthCheck: cachedHealth?.lastChecked ?? prev.lastHealthCheck,
+        lastHealthCheck: sessionCheck ?? cachedHealth?.lastChecked ?? prev.lastHealthCheck,
       }));
     } catch {}
   },
@@ -83,24 +86,12 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
               void saveAccountCalendarStatus({ email: clean, hasCalendar: true, calendarId: c.id, calendarName: c.name });
             }
           });
-          return {
-            calendars,
-            status: 'ready',
-            error: null,
-            isUserNotFound: false,
-            isUnauthorized: false,
-            accountCalendarStatus: nextStatuses,
-          };
+          return { calendars, status: 'ready', error: null, isUserNotFound: false, isUnauthorized: false, accountCalendarStatus: nextStatuses };
         });
       })
       .catch((error: unknown) => {
         const err = toCalendarServiceError(error);
-        set({
-          status: 'error',
-          error: err.message,
-          isUserNotFound: err.isUserNotFound,
-          isUnauthorized: err.isUnauthorized,
-        });
+        set({ status: 'error', error: err.message, isUserNotFound: err.isUserNotFound, isUnauthorized: err.isUnauthorized });
       })
       .finally(() => { inflight = null; });
     return inflight;
@@ -163,7 +154,11 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
   pollHealth: async () => {
     const prevHealthy = get().isHealthy;
     const res = await checkCalendarHealth();
-    set({ isHealthy: res.isHealthy, healthMessage: res.message, lastHealthCheck: Date.now() });
+    const now = Date.now();
+    if (typeof window !== 'undefined') {
+      try { window.sessionStorage.setItem(STORAGE_KEYS.LAST_CALENDAR_HEALTH, String(now)); } catch {}
+    }
+    set({ isHealthy: res.isHealthy, healthMessage: res.message, lastHealthCheck: now });
     if (!prevHealthy && res.isHealthy) void get().load({ force: true });
     return res.isHealthy;
   },
