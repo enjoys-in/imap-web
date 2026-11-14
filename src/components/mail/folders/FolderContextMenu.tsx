@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useToastStore } from '@/stores/useToastStore';
 import { useMailStore } from '@/stores/useMailStore';
+import { useAlertStore } from '@/stores/useAlertStore';
 import { foldersApi } from '@/lib/api';
 
 interface FolderContextMenuProps {
@@ -69,22 +70,20 @@ export function FolderContextMenu({
       label: 'New subfolder',
       icon: FolderPlus,
       onClick: async () => {
-        const subName = window.prompt(`Enter subfolder name under "${folder.displayName}":`);
+        const subName = await useAlertStore.getState().showPrompt({
+          title: 'New Subfolder',
+          description: `Enter a name for the subfolder inside "${folder.displayName}":`,
+          label: 'Subfolder name',
+          placeholder: 'e.g. Archives, 2026',
+          confirmText: 'Create subfolder',
+        });
         if (!subName?.trim()) return;
         try {
           await foldersApi.createFolder(folder.accountId || 'acc-1', subName.trim(), folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({
-            title: 'Subfolder Created',
-            description: `Created "${subName.trim()}" inside ${folder.displayName}.`,
-            type: 'success',
-          });
+          addToast({ title: 'Subfolder Created', description: `Created "${subName.trim()}" inside ${folder.displayName}.`, type: 'success' });
         } catch {
-          addToast({
-            title: 'Failed to create subfolder',
-            description: 'Could not create subfolder on the server.',
-            type: 'error',
-          });
+          addToast({ title: 'Failed to create subfolder', description: 'Could not create subfolder on the server.', type: 'error' });
         }
       },
     },
@@ -93,11 +92,7 @@ export function FolderContextMenu({
       icon: Star,
       onClick: () => {
         if (onToggleFavorite) onToggleFavorite(folder.id);
-        addToast({
-          title: isFavorite ? 'Removed from Favorites' : 'Added to Favorites',
-          description: folder.displayName,
-          type: 'info',
-        });
+        addToast({ title: isFavorite ? 'Removed from Favorites' : 'Added to Favorites', description: folder.displayName, type: 'info' });
       },
     },
     { divider: true, label: '', onClick: () => {} },
@@ -108,22 +103,21 @@ export function FolderContextMenu({
       label: 'Rename folder',
       icon: Edit2,
       onClick: async () => {
-        const newName = window.prompt(`Rename "${folder.displayName}" to:`, folder.displayName);
+        const newName = await useAlertStore.getState().showPrompt({
+          title: 'Rename Folder',
+          description: `Rename folder "${folder.displayName}" to:`,
+          defaultValue: folder.displayName,
+          label: 'New name',
+          placeholder: 'Enter new folder name...',
+          confirmText: 'Rename',
+        });
         if (!newName?.trim() || newName.trim() === folder.displayName) return;
         try {
           await foldersApi.renameFolder(folder.id, newName.trim(), folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({
-            title: 'Folder Renamed',
-            description: `Renamed to ${newName.trim()}.`,
-            type: 'success',
-          });
+          addToast({ title: 'Folder Renamed', description: `Renamed to ${newName.trim()}.`, type: 'success' });
         } catch {
-          addToast({
-            title: 'Rename Failed',
-            description: 'Could not rename folder on the server.',
-            type: 'error',
-          });
+          addToast({ title: 'Rename Failed', description: 'Could not rename folder on the server.', type: 'error' });
         }
       },
     });
@@ -133,22 +127,20 @@ export function FolderContextMenu({
       icon: FolderX,
       destructive: true,
       onClick: async () => {
-        const confirm = window.confirm(`Are you sure you want to delete folder "${folder.displayName}"?`);
+        const confirm = await useAlertStore.getState().showConfirm({
+          title: 'Delete Folder',
+          description: `Are you sure you want to delete folder "${folder.displayName}"? All items inside will be moved to Deleted items.`,
+          confirmText: 'Delete',
+          cancelText: 'Cancel',
+          type: 'warning',
+        });
         if (!confirm) return;
         try {
           await foldersApi.deleteFolder(folder.id, folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({
-            title: 'Folder Deleted',
-            description: `Removed folder ${folder.displayName}.`,
-            type: 'success',
-          });
+          addToast({ title: 'Folder Deleted', description: `Removed folder ${folder.displayName}.`, type: 'success' });
         } catch {
-          addToast({
-            title: 'Delete Failed',
-            description: 'Could not delete folder from the server.',
-            type: 'error',
-          });
+          addToast({ title: 'Delete Failed', description: 'Could not delete folder from the server.', type: 'error' });
         }
       },
     });
@@ -161,11 +153,7 @@ export function FolderContextMenu({
       destructive: true,
       onClick: () => {
         emptyFolder(folder.id);
-        addToast({
-          title: 'Folder Emptied',
-          description: `Emptied all items in ${folder.displayName}.`,
-          type: 'info',
-        });
+        addToast({ title: 'Folder Emptied', description: `Emptied all items in ${folder.displayName}.`, type: 'info' });
       },
     });
   }

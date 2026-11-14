@@ -196,6 +196,8 @@ export const useMailStore = create<MailState>((set, get) => ({
       selectedFolderId: id,
       selectedMailId: inFolder ? s.selectedMailId : (folderEmails[0]?.id || null),
       selectedIds: [],
+      emailPage: 1,
+      hasMoreEmails: folderEmails.length >= 25,
     };
   }),
   setSelectedMail: (id) => {

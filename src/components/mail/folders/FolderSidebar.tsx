@@ -2,17 +2,17 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Plus, User, FolderPlus } from 'lucide-react';
+import { ChevronDown, ChevronRight, User } from 'lucide-react';
 import { useMailStore } from '@/stores';
 import { useFolders, useAccounts } from '@/hooks/useEmailsQuery';
 import { FolderItem } from './FolderItem';
 import { FolderContextMenu } from './FolderContextMenu';
 import { SidebarQuota } from './SidebarQuota';
+import { SidebarAccountsList } from './SidebarAccountsList';
+import { SidebarFolderActions } from './SidebarFolderActions';
 import { MailFolder } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
 import { getClientConfig } from '@/config/clientConfig';
-import { foldersApi } from '@/lib/api';
 
 interface FolderSidebarProps {
   activeFolderId?: string;
@@ -32,27 +32,6 @@ export function FolderSidebar({
   const setStoreFolder = useMailStore((s) => s.setSelectedFolder);
   const moveEmailToFolder = useMailStore((s) => s.moveEmailToFolder);
   const addToast = useToastStore((s) => s.addToast);
-  const queryClient = useQueryClient();
-
-  const handleCreateFolder = async () => {
-    const name = window.prompt('Enter new folder name:');
-    if (!name?.trim()) return;
-    try {
-      await foldersApi.createFolder(activeAccId, name.trim());
-      queryClient.invalidateQueries({ queryKey: ['folders', activeAccId] });
-      addToast({
-        title: 'Folder Created',
-        description: `Created folder "${name.trim()}".`,
-        type: 'success',
-      });
-    } catch {
-      addToast({
-        title: 'Failed to create folder',
-        description: 'Could not create folder on the server.',
-        type: 'error',
-      });
-    }
-  };
 
   const [contextMenu, setContextMenu] = useState<{ folder: MailFolder; position: { x: number; y: number }; isFav: boolean } | null>(null);
   const [isFavOpen, setIsFavOpen] = useState(true);
@@ -155,41 +134,9 @@ export function FolderSidebar({
           )}
         </div>
 
-        {/* Secondary Accounts List */}
-        <div className="space-y-1 pt-2 border-t border-neutral-200 dark:border-neutral-800/80">
-          {otherAccounts.map((acc) => {
-            const accIdx = accounts?.findIndex((a) => a.id === acc.id) ?? 0;
-            return (
-              <Link
-                key={acc.id}
-                href={`/mail/u/${accIdx}/#inbox`}
-                className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-neutral-200/70 dark:hover:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer transition-colors"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{acc.email}</span>
-                </div>
-                <User className="w-3.5 h-3.5 shrink-0 ml-1 text-neutral-400 dark:text-neutral-500" />
-              </Link>
-            );
-          })}
-        </div>
+        <SidebarAccountsList accounts={accounts} otherAccounts={otherAccounts} />
 
-        {/* Action Buttons: New folder & Add account */}
-        <div className="pt-2 space-y-1">
-          <button
-            type="button"
-            onClick={handleCreateFolder}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded hover:bg-neutral-200/70 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-left"
-          >
-            <FolderPlus className="w-4 h-4 text-blue-500" />
-            <span>New folder</span>
-          </button>
-          <Link href="/settings/accounts" className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded hover:bg-neutral-200/70 dark:hover:bg-neutral-800 transition-colors">
-            <Plus className="w-4 h-4" />
-            <span>Add account</span>
-          </Link>
-        </div>
+        <SidebarFolderActions activeAccId={activeAccId} />
       </div>
 
       {/* Docked Quota Section: Just above version footer */}
@@ -211,6 +158,7 @@ export function FolderSidebar({
           onClose={() => setContextMenu(null)}
         />
       )}
+
     </div>
   );
 }
