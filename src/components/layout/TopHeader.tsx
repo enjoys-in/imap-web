@@ -86,7 +86,7 @@ export function TopHeader() {
               ? `Sync cooldown active: blocked for 2 minutes (${formattedCooldown} remaining)`
               : isSyncing
               ? 'Synchronizing mailbox with IMAP server...'
-              : 'Check for new mail & sync folder with IMAP server (Auto-syncs every 5 min)'
+              : 'Check for new mail & sync folder with IMAP server (Auto-syncs every 30 min)'
           }
           aria-label="Sync Mailbox"
         >

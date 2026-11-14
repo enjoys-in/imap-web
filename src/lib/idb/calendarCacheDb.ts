@@ -11,6 +11,8 @@ export interface CachedAccountCalendarStatus {
   hasCalendar: boolean;
   calendarId?: string;
   calendarName?: string;
+  tenantId?: string;
+  tenant_id?: string;
   updatedAt: number;
 }
 
@@ -91,7 +93,15 @@ export async function getCachedAccountCalendarStatus(
   if (!email) return null;
   const cleanEmail = email.toLowerCase().trim();
   return withDb(async (db) => {
-    return (await db.account_status.get(cleanEmail)) || null;
+    const record = await db.account_status.get(cleanEmail);
+    if (!record) return null;
+    if (record.tenant_id === '103' || (record as any).tenant_id === 103) {
+      const domain = cleanEmail.includes('@') ? cleanEmail.split('@')[1] : 'example.com';
+      record.tenant_id = domain;
+      record.tenantId = domain;
+      void db.account_status.put(record);
+    }
+    return record;
   }, null);
 }
 
@@ -99,9 +109,14 @@ export async function saveAccountCalendarStatus(
   status: Omit<CachedAccountCalendarStatus, 'updatedAt'>
 ): Promise<void> {
   const cleanEmail = status.email.toLowerCase().trim();
+  const domain = cleanEmail.includes('@') ? cleanEmail.split('@')[1] : 'example.com';
+  const rawTenant = status.tenant_id || status.tenantId;
+  const tenantId = (rawTenant === '103' || (rawTenant as any) === 103 || !rawTenant) ? domain : rawTenant;
   const record: CachedAccountCalendarStatus = {
     ...status,
     email: cleanEmail,
+    tenantId,
+    tenant_id: tenantId,
     updatedAt: Date.now(),
   };
   await withDb(async (db) => {
@@ -111,7 +126,16 @@ export async function saveAccountCalendarStatus(
 
 export async function getAllCachedAccountStatuses(): Promise<CachedAccountCalendarStatus[]> {
   return withDb(async (db) => {
-    return await db.account_status.toArray();
+    const list = await db.account_status.toArray();
+    for (const record of list) {
+      if (record.tenant_id === '103' || (record as any).tenant_id === 103 || !record.tenant_id) {
+        const domain = record.email.includes('@') ? record.email.split('@')[1] : 'example.com';
+        record.tenant_id = domain;
+        record.tenantId = domain;
+        void db.account_status.put(record);
+      }
+    }
+    return list;
   }, []);
 }
 

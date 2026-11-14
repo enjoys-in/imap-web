@@ -20,6 +20,8 @@ export interface UserCalendar {
   isVisible?: boolean;
   isReadOnly?: boolean;
   ownerEmail?: string;
+  tenant_id?: string;
+  tenantId?: string;
 }
 
 export interface SharedCalendar extends UserCalendar {
