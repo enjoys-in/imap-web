@@ -37,6 +37,14 @@ export function ScheduleTopBar({
 
   return (
     <>
+      {/* Backdrop to close menus on outside click */}
+      {activeMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setActiveMenu(null)}
+        />
+      )}
+
       <div className="h-9 px-3.5 bg-[#141414] border-b border-neutral-800/80 flex items-center justify-between shrink-0">
         <div className="text-xs font-normal text-neutral-300">{isEdit ? 'Edit event' : 'New event'}</div>
         <div className="flex items-center gap-1 text-neutral-400">
@@ -49,7 +57,7 @@ export function ScheduleTopBar({
         </div>
       </div>
 
-      <div className="h-11 px-3 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between gap-2 shrink-0 overflow-x-auto text-xs">
+      <div className="h-11 px-3 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between gap-2 shrink-0 overflow-visible relative z-40 text-xs">
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
