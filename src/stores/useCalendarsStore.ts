@@ -28,6 +28,7 @@ interface CalendarsState {
   error: string | null;
   isUserNotFound: boolean;
   isUnauthorized: boolean;
+  tenantId: string | null;
   isHealthy: boolean;
   healthMessage: string | null;
   lastHealthCheck: number | null;
@@ -37,7 +38,7 @@ interface CalendarsState {
   load: (options?: { force?: boolean }) => Promise<void>;
   create: (input: NewCalendarInput, accountEmail?: string) => Promise<UserCalendar>;
   update: (id: string, updates: Partial<UserCalendar>) => Promise<UserCalendar>;
-  onboard: (email?: string, name?: string) => Promise<void>;
+  onboard: (email?: string, name?: string) => Promise<any>;
   pollHealth: () => Promise<boolean>;
   isCalendarAddedForAccount: (email?: string) => boolean;
 }
@@ -50,6 +51,7 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
   error: null,
   isUserNotFound: false,
   isUnauthorized: false,
+  tenantId: null,
   isHealthy: true,
   healthMessage: null,
   lastHealthCheck: null,
@@ -144,14 +146,25 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
   onboard: async (email?: string, name?: string) => {
     set({ status: 'loading', error: null });
     try {
-      await onboardCalendarUser(email, name);
-      if (email) {
-        const clean = email.toLowerCase().trim();
+      const res = await onboardCalendarUser(email, name);
+      const targetEmail = (email || res?.email || '').trim();
+      const domain = typeof res?.tenant_id === 'string' && res.tenant_id
+        ? res.tenant_id
+        : targetEmail.includes('@')
+        ? targetEmail.split('@')[1].trim().toLowerCase()
+        : null;
+
+      if (targetEmail) {
+        const clean = targetEmail.toLowerCase().trim();
         void saveAccountCalendarStatus({ email: clean, hasCalendar: true });
-        set((s) => ({ accountCalendarStatus: { ...s.accountCalendarStatus, [clean]: true } }));
+        set((s) => ({ accountCalendarStatus: { ...s.accountCalendarStatus, [clean]: true }, tenantId: domain }));
+      } else if (domain) {
+        set({ tenantId: domain });
       }
+
       set({ isUserNotFound: false, isUnauthorized: false, error: null });
       await get().load({ force: true });
+      return res;
     } catch (error) {
       const err = toCalendarServiceError(error);
       set({ status: 'error', error: err.message, isUserNotFound: err.isUserNotFound, isUnauthorized: err.isUnauthorized });

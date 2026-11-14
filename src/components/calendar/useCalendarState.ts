@@ -20,6 +20,7 @@ import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useCalendarNotificationStore } from '@/stores/useCalendarNotificationStore';
 import { useTeamAvailabilityStore } from '@/stores/useTeamAvailabilityStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useCalendarHealthPoll } from '@/hooks/useCalendarHealthPoll';
 import { getAccounts } from '@/lib/api/handlers/account';
 import { getAuthToken } from '@/lib/api/client';
 import { Appointment } from '@/types';
@@ -135,7 +136,23 @@ export function useCalendarState() {
   const calendarsError = useCalendarsStore((s) => s.error);
   const isUserNotFound = useCalendarsStore((s) => s.isUserNotFound);
   const isUnauthorized = useCalendarsStore((s) => s.isUnauthorized);
-  const isViewOnly = isUnauthorized || isUserNotFound;
+  const initFromCache = useCalendarsStore((s) => s.initFromCache);
+  const isCalendarAddedForAccount = useCalendarsStore((s) => s.isCalendarAddedForAccount);
+
+  const { isHealthy, healthMessage } = useCalendarHealthPoll();
+  const [activeEmail, setActiveEmail] = useState<string>('');
+
+  useEffect(() => {
+    void initFromCache();
+    void getAccounts().then((accs) => {
+      if (accs.length > 0 && accs[0].email) {
+        setActiveEmail(accs[0].email);
+      }
+    });
+  }, [initFromCache]);
+
+  const isCalendarAdded = isCalendarAddedForAccount(activeEmail);
+  const isViewOnly = isUnauthorized || (!isCalendarAdded && isUserNotFound);
   const loadCalendars = useCalendarsStore((s) => s.load);
   const createCalendarInStore = useCalendarsStore((s) => s.create);
   const onboardInStore = useCalendarsStore((s) => s.onboard);
