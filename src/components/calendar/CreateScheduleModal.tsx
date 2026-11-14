@@ -22,7 +22,7 @@ export function CreateScheduleModal({
   onClose,
   onSave,
   initialDayIndex = 6,
-  initialHour = 7, // Default 7:00 AM
+  initialHour = 7,
   initialEvent,
 }: CreateScheduleModalProps) {
   const [title, setTitle] = useState(initialEvent?.title || '');
@@ -39,7 +39,8 @@ export function CreateScheduleModal({
 
   const [attendees, setAttendees] = useState<string[]>([]);
   const [location, setLocation] = useState(initialEvent?.category || '');
-  const [isTeamsMeeting, setIsTeamsMeeting] = useState(false);
+  const [hasOnlineMeeting, setHasOnlineMeeting] = useState(Boolean(initialEvent?.meetUrl));
+  const [meetUrl, setMeetUrl] = useState(initialEvent?.meetUrl || '');
   const [description, setDescription] = useState(initialEvent?.description || '');
   const [agenda, setAgenda] = useState('');
   const [selectedCharm, setSelectedCharm] = useState<string | null>(null);
@@ -53,6 +54,8 @@ export function CreateScheduleModal({
         setDurationHours(initialEvent.durationHours || 0.5);
         setDescription(initialEvent.description || '');
         setCategoryColor(initialEvent.color || 'salmon');
+        setHasOnlineMeeting(Boolean(initialEvent.meetUrl));
+        setMeetUrl(initialEvent.meetUrl || '');
       } else {
         setTitle('');
         setStartHourDecimal(initialHour);
@@ -60,7 +63,8 @@ export function CreateScheduleModal({
         setDescription('');
         setAgenda('');
         setAttendees([]);
-        setIsTeamsMeeting(false);
+        setHasOnlineMeeting(false);
+        setMeetUrl('');
       }
     }
   }, [open, initialHour, initialEvent]);
@@ -77,6 +81,10 @@ export function CreateScheduleModal({
       avatar: `https://images.unsplash.com/photo-${1534528741775 + idx}?w=64&h=64&fit=crop&crop=faces`,
     }));
 
+    const finalMeet = hasOnlineMeeting
+      ? (meetUrl.trim() || `https://meet.airsend.io/join/${Math.random().toString(36).substring(2, 9)}`)
+      : undefined;
+
     onSave({
       id: initialEvent?.id,
       uid: initialEvent?.uid,
@@ -89,9 +97,9 @@ export function CreateScheduleModal({
       startHour: startHourDecimal,
       durationHours,
       color: categoryColor,
-      category: location || (isTeamsMeeting ? 'Microsoft Teams' : 'General'),
+      category: location || (hasOnlineMeeting ? 'Online Meeting' : 'General'),
       description: agenda ? `${description}\n\nAgenda:\n${agenda}`.trim() : description,
-      meetUrl: isTeamsMeeting ? 'https://teams.microsoft.com/l/meetup-join/airsend' : undefined,
+      meetUrl: finalMeet,
       participants,
       isAllDay,
       isRecurring: isSeries,
@@ -130,8 +138,10 @@ export function CreateScheduleModal({
               onRemoveAttendee={(e) => setAttendees(attendees.filter((a) => a !== e))}
               location={location}
               setLocation={setLocation}
-              isTeamsMeeting={isTeamsMeeting}
-              setIsTeamsMeeting={setIsTeamsMeeting}
+              hasOnlineMeeting={hasOnlineMeeting}
+              setHasOnlineMeeting={setHasOnlineMeeting}
+              meetUrl={meetUrl}
+              setMeetUrl={setMeetUrl}
               description={description}
               setDescription={setDescription}
               agenda={agenda}
