@@ -3,21 +3,46 @@
 import { create } from 'zustand';
 import type { MailFolder } from '@/types';
 import { foldersApi } from '@/lib/api';
-import { getCachedFolders, replaceCachedFolders } from '@/lib/idb/mailCacheDb';
+import {
+  getCachedFolders,
+  replaceCachedFolders,
+  getFolderSyncStates,
+  invalidateFolderSync,
+} from '@/lib/idb/mailCacheDb';
 import { folderLabel, replaceRegisteredFolders, clearRegisteredFolders } from '@/lib/folders';
 
-/** A folder list synced less than this long ago is not requested again. */
-const FOLDER_FRESH_MS = 30_000;
+/** Bursts of server events (flags, expunges) are folded into one folder sync. */
+const SYNC_SOON_MS = 400;
 
 interface FolderState {
   /** Folders per account id, exactly as the backend classified them (labels normalized for display). */
   byAccount: Record<string, MailFolder[]>;
-  syncedAt: Record<string, number>;
+  /**
+   * Unread changes made locally since the last backend sync, per folder id. The
+   * sidebar shows backend `unreadCount + delta`, so it reacts instantly; the
+   * next sync replaces the base and clears the deltas.
+   */
+  unreadDelta: Record<string, number>;
 
-  /** Show the local copy at once, then refresh from the backend unless it was synced recently. */
+  /**
+   * Load an account's folders without asking the backend when they are already
+   * known (in memory, or stored locally from an earlier fetch). The backend is
+   * only asked the first time.
+   */
   ensureFolders: (accountId: string) => Promise<MailFolder[]>;
-  /** Fetch from the backend now. The backend list replaces the local copy. */
-  syncFolders: (accountId: string) => Promise<MailFolder[]>;
+  /**
+   * Fetch from the backend now (a server event, a manual sync, a folder was
+   * created/renamed/deleted). The backend list replaces the local copy.
+   * `openFolderId` is the folder on screen: it is kept current by events and
+   * local actions, so it is not marked stale when its count changes.
+   */
+  syncFolders: (accountId: string, openFolderId?: string) => Promise<MailFolder[]>;
+  /** Like `syncFolders`, but waits briefly so a burst of events costs one request. */
+  syncFoldersSoon: (accountId: string, openFolderId?: string) => void;
+
+  bumpUnread: (folderId: string, delta: number) => void;
+  /** All messages in the folder were marked read. */
+  clearUnread: (folderId: string) => void;
   reset: () => void;
 }
 
@@ -32,39 +57,61 @@ function withLabels(accountId: string, folders: MailFolder[]): MailFolder[] {
 
 // One request per account at a time, however many components ask.
 const inflightSync = new Map<string, Promise<MailFolder[]>>();
+const soonTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const useFolderStore = create<FolderState>((set, get) => {
-  const apply = (accountId: string, folders: MailFolder[], synced: boolean) => {
+  /** Puts a folder list in the store (and the registry the API layer reads). */
+  const apply = (accountId: string, folders: MailFolder[], fromBackend: boolean) => {
     const labelled = withLabels(accountId, folders);
     replaceRegisteredFolders(accountId, labelled);
-    set((s) => ({
-      byAccount: { ...s.byAccount, [accountId]: labelled },
-      syncedAt: synced ? { ...s.syncedAt, [accountId]: Date.now() } : s.syncedAt,
-    }));
+    set((s) => {
+      let unreadDelta = s.unreadDelta;
+      if (fromBackend) {
+        // The backend counts are the new base: forget local adjustments for this account.
+        const previousIds = new Set((s.byAccount[accountId] ?? []).map((f) => f.id));
+        unreadDelta = Object.fromEntries(Object.entries(s.unreadDelta).filter(([id]) => !previousIds.has(id)));
+      }
+      return { byAccount: { ...s.byAccount, [accountId]: labelled }, unreadDelta };
+    });
     return labelled;
+  };
+
+  /**
+   * A folder whose message count differs from when we fetched it has changed
+   * on the server: forget its fetched marker so the next open asks the backend.
+   */
+  const markChangedFoldersStale = async (accountId: string, folders: MailFolder[], openFolderId?: string) => {
+    const states = await getFolderSyncStates(accountId);
+    await Promise.all(
+      folders.map(async (folder) => {
+        const state = states.find((st) => st.folderId === folder.id);
+        if (!state || folder.id === openFolderId) return;
+        if (state.totalCount !== (Number(folder.totalCount) || 0)) await invalidateFolderSync(folder.id);
+      })
+    );
   };
 
   return {
     byAccount: {},
-    syncedAt: {},
+    unreadDelta: {},
 
     ensureFolders: async (accountId) => {
       if (!accountId) return [];
 
-      if (!get().byAccount[accountId]) {
-        const cached = await getCachedFolders(accountId);
-        // The backend may have answered while the local copy was loading.
-        if (cached.length > 0 && !get().byAccount[accountId]) apply(accountId, cached, false);
+      const loaded = get().byAccount[accountId];
+      if (loaded) return loaded;
+
+      const stored = await getCachedFolders(accountId);
+      if (stored.length > 0) {
+        // Another caller may have loaded them while we read the local copy.
+        return get().byAccount[accountId] ?? apply(accountId, stored, false);
       }
 
-      const lastSync = get().syncedAt[accountId] ?? 0;
-      if (Date.now() - lastSync < FOLDER_FRESH_MS) {
-        return get().byAccount[accountId] ?? [];
-      }
+      // Nothing local yet: the first time ever.
       return get().syncFolders(accountId);
     },
 
-    syncFolders: (accountId) => {
+    syncFolders: (accountId, openFolderId) => {
       if (!accountId) return Promise.resolve([]);
       const pending = inflightSync.get(accountId);
       if (pending) return pending;
@@ -73,6 +120,7 @@ export const useFolderStore = create<FolderState>((set, get) => {
         try {
           const fromBackend = await foldersApi.getFolders(accountId);
           await replaceCachedFolders(accountId, fromBackend);
+          await markChangedFoldersStale(accountId, fromBackend, openFolderId);
           return apply(accountId, fromBackend, true);
         } catch {
           // Offline or server error: keep showing the last known copy.
@@ -86,10 +134,41 @@ export const useFolderStore = create<FolderState>((set, get) => {
       return request;
     },
 
+    syncFoldersSoon: (accountId, openFolderId) => {
+      if (!accountId) return;
+      const existing = soonTimers.get(accountId);
+      if (existing) clearTimeout(existing);
+      soonTimers.set(
+        accountId,
+        setTimeout(() => {
+          soonTimers.delete(accountId);
+          void get().syncFolders(accountId, openFolderId);
+        }, SYNC_SOON_MS)
+      );
+    },
+
+    bumpUnread: (folderId, delta) => {
+      if (!folderId || !delta) return;
+      set((s) => ({ unreadDelta: { ...s.unreadDelta, [folderId]: (s.unreadDelta[folderId] ?? 0) + delta } }));
+    },
+
+    clearUnread: (folderId) => {
+      if (!folderId) return;
+      set((s) => {
+        const folder = Object.values(s.byAccount)
+          .flat()
+          .find((f) => f.id === folderId);
+        if (!folder) return s;
+        return { unreadDelta: { ...s.unreadDelta, [folderId]: -(Number(folder.unreadCount) || 0) } };
+      });
+    },
+
     reset: () => {
       inflightSync.clear();
+      for (const timer of soonTimers.values()) clearTimeout(timer);
+      soonTimers.clear();
       clearRegisteredFolders();
-      set({ byAccount: {}, syncedAt: {} });
+      set({ byAccount: {}, unreadDelta: {} });
     },
   };
 });

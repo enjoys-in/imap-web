@@ -50,6 +50,14 @@ export function listRegisteredFolders(accountId?: string): MailFolder[] {
   return Array.from(registry.values()).filter((f) => !accountId || f.accountId === accountId);
 }
 
+/** The folder an event refers to by IMAP path (e.g. the event stream's `path`). */
+export function findRegisteredFolderByPath(path: string, accountId?: string): MailFolder | undefined {
+  for (const folder of registry.values()) {
+    if (folder.fullName === path && (!accountId || folder.accountId === accountId)) return folder;
+  }
+  return undefined;
+}
+
 /** First registered folder with this classification, optionally limited to an account. */
 export function findRegisteredSpecialFolder(
   special: SpecialFolder,

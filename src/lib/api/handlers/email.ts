@@ -351,6 +351,19 @@ export async function markAsRead(
 }
 
 /**
+ * Mark EVERY message in a folder as read (the server runs it as a background job).
+ */
+export async function markAllAsRead(folder: string): Promise<boolean> {
+  const path = toFolderPath(folder) ?? folder;
+  try {
+    await apiClient.patch(`/handle-flags?flag=mark_all_as_read&folder=${encodeURIComponent(path)}`, { uids: [] });
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Bulk mark messages as read / unread.
  */
 export async function bulkMarkAsRead(

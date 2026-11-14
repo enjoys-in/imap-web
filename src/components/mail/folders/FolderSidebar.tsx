@@ -12,6 +12,7 @@ import { SidebarAccountsList } from './SidebarAccountsList';
 import { SidebarFolderActions } from './SidebarFolderActions';
 import { MailFolder } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
+import { useFolderStore } from '@/stores/useFolderStore';
 import { getClientConfig } from '@/config/clientConfig';
 
 interface FolderSidebarProps {
@@ -48,21 +49,17 @@ export function FolderSidebar({
 
   const activeAccId = primaryAccount.id || selectedAccountId;
   const { data: folders } = useFolders(activeAccId);
-  const localEmails = useMailStore((s) => s.localEmails);
+  const unreadDelta = useFolderStore((s) => s.unreadDelta);
 
+  // Counts are the backend's (kept fresh by server events), adjusted by local read/unread
+  // changes the backend has not reported back yet. They do not depend on how many messages are loaded.
   const foldersWithCounts = useMemo(() => {
     if (!folders) return [];
-    return folders.map((f) => {
-      const isInbox = f.special === 'Inbox';
-      const fEmails = localEmails.filter((e) => {
-        const matchesFolder = e.folderId === f.id;
-        const matchesAcc = !e.accountId || e.accountId === activeAccId;
-        return matchesFolder && matchesAcc;
-      });
-      const dynamicUnread = fEmails.filter((e) => !e.isRead).length;
-      return { ...f, unreadCount: isInbox || fEmails.length > 0 ? dynamicUnread : f.unreadCount };
-    });
-  }, [folders, localEmails, activeAccId]);
+    return folders.map((f) => ({
+      ...f,
+      unreadCount: Math.max(0, (Number(f.unreadCount) || 0) + (unreadDelta[f.id] ?? 0)),
+    }));
+  }, [folders, unreadDelta]);
 
   const notesFolder = foldersWithCounts.find((f) => f.displayName === 'Notes');
 

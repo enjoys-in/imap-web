@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import { useComposeStore, useMailStore, useToastStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
-import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
+import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { ComposeHeader } from './ComposeHeader';
@@ -100,7 +100,8 @@ export function ComposeModal() {
             : e
         );
         useMailStore.setState({ localEmails: [msg, ...updatedList] });
-        saveCachedEmails([msg]);
+        // The sent message exists on the server with its own uid: have Sent fetch again when it is opened.
+        if (msg.folderId) void invalidateFolderSync(msg.folderId);
 
         const toRecipients = to.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
         const ccRecipients = cc ? cc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;

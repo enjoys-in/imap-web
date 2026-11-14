@@ -66,6 +66,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       options.onProfile?.();
       const list = await queryClient.fetchQuery({
         ...accountsQuery,
+        // After a fresh sign-in the backend decides; otherwise the local copy is used when it is this user's.
+        queryFn: () =>
+          accountsApi.getAccounts({ refresh: options.force, forEmail: profile.email }),
         staleTime: options.force ? 0 : accountsQuery.staleTime,
       });
       return { profile, list };

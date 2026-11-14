@@ -57,13 +57,15 @@ function useSyncCore() {
         await foldersApi.syncCompleteMailbox();
 
         // Invalidate React Query caches for immediate UI update
-        void useFolderStore.getState().syncFolders(selectedAccountId);
+        // The backend is the source of truth: fresh folder counts (other folders whose count changed are marked stale)...
+        await useFolderStore.getState().syncFolders(selectedAccountId, selectedFolderId);
         queryClient.invalidateQueries({ queryKey: ['emails'] });
         queryClient.invalidateQueries({ queryKey: ['quota'] });
         queryClient.invalidateQueries({ queryKey: ['connection-status'] });
 
         // Update current folder emails
-        await fetchEmails(selectedFolderId, selectedAccountId || undefined);
+        // ...then the open folder is reloaded from the backend, replacing the local copy.
+        await fetchEmails(selectedFolderId, selectedAccountId || undefined, { force: true });
 
         if (notify) {
           addToast({

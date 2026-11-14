@@ -348,7 +348,14 @@ function accountFromProfile(profile: any): Account {
  * multi-account endpoint expose the signed-in mailbox through the session
  * profile instead.
  */
-export async function getAccounts(): Promise<Account[]> {
+export async function getAccounts(options: { refresh?: boolean; forEmail?: string } = {}): Promise<Account[]> {
+  // Fetched before: read the local copy, no request. `forEmail` makes sure the copy belongs to the signed-in user.
+  if (!options.refresh) {
+    const stored = await getCachedAccounts();
+    const usable = options.forEmail ? stored.some((a) => a.email === options.forEmail) : stored.length > 0;
+    if (usable) return stored;
+  }
+
   try {
     const data = await apiClient.get<any>('/accounts');
     const list = Array.isArray(data?.result)

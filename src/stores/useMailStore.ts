@@ -1,10 +1,18 @@
 import { create } from 'zustand';
 import { MailMessageMetadata } from '@/types';
 import { emailsApi, foldersApi } from '@/lib/api';
-import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
+import {
+  saveCachedEmails,
+  deleteCachedEmails,
+  patchCachedEmail,
+  invalidateFolderSync,
+  clearFolderCache,
+} from '@/lib/idb/mailCacheDb';
+import { loadFolderEmails, loadMoreFolderEmails, refreshFolderEmails } from '@/lib/mailSync';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 import { getRegisteredFolder } from '@/lib/folders';
 import { useGeneralSettingsStore } from './useGeneralSettingsStore';
+import { useFolderStore } from './useFolderStore';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
 export type MailSortField = 'date' | 'from' | 'subject' | 'size';
@@ -29,7 +37,17 @@ interface MailState {
   isLoadingMore: boolean;
   lastSnapshot: MailMessageMetadata[] | null;
 
-  fetchEmails: (folderId?: string, accountId?: string) => Promise<void>;
+  /**
+   * Show a folder's messages. After the first fetch they come from the local
+   * copy with no request; `force` asks the backend again (manual sync).
+   */
+  fetchEmails: (folderId?: string, accountId?: string, options?: { force?: boolean }) => Promise<void>;
+  /** Live update after a server event: merge the folder's newest page from the backend. */
+  refreshFolder: (folderId: string) => Promise<void>;
+  /** A server event changed a message's flags (read / flagged). */
+  applyMessageFlags: (folderId: string, emailId: string, patch: Partial<MailMessageMetadata>) => void;
+  /** A server event removed a message. */
+  removeEmailFromFolder: (folderId: string, emailId: string) => void;
   loadMoreEmails: () => Promise<void>;
   setSortConfig: (field: MailSortField, direction: MailSortDirection) => void;
   setLocalEmails: (emails: MailMessageMetadata[]) => void;
@@ -91,6 +109,18 @@ const initialState = getInitialState();
 // Identifies the newest list request so a slow, superseded response cannot overwrite a newer list.
 let latestFetchId = 0;
 
+// While true, changes to `localEmails` are not written back to IndexedDB: they
+// come from IndexedDB or the backend and are already stored.
+let suppressPersist = false;
+function quietly(update: () => void): void {
+  suppressPersist = true;
+  try {
+    update();
+  } finally {
+    suppressPersist = false;
+  }
+}
+
 export const useMailStore = create<MailState>((set, get) => ({
   selectedAccountId: initialState.selectedAccountId,
   selectedAccountIndex: initialState.selectedAccountIndex,
@@ -112,34 +142,28 @@ export const useMailStore = create<MailState>((set, get) => ({
 
   setSortConfig: (field, direction) => set({ sortField: field, sortDirection: direction }),
 
-  fetchEmails: async (folderId, accountId) => {
+  fetchEmails: async (folderId, accountId, options) => {
     const fId = folderId || get().selectedFolderId;
     const aId = accountId || get().selectedAccountId || '';
     const folder = getRegisteredFolder(fId);
-    // Folder ids come from the backend; nothing to request until its folder list has loaded.
+    // Folder ids come from the backend; nothing to load until its folder list has arrived.
     if (!fId || !folder) return;
 
     const requestId = ++latestFetchId;
-    set({ isLoadingEmails: true, emailPage: 1 });
+    set({ isLoadingEmails: true });
     try {
-      // Local copy first, so the list paints before the backend answers.
-      const cached = await getCachedEmails(fId, aId);
-      const alreadyShowing = get().localEmails.some((e) => e.folderId === fId);
-      if (requestId === latestFetchId && cached.length > 0 && !alreadyShowing) {
-        set({ localEmails: cached, selectedFolderId: fId });
-      }
-    } catch {}
-    try {
-      const list = await emailsApi.getEmailsMetadata(folder, aId || undefined, 1, 25);
-      saveCachedEmails(list);
-      // A newer fetch (e.g. the user switched folder) owns the list and the loading flag now.
+      // From the local copy when this folder was fetched before; the backend is asked the first time or when forced.
+      const result = await loadFolderEmails(folder, aId || undefined, { force: options?.force });
+      // A newer request (e.g. the user switched folder) owns the list and the loading flag now.
       if (requestId !== latestFetchId) return;
-      set({
-        localEmails: list,
-        emailPage: 1,
-        hasMoreEmails: list.length >= 25,
-        isLoadingEmails: false,
-      });
+      quietly(() =>
+        set({
+          localEmails: result.emails,
+          emailPage: result.pagesLoaded,
+          hasMoreEmails: result.hasMore,
+          isLoadingEmails: false,
+        })
+      );
     } catch {
       if (requestId === latestFetchId) set({ isLoadingEmails: false });
     }
@@ -154,7 +178,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     if (!folder) return;
     set({ isLoadingMore: true });
     try {
-      const nextBatch = await emailsApi.getEmailsMetadata(folder, aId || undefined, nextPage, 25);
+      const { fresh, hasMore } = await loadMoreFolderEmails(folder, aId || undefined, nextPage);
       // The user moved to another folder/account while this page loaded: drop it.
       if (get().selectedFolderId !== fId || get().selectedAccountId !== aId) {
         set({ isLoadingMore: false });
@@ -162,18 +186,47 @@ export const useMailStore = create<MailState>((set, get) => ({
       }
       const current = get().localEmails;
       const currentIds = new Set(current.map((e) => e.id));
-      const fresh = nextBatch.filter((e) => !currentIds.has(e.id));
-      const merged = [...current, ...fresh];
-      set({
-        localEmails: merged,
-        emailPage: nextPage,
-        hasMoreEmails: nextBatch.length >= 25,
-        isLoadingMore: false,
-      });
-      saveCachedEmails(fresh);
+      const merged = [...current, ...fresh.filter((e) => !currentIds.has(e.id))];
+      quietly(() =>
+        set({ localEmails: merged, emailPage: nextPage, hasMoreEmails: hasMore, isLoadingMore: false })
+      );
     } catch {
       set({ isLoadingMore: false });
     }
+  },
+
+  refreshFolder: async (folderId) => {
+    const folder = getRegisteredFolder(folderId);
+    if (!folder) return;
+    try {
+      const result = await refreshFolderEmails(folder, folder.accountId || undefined);
+      if (get().selectedFolderId === folderId) {
+        quietly(() =>
+          set({ localEmails: result.emails, emailPage: result.pagesLoaded, hasMoreEmails: result.hasMore })
+        );
+      }
+    } catch {
+      // Keep showing what we have; the next event or manual sync retries.
+    }
+  },
+
+  applyMessageFlags: (folderId, emailId, patch) => {
+    void patchCachedEmail(folderId, emailId, patch);
+    quietly(() =>
+      set((s) => ({
+        localEmails: s.localEmails.map((m) =>
+          m.folderId === folderId && m.id === emailId ? { ...m, ...patch } : m
+        ),
+      }))
+    );
+  },
+
+  removeEmailFromFolder: (folderId, emailId) => {
+    void deleteCachedEmails(folderId, [emailId]);
+    set((s) => ({
+      localEmails: s.localEmails.filter((m) => !(m.folderId === folderId && m.id === emailId)),
+      selectedMailId: s.selectedMailId === emailId ? null : s.selectedMailId,
+    }));
   },
 
   setLocalEmails: (localEmails) => set({ localEmails }),
@@ -220,6 +273,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     }));
     if (id && current && !current.isRead) {
       emailsApi.markAsRead(id, true, current.folderId || get().selectedFolderId).catch(() => {});
+      useFolderStore.getState().bumpUnread(current.folderId, -1);
     }
   },
   setFilterTab: (filterTab) => set({ filterTab }),
@@ -277,17 +331,18 @@ export const useMailStore = create<MailState>((set, get) => ({
       localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isRead: nextRead } : m)),
     }));
     emailsApi.markAsRead(id, nextRead, folder).catch(() => {});
+    if (email && email.isRead !== nextRead) {
+      useFolderStore.getState().bumpUnread(email.folderId, nextRead ? -1 : 1);
+    }
   },
   markFolderAsRead: (folderId) => {
-    const folderEmails = get().localEmails.filter((m) => m.folderId === folderId);
-    const unreadIds = folderEmails.filter((m) => !m.isRead).map((m) => m.id);
     set((s) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.folderId === folderId ? { ...m, isRead: true } : m)),
     }));
-    if (unreadIds.length > 0) {
-      emailsApi.bulkMarkAsRead(unreadIds, true, folderId).catch(() => {});
-    }
+    // Every message in the folder, not just the ones loaded on screen.
+    emailsApi.markAllAsRead(folderId).catch(() => {});
+    useFolderStore.getState().clearUnread(folderId);
   },
   emptyFolder: (folderId) => {
     set((s) => ({
@@ -297,6 +352,8 @@ export const useMailStore = create<MailState>((set, get) => ({
       selectedIds: [],
     }));
     foldersApi.emptyFolder(folderId).catch(() => {});
+    void clearFolderCache(folderId);
+    useFolderStore.getState().clearUnread(folderId);
   },
   deleteEmail: (id) => {
     const email = get().localEmails.find((m) => m.id === id);
@@ -322,14 +379,24 @@ export const useMailStore = create<MailState>((set, get) => ({
       };
     });
     emailsApi.deleteEmail(id, folder).catch(() => {});
+    void deleteCachedEmails(folder, [id]);
+    if (email && !email.isRead) useFolderStore.getState().bumpUnread(email.folderId, -1);
   },
   moveEmailToFolder: (emailId, folderId) => {
-    const currentFolder = get().selectedFolderId;
+    const email = get().localEmails.find((m) => m.id === emailId);
+    const sourceFolder = email?.folderId || get().selectedFolderId;
     set((s) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
     }));
-    emailsApi.moveEmail(emailId, folderId, currentFolder).catch(() => {});
+    emailsApi.moveEmail(emailId, folderId, sourceFolder).catch(() => {});
+    // The server gives the message a new uid in the target folder: forget it here, and have the target fetch again when opened.
+    void deleteCachedEmails(sourceFolder, [emailId]);
+    void invalidateFolderSync(folderId);
+    if (email && !email.isRead) {
+      useFolderStore.getState().bumpUnread(sourceFolder, -1);
+      useFolderStore.getState().bumpUnread(folderId, 1);
+    }
   },
   copyEmailToFolder: (emailId, folderId) => {
     const original = get().localEmails.find((m) => m.id === emailId);
@@ -344,6 +411,8 @@ export const useMailStore = create<MailState>((set, get) => ({
       localEmails: [copied, ...s.localEmails],
     }));
     emailsApi.copyEmail(emailId, folderId, original.folderId).catch(() => {});
+    // The copy only exists on the server (with its own uid): have the target fetch again when opened.
+    void invalidateFolderSync(folderId);
   },
   categorizeEmail: (emailId, category) => {
     const email = get().localEmails.find((m) => m.id === emailId);
@@ -385,6 +454,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     const ids = get().selectedIds;
     if (ids.length === 0) return;
     const folder = get().selectedFolderId;
+    const removed = get().localEmails.filter((m) => ids.includes(m.id));
     set((s) => {
       const setIds = new Set(s.selectedIds);
       return {
@@ -395,11 +465,17 @@ export const useMailStore = create<MailState>((set, get) => ({
       };
     });
     emailsApi.bulkDeleteEmails(ids, folder).catch(() => {});
+    for (const [folderId, rows] of groupByFolder(removed)) {
+      void deleteCachedEmails(folderId, rows.map((m) => m.id));
+      const unread = rows.filter((m) => !m.isRead).length;
+      if (unread) useFolderStore.getState().bumpUnread(folderId, -unread);
+    }
   },
   bulkMarkAsRead: (isRead) => {
     const ids = get().selectedIds;
     if (ids.length === 0) return;
     const folder = get().selectedFolderId;
+    const changing = get().localEmails.filter((m) => ids.includes(m.id) && m.isRead !== isRead);
     set((s) => {
       const setIds = new Set(s.selectedIds);
       return {
@@ -408,11 +484,15 @@ export const useMailStore = create<MailState>((set, get) => ({
       };
     });
     emailsApi.bulkMarkAsRead(ids, isRead, folder).catch(() => {});
+    for (const [folderId, rows] of groupByFolder(changing)) {
+      useFolderStore.getState().bumpUnread(folderId, isRead ? -rows.length : rows.length);
+    }
   },
   bulkMoveToFolder: (folderId) => {
     const ids = get().selectedIds;
     if (ids.length === 0) return;
     const currentFolder = get().selectedFolderId;
+    const moving = get().localEmails.filter((m) => ids.includes(m.id));
     set((s) => {
       const setIds = new Set(s.selectedIds);
       return {
@@ -423,6 +503,16 @@ export const useMailStore = create<MailState>((set, get) => ({
       };
     });
     emailsApi.bulkMoveEmails(ids, folderId, currentFolder).catch(() => {});
+    // The server gives moved messages new uids in the target folder: forget them here, and have the target fetch again when opened.
+    for (const [sourceFolder, rows] of groupByFolder(moving)) {
+      void deleteCachedEmails(sourceFolder, rows.map((m) => m.id));
+      const unread = rows.filter((m) => !m.isRead).length;
+      if (unread) {
+        useFolderStore.getState().bumpUnread(sourceFolder, -unread);
+        useFolderStore.getState().bumpUnread(folderId, unread);
+      }
+    }
+    void invalidateFolderSync(folderId);
   },
   bulkToggleFlag: (isFlagged) => {
     const ids = get().selectedIds;
@@ -447,3 +537,27 @@ export const useMailStore = create<MailState>((set, get) => ({
     return true;
   },
 }));
+
+function groupByFolder(rows: MailMessageMetadata[]): Map<string, MailMessageMetadata[]> {
+  const groups = new Map<string, MailMessageMetadata[]>();
+  for (const row of rows) {
+    const list = groups.get(row.folderId);
+    if (list) list.push(row);
+    else groups.set(row.folderId, [row]);
+  }
+  return groups;
+}
+
+// Keep the local copy in step with what the user changes on screen: a message
+// edited in place (read, flagged, pinned, categorized) is written back to
+// IndexedDB, so reopening the folder shows it as it was left. Added, moved and
+// removed messages are handled by the actions above, not here.
+useMailStore.subscribe((state, previous) => {
+  if (suppressPersist || state.localEmails === previous.localEmails) return;
+  const before = new Map(previous.localEmails.map((m) => [`${m.folderId}|${m.id}`, m]));
+  const edited = state.localEmails.filter((m) => {
+    const old = before.get(`${m.folderId}|${m.id}`);
+    return old !== undefined && old !== m;
+  });
+  if (edited.length > 0) void saveCachedEmails(edited);
+});

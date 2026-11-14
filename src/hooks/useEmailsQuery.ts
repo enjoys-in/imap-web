@@ -80,7 +80,8 @@ export function useQuota(folder = 'INBOX') {
   return useQuery<StorageQuotaInfo>({
     queryKey: ['quota', folder],
     queryFn: () => foldersApi.getQuota(folder),
-    staleTime: 30000,
+    // Fetched once; server events and syncs invalidate it (see LiveEmailSyncBridge / useSyncManager).
+    staleTime: Infinity,
   });
 }
 

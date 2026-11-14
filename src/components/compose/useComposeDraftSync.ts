@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useComposeStore } from '@/stores/useComposeStore';
 import { useMailStore } from '@/stores/useMailStore';
-import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
+import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { useSession } from '@/components/providers/SessionProvider';
@@ -89,7 +89,8 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     }
 
     // 2. Offline IDB cache
-    saveCachedEmails([draftMsg]);
+    // The draft exists on the server with its own uid: have Drafts fetch again when it is opened.
+    if (draftMsg.folderId) void invalidateFolderSync(draftMsg.folderId);
 
     // 3. Backend IMAP/REST Sync
     try {

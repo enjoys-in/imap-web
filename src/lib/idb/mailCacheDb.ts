@@ -11,6 +11,9 @@ import type { Account, MailFolder, MailMessageMetadata } from '@/types';
  *   an IMAP uid ("msg-1") is only unique within one folder.
  * - email_bodies: bodies, stored only after the user opened the message.
  * - folders / accounts: the lists the backend returned.
+ * - folder_sync: per-folder marker saying "this folder was fetched from the
+ *   backend". While it exists the folder is served from here without a request;
+ *   it is removed (so the next open fetches) when the backend reports a change.
  */
 
 export interface CachedEmailMetadata extends MailMessageMetadata {
@@ -27,6 +30,19 @@ export interface CachedEmailBody {
   cachedAt: number;
 }
 
+/** Written when a folder's messages were fetched from the backend. */
+export interface FolderSyncState {
+  folderId: string;
+  accountId: string;
+  /** How many 25-message pages are stored locally. */
+  pagesLoaded: number;
+  /** Whether the backend has older messages beyond the stored pages. */
+  hasMore: boolean;
+  /** The folder's message count when it was fetched; a different count later means it changed. */
+  totalCount: number;
+  syncedAt: number;
+}
+
 type CachedFolder = MailFolder & { cachedAt: number };
 type CachedAccount = Account & { cachedAt: number };
 
@@ -35,6 +51,7 @@ export type MailDbTables = {
   email_bodies: Table<CachedEmailBody, string>;
   folders: Table<CachedFolder, string>;
   accounts: Table<CachedAccount, string>;
+  folder_sync: Table<FolderSyncState, string>;
 };
 
 const schema: any = {
@@ -42,6 +59,7 @@ const schema: any = {
   email_bodies: 'key,cachedAt',
   folders: 'id,accountId',
   accounts: 'id',
+  folder_sync: 'folderId,accountId',
 };
 
 const DB_NAME = 'airsend-mail-cache-v3';
@@ -59,7 +77,7 @@ function getIdb(): IDB<MailDbTables> | null {
           window.indexedDB?.deleteDatabase(legacy);
         } catch {}
       }
-      idbInstance = new IDB<MailDbTables>(schema, DB_NAME, 1);
+      idbInstance = new IDB<MailDbTables>(schema, DB_NAME, 2);
     } catch (err) {
       console.warn('[IndexedDB] Initialization failed:', err);
       return null;
@@ -170,13 +188,112 @@ export async function getCachedFolders(accountId: string): Promise<MailFolder[]>
   }, []);
 }
 
-export async function replaceCachedFolders(accountId: string, folders: MailFolder[]): Promise<void> {
+/**
+ * Replaces an account's folders with the backend list. Messages cached for a
+ * folder the backend no longer has, or whose UIDVALIDITY changed (every stored
+ * uid is meaningless after that), are discarded in the same transaction.
+ * Returns the ids of the folders whose messages were discarded.
+ */
+export async function replaceCachedFolders(
+  accountId: string,
+  folders: MailFolder[]
+): Promise<{ dropped: string[] }> {
   const now = Date.now();
-  await withDb(
+  return withDb(
     (db) =>
-      db.transaction('rw', db.folders, async () => {
+      db.transaction('rw', db.folders, db.emails, db.folder_sync, async () => {
+        const previous = await db.folders.where('accountId').equals(accountId).toArray();
+        const incoming = new Map(folders.map((f) => [f.id, f]));
+
+        const dropped: string[] = [];
+        for (const old of previous) {
+          const current = incoming.get(old.id);
+          if (!current || old.uidValidity !== current.uidValidity) dropped.push(old.id);
+        }
+        for (const id of dropped) {
+          await db.emails.where('folderId').equals(id).delete();
+          await db.folder_sync.delete(id);
+        }
+
         await db.folders.where('accountId').equals(accountId).delete();
         await db.folders.bulkPut(folders.map((f) => ({ ...f, cachedAt: now })));
+        return { dropped };
+      }),
+    { dropped: [] as string[] }
+  );
+}
+
+// ── Per-folder sync state & message maintenance ──────────────────────────────
+
+export async function getFolderSyncState(folderId: string): Promise<FolderSyncState | null> {
+  return withDb(async (db) => (await db.folder_sync.get(folderId)) ?? null, null);
+}
+
+export async function getFolderSyncStates(accountId: string): Promise<FolderSyncState[]> {
+  return withDb((db) => db.folder_sync.where('accountId').equals(accountId).toArray(), []);
+}
+
+export async function saveFolderSyncState(state: FolderSyncState): Promise<void> {
+  await withDb((db) => db.folder_sync.put(state).then(() => undefined), undefined);
+}
+
+/** Stores a freshly fetched folder: its messages replace what was stored and the folder is marked as fetched. */
+export async function replaceFolderEmails(
+  folderId: string,
+  emails: MailMessageMetadata[],
+  state: FolderSyncState
+): Promise<void> {
+  const now = Date.now();
+  const records: CachedEmailMetadata[] = emails
+    .filter((e) => e.id)
+    .map((e) => {
+      const meta: Partial<MailMessageMetadata> & { bodyHtml?: string; bodyText?: string } = { ...e, folderId };
+      delete meta.bodyHtml;
+      delete meta.bodyText;
+      return { ...(meta as MailMessageMetadata), cachedAt: now };
+    });
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.emails, db.folder_sync, async () => {
+        await db.emails.where('folderId').equals(folderId).delete();
+        await db.emails.bulkPut(records);
+        await db.folder_sync.put(state);
+      }),
+    undefined
+  );
+}
+
+export async function deleteCachedEmails(folderId: string, ids: string[]): Promise<void> {
+  if (!folderId || ids.length === 0) return;
+  await withDb((db) => db.emails.bulkDelete(ids.map((id) => [folderId, id] as [string, string])), undefined);
+}
+
+/** Updates fields of one stored message (e.g. read/flagged after a server event); no-op if it is not stored. */
+export async function patchCachedEmail(
+  folderId: string,
+  id: string,
+  patch: Partial<MailMessageMetadata>
+): Promise<void> {
+  await withDb(
+    (db) => db.emails.where('[folderId+id]').equals([folderId, id]).modify(patch).then(() => undefined),
+    undefined
+  );
+}
+
+/** Forgets that a folder was fetched, so the next open asks the backend again. */
+export async function invalidateFolderSync(folderId: string): Promise<void> {
+  if (!folderId) return;
+  await withDb((db) => db.folder_sync.delete(folderId), undefined);
+}
+
+/** Drops a folder's stored messages and its fetched marker. */
+export async function clearFolderCache(folderId: string): Promise<void> {
+  if (!folderId) return;
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.emails, db.folder_sync, async () => {
+        await db.emails.where('folderId').equals(folderId).delete();
+        await db.folder_sync.delete(folderId);
       }),
     undefined
   );
@@ -208,8 +325,14 @@ export async function getCachedCount(): Promise<number> {
 export async function clearCachedEmails(): Promise<void> {
   await withDb(
     (db) =>
-      db.transaction('rw', db.emails, db.email_bodies, db.folders, db.accounts, async () => {
-        await Promise.all([db.emails.clear(), db.email_bodies.clear(), db.folders.clear(), db.accounts.clear()]);
+      db.transaction('rw', db.emails, db.email_bodies, db.folders, db.accounts, db.folder_sync, async () => {
+        await Promise.all([
+          db.emails.clear(),
+          db.email_bodies.clear(),
+          db.folders.clear(),
+          db.accounts.clear(),
+          db.folder_sync.clear(),
+        ]);
       }),
     undefined
   );
