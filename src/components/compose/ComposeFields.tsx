@@ -3,7 +3,12 @@
 import React, { useState } from 'react';
 import { X, Paperclip } from 'lucide-react';
 import { useComposeStore } from '@/stores';
-import { formatFileSize } from '@/lib/utils';
+import { formatFileSize, cn } from '@/lib/utils';
+import {
+  MAX_ATTACHMENT_TOTAL_BYTES,
+  isNearAttachmentLimit,
+  totalAttachmentBytes,
+} from '@/lib/attachmentLimits';
 import { RecipientChipInput } from './RecipientChipInput';
 
 export function ComposeFields() {
@@ -113,6 +118,17 @@ export function ComposeFields() {
               </button>
             </div>
           ))}
+          <span
+            className={cn(
+              'ml-auto self-center text-[11px] whitespace-nowrap',
+              isNearAttachmentLimit(attachments)
+                ? 'text-amber-600 dark:text-amber-400 font-medium'
+                : 'text-neutral-400'
+            )}
+            title="Attachments can total up to this size per message"
+          >
+            {formatFileSize(totalAttachmentBytes(attachments))} of {formatFileSize(MAX_ATTACHMENT_TOTAL_BYTES)}
+          </span>
         </div>
       )}
     </div>

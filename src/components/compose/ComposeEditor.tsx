@@ -6,12 +6,15 @@ import { useComposeStore } from '@/stores';
 import { useRecentAttachmentsStore } from '@/stores/useRecentAttachmentsStore';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { useSession } from '@/components/providers/SessionProvider';
+import { useAttachFiles } from '@/hooks/useAttachFiles';
+import { MAX_ATTACHMENT_TOTAL_BYTES } from '@/lib/attachmentLimits';
+import { formatFileSize } from '@/lib/utils';
 import { ComposeRichToolbar } from './ComposeRichToolbar';
 
 export function ComposeEditor() {
   const body = useComposeStore((s) => s.body);
   const updateFields = useComposeStore((s) => s.updateFields);
-  const addAttachment = useComposeStore((s) => s.addAttachment);
+  const attachFiles = useAttachFiles();
   const addRecent = useRecentAttachmentsStore((s) => s.addRecent);
   const savedSignature = useGeneralSettingsStore((s) => s.emailSignature);
   const { account } = useSession();
@@ -35,8 +38,7 @@ export function ComposeEditor() {
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      Array.from(e.dataTransfer.files).forEach((file) => {
-        addAttachment(file);
+      attachFiles(Array.from(e.dataTransfer.files)).forEach((file) => {
         addRecent({ name: file.name, size: file.size, type: file.type });
       });
     }
@@ -125,7 +127,7 @@ export function ComposeEditor() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateFields({ isAttaching: false });
     if (e.target.files) {
-      Array.from(e.target.files).forEach((file) => addAttachment(file));
+      attachFiles(Array.from(e.target.files));
       e.target.value = '';
     }
   };
@@ -156,6 +158,9 @@ export function ComposeEditor() {
         <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/20 backdrop-blur-xs border-2 border-dashed border-[#0078d4] z-20 flex flex-col items-center justify-center pointer-events-none">
           <UploadCloud className="w-10 h-10 text-[#0078d4] animate-bounce" />
           <p className="text-sm font-semibold text-[#0078d4] mt-2">Drop files here to attach</p>
+          <p className="text-xs text-[#0078d4]/80 mt-0.5">
+            Up to {formatFileSize(MAX_ATTACHMENT_TOTAL_BYTES)} total per message
+          </p>
         </div>
       )}
 

@@ -6,10 +6,14 @@ import {
   FolderOpen, Clock, File
 } from 'lucide-react';
 import { useComposeStore } from '@/stores';
-import { useRecentAttachmentsStore, RecentAttachment } from '@/stores/useRecentAttachmentsStore';
+import { useRecentAttachmentsStore } from '@/stores/useRecentAttachmentsStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useAttachFiles } from '@/hooks/useAttachFiles';
+import { MAX_ATTACHMENT_TOTAL_BYTES, isNearAttachmentLimit, totalAttachmentBytes } from '@/lib/attachmentLimits';
 import { formatFileSize } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
+const LIMIT_LABEL = formatFileSize(MAX_ATTACHMENT_TOTAL_BYTES);
 
 interface ComposeAttachMenuProps {
   variant?: 'button' | 'icon';
@@ -18,11 +22,12 @@ interface ComposeAttachMenuProps {
 
 export function ComposeAttachMenu({ variant = 'button', className }: ComposeAttachMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const addAttachment = useComposeStore((s) => s.addAttachment);
+  const attachments = useComposeStore((s) => s.attachments);
+  const attachFiles = useAttachFiles();
   const recentAttachments = useRecentAttachmentsStore((s) => s.recentAttachments);
   const addRecent = useRecentAttachmentsStore((s) => s.addRecent);
-  const createSyntheticFile = useRecentAttachmentsStore((s) => s.createSyntheticFile);
   const addToast = useToastStore((s) => s.addToast);
+  const usedLabel = formatFileSize(totalAttachmentBytes(attachments));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,23 +44,10 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
     }
   }, [isOpen]);
 
-  const handleRecentClick = (rec: RecentAttachment) => {
-    const file = createSyntheticFile(rec);
-    addAttachment(file);
-    addRecent(rec);
-    setIsOpen(false);
-    addToast({
-      title: 'Attachment Added',
-      description: `Attached ${rec.name} (${formatFileSize(rec.size)})`,
-      type: 'success',
-    });
-  };
-
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     useComposeStore.getState().updateFields({ isAttaching: false });
     if (e.target.files) {
-      Array.from(e.target.files).forEach((file) => {
-        addAttachment(file);
+      attachFiles(Array.from(e.target.files)).forEach((file) => {
         addRecent({ name: file.name, size: file.size, type: file.type });
         addToast({
           title: 'Attachment Added',
@@ -99,7 +91,7 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
             'h-7 px-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded flex items-center gap-1.5 transition-colors border border-neutral-200 dark:border-neutral-700 cursor-pointer',
             className
           )}
-          title="Attach files (shows recent 3 attachments)"
+          title={`Attach files (up to ${LIMIT_LABEL} total per message)`}
         >
           <Paperclip className="w-3.5 h-3.5" />
           <span>Attach</span>
@@ -113,7 +105,7 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
             'p-1 hover:bg-neutral-200 dark:hover:bg-[#383838] rounded text-neutral-700 dark:text-neutral-300 transition-colors flex items-center gap-0.5 shrink-0 cursor-pointer',
             className
           )}
-          title="Attach file (shows last 3 used attachments)"
+          title={`Attach file (up to ${LIMIT_LABEL} total per message)`}
         >
           <Paperclip className="w-3.5 h-3.5" />
           <ChevronDown className="w-2.5 h-2.5 opacity-60" />
@@ -132,7 +124,8 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
               <button
                 key={rec.id}
                 type="button"
-                onClick={() => handleRecentClick(rec)}
+                onClick={handleOpenBrowse}
+                title="Select this file again from your computer"
                 className="w-full text-left px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 flex items-center gap-2 cursor-pointer transition-colors group"
               >
                 {getFileIcon(rec.name, rec.type)}
@@ -155,6 +148,17 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
               <FolderOpen className="w-3.5 h-3.5 text-amber-500" />
               <span>Browse this computer...</span>
             </button>
+          </div>
+
+          <div
+            className={cn(
+              'border-t border-neutral-200 dark:border-neutral-800 px-3 py-1.5 text-[10px]',
+              isNearAttachmentLimit(attachments)
+                ? 'text-amber-600 dark:text-amber-400 font-medium'
+                : 'text-neutral-400'
+            )}
+          >
+            Limit: {LIMIT_LABEL} total per message ({usedLabel} used)
           </div>
         </div>
       )}
