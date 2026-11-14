@@ -79,6 +79,9 @@ export function LoginView() {
   const [setupProgress, setSetupProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('init');
   const [failedStep, setFailedStep] = useState<string | null>(null);
+  // Latest status the server reported for each setup step, so a step turns green
+  // as soon as its own success arrives rather than when the next step starts.
+  const [stepResults, setStepResults] = useState<Record<string, 'running' | 'success' | 'warning' | 'error'>>({});
   const [copiedLogs, setCopiedLogs] = useState(false);
   const [setupLogs, setSetupLogs] = useState<{ id: string; time: string; text: string; status: 'running' | 'success' | 'warning' | 'error' }[]>([]);
   const logsContainerRef = useRef<HTMLDivElement>(null);
@@ -247,6 +250,7 @@ export function LoginView() {
     setSetupProgress(8);
     setCurrentStep('init');
     setFailedStep(null);
+    setStepResults({});
     setErrorMessage(null);
     setInfoMessage(null);
     setSetupLogs([
@@ -281,6 +285,7 @@ export function LoginView() {
       const res = await accountsApi.setupAccountStream(payload, (event) => {
         setSetupProgress(event.progress);
         setCurrentStep(event.step);
+        setStepResults((prev) => ({ ...prev, [event.step]: event.status }));
         if (event.status === 'error') {
           setFailedStep(event.step);
         }
@@ -645,10 +650,13 @@ export function LoginView() {
                           status = 'pending';
                         }
                       } else {
+                        const result = stepResults[step.id];
                         const currentIdx = stepOrder.indexOf(currentStep);
                         const thisIdx = stepOrder.indexOf(step.id);
-                        if (currentIdx > thisIdx) status = 'completed';
-                        else if (currentIdx === thisIdx) status = 'active';
+                        if (result === 'error') status = 'error';
+                        else if (result === 'success' || result === 'warning') status = 'completed';
+                        else if (currentIdx > thisIdx) status = 'completed';
+                        else if (result === 'running' || currentIdx === thisIdx) status = 'active';
                       }
 
                       return (
@@ -711,7 +719,17 @@ export function LoginView() {
                               </span>
 
                               {/* Telemetry Status Pills */}
-                              {status === 'completed' && (
+                              {status === 'completed' && step.id === 'smtp_verify' && !smtpEnabled && (
+                                <span className="text-[10px] font-mono font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-500/10 px-1.5 py-0.5 rounded border border-neutral-500/30">
+                                  SKIPPED
+                                </span>
+                              )}
+                              {status === 'completed' && !(step.id === 'smtp_verify' && !smtpEnabled) && stepResults[step.id] === 'warning' && (
+                                <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                  WARNING
+                                </span>
+                              )}
+                              {status === 'completed' && !(step.id === 'smtp_verify' && !smtpEnabled) && stepResults[step.id] !== 'warning' && (
                                 <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30">
                                   VERIFIED
                                 </span>
