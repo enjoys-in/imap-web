@@ -30,6 +30,14 @@ export interface CalendarEvent {
   participants: CalendarParticipant[];
   extraAttendeesCount?: number;
   isDraft?: boolean;
+  uid?: string;
+  isAllDay?: boolean;
+  isRecurring?: boolean;
+  isException?: boolean;
+  originalStart?: string;
+  organizerEmail?: string;
+  isOrganizer?: boolean;
+  myResponse?: 'None' | 'NeedsAction' | 'Accepted' | 'Tentative' | 'Declined';
 }
 
 export interface WorkspaceTab {

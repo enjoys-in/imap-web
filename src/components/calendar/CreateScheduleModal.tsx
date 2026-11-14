@@ -240,6 +240,8 @@ export function CreateScheduleModal({
       description: agenda ? `${description}\n\nAgenda:\n${agenda}`.trim() : description,
       meetUrl: isTeamsMeeting ? 'https://teams.microsoft.com/l/meetup-join/airsend' : undefined,
       participants,
+      isAllDay,
+      isRecurring: isSeries,
     });
     onClose();
   };

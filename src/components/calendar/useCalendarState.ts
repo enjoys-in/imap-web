@@ -9,6 +9,7 @@ import {
   getAppointments,
   createAppointment,
   deleteAppointment,
+  rsvpAppointment,
   subscribeCalendarEvents,
   type NewCalendarInput,
   type UserCalendar,
@@ -16,6 +17,8 @@ import {
 import { DEFAULT_CALENDAR_COLOR } from '@/lib/calendarColors';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useCalendarNotificationStore } from '@/stores/useCalendarNotificationStore';
+import { useTeamAvailabilityStore } from '@/stores/useTeamAvailabilityStore';
+import { useToastStore } from '@/stores/useToastStore';
 import { getAccounts } from '@/lib/api/handlers/account';
 import { getAuthToken } from '@/lib/api/client';
 import { Appointment } from '@/types';
@@ -65,8 +68,35 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
   const colors: CalendarColor[] = ['blue', 'cyan', 'green', 'peach', 'pink', 'purple', 'yellow', 'salmon'];
   const colorIndex = apt.id ? Math.abs(apt.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % colors.length : 0;
 
+  let attendeesList: { id: string; name: string; avatar: string }[] = [];
+  if (apt.attendees) {
+    try {
+      const parsed = typeof apt.attendees === 'string' ? JSON.parse(apt.attendees) : apt.attendees;
+      if (Array.isArray(parsed)) {
+        attendeesList = parsed.map((a: any, idx: number) => ({
+          id: `p-${idx}`,
+          name: typeof a === 'string' ? a.split('@')[0] : a.name || a.email?.split('@')[0] || 'Guest',
+          avatar: '',
+        }));
+      } else if (typeof parsed === 'object') {
+        attendeesList = Object.entries(parsed).map(([key, val]: [string, any]) => ({
+          id: key,
+          name: val.name || val.email?.split('@')[0] || 'Guest',
+          avatar: '',
+        }));
+      }
+    } catch {}
+  }
+
+  const participants = attendeesList.length > 0
+    ? attendeesList
+    : apt.organizerEmail
+    ? [{ id: 'org', name: apt.organizerName || apt.organizerEmail, avatar: '' }]
+    : [];
+
   return {
     id: apt.id || apt.uid || `apt-${Date.now()}`,
+    uid: apt.uid || apt.id,
     title: apt.title || 'Untitled Event',
     dayIndex: Math.min(Math.max(0, dayIndex), 6),
     startTime: formatTime(startDate),
@@ -74,13 +104,16 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
     startHour,
     durationHours,
     color: colors[colorIndex],
-    striped: false,
+    striped: Boolean(apt.isRecurring),
     category: apt.location || 'Meeting',
     description: apt.notes,
     meetUrl: undefined,
-    participants: apt.organizerEmail
-      ? [{ id: 'org', name: apt.organizerName || apt.organizerEmail, avatar: '' }]
-      : [],
+    participants,
+    isAllDay: Boolean(apt.isAllDay),
+    isRecurring: Boolean(apt.isRecurring),
+    organizerEmail: apt.organizerEmail,
+    isOrganizer: apt.isOrganizer,
+    myResponse: apt.myResponse,
   };
 }
 
@@ -106,6 +139,11 @@ export function useCalendarState() {
   const createCalendarInStore = useCalendarsStore((s) => s.create);
   const onboardInStore = useCalendarsStore((s) => s.onboard);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
+
+  const loadTeamData = useTeamAvailabilityStore((s) => s.loadTeamData);
+  const updateTeammateFromSSE = useTeamAvailabilityStore((s) => s.updateTeammateFromSSE);
+  const shareWithUser = useTeamAvailabilityStore((s) => s.shareWithUser);
+  const addToast = useToastStore((s) => s.addToast);
 
   const handleOnboardUser = async () => {
     setOnboardingLoading(true);
@@ -138,6 +176,7 @@ export function useCalendarState() {
       setOnboardingLoading(false);
     }
   };
+
   const seenCalendarIds = useRef(new Set<string>());
   const projects = useMemo<ProjectItem[]>(
     () => (calendars.length > 0 ? calendars.map(toProject) : [PLACEHOLDER_PROJECT]),
@@ -161,29 +200,59 @@ export function useCalendarState() {
     [reminders]
   );
 
+  const loadEvents = async () => {
+    try {
+      const apts = await getAppointments();
+      if (apts.length > 0) {
+        setEvents(apts.map(appointmentToCalendarEvent));
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     let active = true;
 
-    const loadEvents = async () => {
-      const apts = await getAppointments();
-      if (active && apts.length > 0) {
-        setEvents(apts.map(appointmentToCalendarEvent));
-      }
+    const loadAll = async () => {
+      await Promise.all([
+        loadCalendars(),
+        loadEvents(),
+        loadTeamData(),
+      ]);
     };
 
-    void loadCalendars();
-    void loadEvents();
+    void loadAll();
 
-    const unsubscribePush = subscribeCalendarEvents(() => {
-      void loadCalendars({ force: true });
-      void loadEvents();
+    // Wire live SSE stream (UI_GUIDE.md Section 10)
+    const unsubscribePush = subscribeCalendarEvents({
+      onState: (changed) => {
+        const entries = Object.values(changed);
+        const hasCal = entries.some((e) => e.Calendar);
+        const hasEvt = entries.some((e) => e.CalendarEvent);
+        if (hasCal) {
+          void loadCalendars({ force: true });
+        }
+        if (hasEvt || hasCal) {
+          void loadEvents();
+        }
+      },
+      onAvailability: (data) => {
+        updateTeammateFromSSE(data);
+      },
+      onShares: () => {
+        void loadTeamData();
+      },
+      onResync: () => {
+        void loadCalendars({ force: true });
+        void loadEvents();
+        void loadTeamData();
+      },
     });
 
     return () => {
       active = false;
       unsubscribePush();
     };
-  }, [loadCalendars]);
+  }, [loadCalendars, loadTeamData, updateTeammateFromSSE]);
 
   useEffect(() => {
     const fresh = calendars.filter((c) => !seenCalendarIds.current.has(c.id));
@@ -247,13 +316,55 @@ export function useCalendarState() {
     await createCalendarInStore(input);
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = async (
+    id: string,
+    options?: { isOccurrenceOnly?: boolean; originalStart?: string }
+  ) => {
     if (isViewOnly) return;
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+    if (options?.isOccurrenceOnly && options.originalStart) {
+      setEvents((prev) => prev.filter((e) => !(e.id === id && e.originalStart === options.originalStart)));
+    } else {
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    }
     try {
-      await deleteAppointment(id);
+      await deleteAppointment(id, options);
     } catch {
       // Ignored if server unreachable
+    }
+  };
+
+  const handleRsvpEvent = async (eventUid: string, response: 'accept' | 'decline' | 'maybe') => {
+    try {
+      await rsvpAppointment(eventUid, response);
+      addToast({
+        title: 'Response Sent',
+        description: `Marked invitation as ${response}.`,
+        type: 'success',
+      });
+      await loadEvents();
+    } catch (err: any) {
+      addToast({
+        title: 'Response Failed',
+        description: err.message || 'Could not update meeting response.',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleInviteTeammate = async (email: string) => {
+    try {
+      await shareWithUser(email);
+      addToast({
+        title: 'Availability Shared',
+        description: `Shared calendar availability with ${email}.`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      addToast({
+        title: 'Share Failed',
+        description: err.message || 'Could not share availability.',
+        type: 'error',
+      });
     }
   };
 
@@ -268,7 +379,7 @@ export function useCalendarState() {
       startHour: newEventData.startHour ?? slotHour,
       durationHours: newEventData.durationHours || 1,
       color: newEventData.color || 'blue',
-      striped: false,
+      striped: Boolean(newEventData.striped),
       category: newEventData.category || 'Meeting',
       description: newEventData.description,
       meetUrl: newEventData.meetUrl,
@@ -283,25 +394,43 @@ export function useCalendarState() {
       const end = new Date(start.getTime() + (created.durationHours || 1) * 3600 * 1000);
       const calendarId = calendars.find((c) => c.name === selectedProject)?.id;
 
-      await createAppointment({
-        accountId: '',
-        uid: created.id,
-        sequence: 0,
-        title: created.title,
-        location: created.category,
-        startUtc: start.toISOString(),
-        endUtc: end.toISOString(),
-        isAllDay: false,
-        isRecurring: false,
-        organizerEmail: '',
-        organizerName: '',
-        isOrganizer: true,
-        attendees: '',
-        myResponse: 'Accepted',
-        showAs: 'Busy',
-        notes: created.description,
-        calendarId,
-      });
+      const isRecurring = Boolean(newEventData.isRecurring);
+      let recurrenceRule: string | undefined;
+      if (isRecurring) {
+        const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        const jsDay = start.getDay();
+        recurrenceRule = `FREQ=WEEKLY;BYDAY=${days[jsDay]}`;
+      }
+
+      if (newEventData.isAllDay) {
+        const startUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0)).toISOString();
+        const endUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() + 1, 0, 0, 0)).toISOString();
+        await createAppointment({
+          title: created.title,
+          location: created.category,
+          startUtc,
+          endUtc,
+          isAllDay: true,
+          notes: created.description,
+          calendarId,
+          attendees: created.participants.map((p) => p.name).filter(Boolean),
+          recurrenceRule,
+        });
+      } else {
+        await createAppointment({
+          title: created.title,
+          location: created.category,
+          startUtc: start.toISOString(),
+          endUtc: end.toISOString(),
+          isAllDay: false,
+          notes: created.description,
+          calendarId,
+          attendees: created.participants.map((p) => p.name).filter(Boolean),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          recurrenceRule,
+        });
+      }
+      await loadEvents();
     } catch {
       // Ignored if server unreachable
     }
@@ -359,5 +488,7 @@ export function useCalendarState() {
     setSlotHour,
     handleDeleteEvent,
     handleSaveSchedule,
+    handleRsvpEvent,
+    handleInviteTeammate,
   };
 }

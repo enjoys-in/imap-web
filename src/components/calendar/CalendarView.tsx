@@ -173,6 +173,7 @@ export function CalendarView() {
           }}
           projects={s.projects}
           onAddProject={handleAddProjectClick}
+          onShareAvailability={() => s.setInviteModalOpen(true)}
           onOpenSettings={() => router.push('/settings/calendar')}
           onOpenReleaseNotes={() =>
             showAlert({
@@ -246,6 +247,7 @@ export function CalendarView() {
         event={s.selectedEvent}
         onClose={() => s.setDetailModalOpen(false)}
         onDelete={s.handleDeleteEvent}
+        onRsvp={s.handleRsvpEvent}
         onEdit={(evt) => {
           if (s.isViewOnly) return;
           s.setSlotDay(evt.dayIndex);
@@ -260,11 +262,7 @@ export function CalendarView() {
         open={s.inviteModalOpen}
         onClose={() => s.setInviteModalOpen(false)}
         onInviteSent={(email, role) => {
-          showAlert({
-            title: 'Invitation Sent',
-            description: `Successfully invited ${email} as ${role} to ${s.selectedProject}.`,
-            type: 'success',
-          });
+          void s.handleInviteTeammate(email);
         }}
       />
 
