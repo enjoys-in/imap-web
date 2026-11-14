@@ -146,10 +146,17 @@ export function LoginView() {
     }
   }, [displayName]);
 
+  // Autodiscovery belongs to account setup only: it runs from the setup screen's
+  // email field and when entering setup, never from the sign-in form.
   const handleEmailBlur = () => {
     if (email && email.includes('@')) {
       triggerAutodiscovery(email);
     }
+  };
+
+  const goToSetup = () => {
+    setView('setup');
+    if (email) triggerAutodiscovery(email);
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -185,8 +192,7 @@ export function LoginView() {
         setInfoMessage(
           'This account has not been configured on AirSend yet. We auto-discovered your mail server settings below. Proceed with Setup to connect.'
         );
-        triggerAutodiscovery(email);
-        setView('setup');
+        goToSetup();
       } else {
         setErrorMessage(msg);
       }
@@ -359,9 +365,8 @@ export function LoginView() {
                   className="w-full"
                   iconRight={<Sparkles className="w-3.5 h-3.5 text-blue-400 dark:text-blue-600" />}
                   onClick={() => {
-                    setView('setup');
                     setErrorMessage(null);
-                    if (email) triggerAutodiscovery(email);
+                    goToSetup();
                   }}
                 >
                   Get Started
@@ -437,7 +442,6 @@ export function LoginView() {
                   autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onBlur={handleEmailBlur}
                   placeholder="name@company.com"
                   icon={<Mail className="w-4 h-4" />}
                 />
@@ -465,10 +469,7 @@ export function LoginView() {
                 <div className="text-center pt-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setView('setup');
-                      if (email) triggerAutodiscovery(email);
-                    }}
+                    onClick={goToSetup}
                     className="text-xs text-[#0078d4] dark:text-blue-400 hover:underline font-medium cursor-pointer active:scale-95 transition-transform"
                   >
                     Need to setup an account? Auto-Discover Server
