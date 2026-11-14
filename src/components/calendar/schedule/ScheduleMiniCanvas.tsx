@@ -14,6 +14,7 @@ interface ScheduleMiniCanvasProps {
   onStartHourChange: (val: number) => void;
   durationHours: number;
   onDurationChange: (val: number) => void;
+  scrollTrigger?: number;
 }
 
 const ROW_HEIGHT = 44;
@@ -22,14 +23,25 @@ export function ScheduleMiniCanvas({
   selectedDate, onDateChange,
   startHourDecimal, onStartHourChange,
   durationHours, onDurationChange,
+  scrollTrigger,
 }: ScheduleMiniCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, startHourDecimal * ROW_HEIGHT - 60);
-  }, [startHourDecimal]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: Math.max(0, startHourDecimal * ROW_HEIGHT - 60), behavior: 'smooth' });
+    }
+    if (scrollTrigger) {
+      containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setPulse(true);
+      const timer = setTimeout(() => setPulse(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [startHourDecimal, scrollTrigger]);
 
   const endHourDecimal = startHourDecimal + durationHours;
   const startTimeStr = format24hTime(startHourDecimal);
@@ -87,7 +99,7 @@ export function ScheduleMiniCanvas({
   };
 
   return (
-    <div className={cn(
+    <div ref={containerRef} className={cn(
       'border-t md:border-t-0 md:border-l border-neutral-800 bg-[#161616] flex flex-col shrink-0 transition-all duration-200',
       expanded ? 'w-full md:w-[480px] lg:w-[540px]' : 'w-full md:w-[340px] lg:w-[380px]'
     )}>
@@ -145,7 +157,10 @@ export function ScheduleMiniCanvas({
           ))}
           <div
             onMouseDown={handleBlockDrag}
-            className="absolute left-14 right-2 z-20 rounded-xs bg-[#e05151] hover:bg-[#ea5d5d] shadow-md cursor-move flex items-center justify-between px-2 select-none"
+            className={cn(
+              'absolute left-14 right-2 z-20 rounded-xs bg-[#e05151] hover:bg-[#ea5d5d] shadow-md cursor-move flex items-center justify-between px-2 select-none transition-all',
+              pulse && 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-[1.03] shadow-2xl'
+            )}
             style={{ top: `${startHourDecimal * ROW_HEIGHT}px`, height: `${Math.max(22, durationHours * ROW_HEIGHT)}px` }}
           >
             <span className="text-[11px] font-semibold text-white tracking-tight truncate pointer-events-none">{startTimeStr} – {endTimeStr}</span>

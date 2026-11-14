@@ -43,6 +43,7 @@ export function CreateScheduleModal({
   const [description, setDescription] = useState(initialEvent?.description || '');
   const [agenda, setAgenda] = useState('');
   const [selectedCharm, setSelectedCharm] = useState<string | null>(null);
+  const [schedulerTrigger, setSchedulerTrigger] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -146,7 +147,7 @@ export function CreateScheduleModal({
               onDurationChange={setDurationHours}
               isAllDay={isAllDay}
               onAllDayChange={setIsAllDay}
-              onScrollToScheduler={() => {}}
+              onScrollToScheduler={() => setSchedulerTrigger((p) => p + 1)}
             />
           </div>
 
@@ -157,6 +158,7 @@ export function CreateScheduleModal({
             onStartHourChange={setStartHourDecimal}
             durationHours={durationHours}
             onDurationChange={setDurationHours}
+            scrollTrigger={schedulerTrigger}
           />
         </div>
       </div>
