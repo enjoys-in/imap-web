@@ -2,22 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertCircle, CalendarPlus } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Account } from '@/types';
 import { AccountProviderIcon } from './AccountProviderIcon';
-import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 interface AccountRowItemProps {
   account: Account;
   onManage?: (account: Account) => void;
   onSignIn: (account: Account) => void;
-  onAddToCalendar?: (account: Account) => void;
 }
 
-export function AccountRowItem({ account, onManage, onSignIn, onAddToCalendar }: AccountRowItemProps) {
+export function AccountRowItem({ account, onSignIn }: AccountRowItemProps) {
   const isSignInRequired = account.requiresSignIn;
-  const isCalendarAddedForAccount = useCalendarsStore((s) => s.isCalendarAddedForAccount);
-  const isConnected = isCalendarAddedForAccount(account.email);
 
   return (
     <div className="py-3.5 px-3 rounded-lg hover:bg-neutral-100/70 dark:hover:bg-[#252525]/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-[#2b2b2b] last:border-b-0">
@@ -41,18 +37,6 @@ export function AccountRowItem({ account, onManage, onSignIn, onAddToCalendar }:
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-        {onAddToCalendar && !isConnected && (
-          <button
-            type="button"
-            onClick={() => onAddToCalendar(account)}
-            className="h-8 px-3 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-            title="Connect this email to Calendar Service"
-          >
-            <CalendarPlus className="w-3.5 h-3.5" />
-            <span>Add me to Calendar</span>
-          </button>
-        )}
-
         {isSignInRequired && (
           <button
             type="button"

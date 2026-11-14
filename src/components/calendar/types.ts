@@ -17,10 +17,10 @@ export interface CalendarParticipant {
 export interface CalendarEvent {
   id: string;
   title: string;
-  dayIndex: number; // 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
+  dayIndex: number; // 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
   startTime: string; // e.g. "09:00 AM"
   endTime: string; // e.g. "11:00 AM"
-  startHour: number; // 9
+  startHour: number; // 9 or 9.5
   durationHours: number; // 2
   color: CalendarColor;
   striped?: boolean;
@@ -39,6 +39,10 @@ export interface CalendarEvent {
   organizerEmail?: string;
   isOrganizer?: boolean;
   myResponse?: 'None' | 'NeedsAction' | 'Accepted' | 'Tentative' | 'Declined';
+  startUtc?: string;
+  endUtc?: string;
+  selectedDate?: Date;
+  date?: string;
 }
 
 export interface WorkspaceTab {

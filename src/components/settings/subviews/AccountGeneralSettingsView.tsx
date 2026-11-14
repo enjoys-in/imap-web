@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Server, Send, Check, RefreshCw, Globe, CalendarPlus } from 'lucide-react';
+import { Server, Send, Check, RefreshCw, Globe } from 'lucide-react';
 import { useAccounts } from '@/hooks/useEmailsQuery';
 import { accountsApi } from '@/lib/api';
 import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
 import { useToastStore } from '@/stores/useToastStore';
-import { onboardCalendarUser } from '@/lib/api/handlers/calendar';
-import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 const NO_ACCOUNT = {
   id: '', email: '', displayName: '', imapHost: '', imapPort: 993, smtpHost: '', smtpPort: 587,
@@ -18,14 +16,11 @@ export function AccountGeneralSettingsView() {
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
   const saveFullSettings = useAccountSettingsStore((s) => s.saveFullSettings);
   const addToast = useToastStore((s) => s.addToast);
-  const isCalendarAddedForAccount = useCalendarsStore((s) => s.isCalendarAddedForAccount);
 
   const [selectedAccId, setSelectedAccId] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
 
   const activeAccount = accounts?.find((a) => a.id === selectedAccId) || accounts?.[0] || NO_ACCOUNT;
-  const isConnected = isCalendarAddedForAccount(activeAccount.email);
 
   const [form, setForm] = useState({
     displayName: activeAccount.displayName || '',
@@ -78,20 +73,6 @@ export function AccountGeneralSettingsView() {
     }
   };
 
-  const handleAddToCalendar = async () => {
-    if (!activeAccount.email) return;
-    setIsAddingToCalendar(true);
-    try {
-      await onboardCalendarUser(activeAccount.email, form.displayName || activeAccount.displayName);
-      addToast({ title: 'Calendar Connected', description: `Successfully connected ${activeAccount.email} to calendar service.`, type: 'success' });
-      void useCalendarsStore.getState().load({ force: true });
-    } catch (err: any) {
-      addToast({ title: 'Calendar Connection Failed', description: err?.message || 'Could not connect account to calendar service.', type: 'error' });
-    } finally {
-      setIsAddingToCalendar(false);
-    }
-  };
-
   const inputClass = 'w-full h-8 px-2.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525] text-neutral-800 dark:text-neutral-200 text-xs focus:outline-none focus:border-[#0078d4] transition-colors';
 
   return (
@@ -102,18 +83,6 @@ export function AccountGeneralSettingsView() {
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Manage server endpoints, ports, sync mode, and credentials for this mailbox.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!isConnected && (
-            <button
-              type="button"
-              onClick={handleAddToCalendar}
-              disabled={isAddingToCalendar || !activeAccount.email}
-              className="h-8 px-3 border border-blue-200 dark:border-blue-900 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium rounded flex items-center gap-1.5 cursor-pointer"
-              title="Connect this email account to Calendar Service"
-            >
-              <CalendarPlus className="w-3.5 h-3.5" />
-              <span>{isAddingToCalendar ? 'Connecting...' : 'Add me to Calendar'}</span>
-            </button>
-          )}
           <button type="button" onClick={handleTestConnection} disabled={isTesting} className="h-8 px-3 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525] hover:bg-neutral-100 text-neutral-700 dark:text-neutral-200 font-medium rounded flex items-center gap-1.5 cursor-pointer">
             <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-[#0078d4]' : ''}`} /><span>Test Connection</span>
           </button>

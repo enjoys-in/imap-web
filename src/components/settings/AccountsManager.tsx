@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, UserPlus, ExternalLink } from 'lucide-react';
+import { UserPlus, ExternalLink } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { accountsQuery } from '@/hooks/useEmailsQuery';
 import { Account } from '@/types';
@@ -9,8 +9,6 @@ import { AccountRowItem } from './AccountRowItem';
 import { AddAccountModal } from './AddAccountModal';
 import { ConfigureAccountModal } from './ConfigureAccountModal';
 import { useToastStore } from '@/stores/useToastStore';
-import { onboardCalendarUser } from '@/lib/api/handlers/calendar';
-import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 export function AccountsManager() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -49,24 +47,6 @@ export function AccountsManager() {
       description: `Signed in successfully as ${acc.email}.`,
       type: 'success',
     });
-  };
-
-  const handleAddToCalendar = async (acc: Account) => {
-    try {
-      await onboardCalendarUser(acc.email, acc.displayName);
-      addToast({
-        title: 'Calendar Connected',
-        description: `Successfully added ${acc.email} to calendar service.`,
-        type: 'success',
-      });
-      void useCalendarsStore.getState().load({ force: true });
-    } catch (err: any) {
-      addToast({
-        title: 'Calendar Connection Failed',
-        description: err?.message || 'Could not connect account to calendar service.',
-        type: 'error',
-      });
-    }
   };
 
   const handleAddSubscription = () => {
@@ -108,7 +88,6 @@ export function AccountsManager() {
               account={acc}
               onManage={(account) => setEditingAccount(account)}
               onSignIn={handleSignIn}
-              onAddToCalendar={handleAddToCalendar}
             />
           ))}
         </div>
@@ -138,10 +117,9 @@ export function AccountsManager() {
           <button
             type="button"
             onClick={handleAddSubscription}
-            className="h-8 px-4 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer self-start md:self-center"
+            className="h-8 px-4 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-300 dark:bg-[#2b2b2b] dark:hover:bg-[#383838] dark:text-neutral-100 dark:border-neutral-700/80 text-xs font-medium rounded transition-colors flex items-center justify-center cursor-pointer shrink-0"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add subscription</span>
+            Add subscription
           </button>
         </div>
       </section>
@@ -153,9 +131,9 @@ export function AccountsManager() {
       />
 
       <ConfigureAccountModal
-        account={editingAccount}
-        isOpen={Boolean(editingAccount)}
+        isOpen={!!editingAccount}
         onClose={() => setEditingAccount(null)}
+        account={editingAccount}
         onUpdate={handleUpdate}
       />
     </div>

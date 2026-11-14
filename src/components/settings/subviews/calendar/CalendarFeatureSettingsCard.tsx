@@ -7,6 +7,10 @@ import { DEFAULT_CALENDAR_COLOR } from '@/lib/calendarColors';
 import type { UserCalendar } from '@/lib/api/handlers/calendar';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useToastStore } from '@/stores/useToastStore';
+import {
+  getCachedCalendarTimezone,
+  saveCachedCalendarTimezone,
+} from '@/lib/idb/calendarCacheDb';
 
 const cardClass = 'p-4 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-[#1c1c1c] space-y-3';
 const inputClass = 'w-full h-8 px-2.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525] text-neutral-800 dark:text-neutral-200 text-xs focus:outline-none focus:border-[#0078d4] transition-colors disabled:opacity-60';
@@ -26,7 +30,11 @@ export function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalend
     setName(calendar.name);
     setDescription(calendar.description || '');
     setColor(calendar.color || DEFAULT_CALENDAR_COLOR);
-    setTimezone(calendar.timezone || 'UTC');
+    if (!calendar.timezone || calendar.timezone === 'UTC') {
+      void getCachedCalendarTimezone().then((tz) => setTimezone(tz));
+    } else {
+      setTimezone(calendar.timezone);
+    }
   }, [calendar]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -37,6 +45,7 @@ export function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalend
     setPending(true);
     setError(null);
     try {
+      await saveCachedCalendarTimezone(timezone);
       await update(calendar.id, {
         name: trimmed,
         description: description.trim() || undefined,
@@ -68,7 +77,7 @@ export function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalend
             </span>
           </div>
           <p className="text-neutral-500 mt-0.5 text-xs">
-            Per email only one calendar is supported. Customize your features and preferences below.
+            Per email only one calendar is supported. Detected default timezone is cached locally in IndexedDB.
           </p>
         </div>
         <Link
@@ -117,7 +126,7 @@ export function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalend
 
       <div>
         <label htmlFor="cal-feat-timezone" className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1 text-xs">
-          Timezone
+          Timezone (Auto-detected from browser)
         </label>
         <input
           id="cal-feat-timezone"
@@ -125,7 +134,7 @@ export function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalend
           disabled={pending}
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
-          placeholder="e.g. UTC, Asia/Kolkata, America/New_York"
+          placeholder="e.g. Asia/Kolkata, America/New_York"
           className={`${inputClass} sm:w-80`}
         />
       </div>
