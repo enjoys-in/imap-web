@@ -18,9 +18,12 @@ export interface SendEmailPayload {
 export interface DraftPayload {
   id?: string;
   to?: string;
+  cc?: string;
+  bcc?: string;
   subject?: string;
   bodyHtml?: string;
   bodyText?: string;
+  attachments?: Array<{ name: string; size: number; type: string }>;
 }
 
 export interface EmailSearchQuery {
@@ -210,9 +213,16 @@ export async function sendEmail(
  */
 export async function saveDraft(payload: DraftPayload): Promise<{ id: string }> {
   try {
-    const raw = `To: ${payload.to || ''}\r\nSubject: ${payload.subject || ''}\r\n\r\n${
-      payload.bodyText || payload.bodyHtml || ''
-    }`;
+    const headers = [
+      payload.to ? `To: ${payload.to}` : null,
+      payload.cc ? `Cc: ${payload.cc}` : null,
+      payload.bcc ? `Bcc: ${payload.bcc}` : null,
+      `Subject: ${payload.subject || ''}`,
+    ]
+      .filter(Boolean)
+      .join('\r\n');
+
+    const raw = `${headers}\r\n\r\n${payload.bodyText || payload.bodyHtml || ''}`;
     const res = await apiClient.post<any>('/append-message', {
       mailbox: 'Drafts',
       rawMessage: raw,

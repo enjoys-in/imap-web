@@ -61,6 +61,10 @@ export function dispatchMailAction(detail: MailActionEventDetail) {
     case 'deselect':
       setSelectedMail(null);
       clearSelectedIds();
+      if (typeof window !== 'undefined' && window.location.hash.includes('/')) {
+        const folderPart = window.location.hash.split('/')[0];
+        window.history.replaceState(null, '', folderPart);
+      }
       toastStore.addToast({ title: 'Deselected', description: 'Cleared active selection', type: 'info' });
       break;
   }

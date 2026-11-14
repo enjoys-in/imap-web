@@ -29,7 +29,7 @@ export function saveOpenMailSession(
       timestamp: Date.now(),
     };
     window.sessionStorage.setItem(`${SESSION_PREFIX}${idx}`, JSON.stringify(payload));
-    window.sessionStorage.setItem(LAST_ROUTE_KEY, `/mail/u/${idx}/${cleanHash}`);
+    window.sessionStorage.setItem(LAST_ROUTE_KEY, `/mail/u/${idx}${cleanHash}`);
   } catch {
     // Fallback if sessionStorage is restricted
   }
@@ -48,10 +48,10 @@ export function getOpenMailSession(userIndex: number | string): OpenMailSessionD
 }
 
 export function getLastMailRoute(): string {
-  if (typeof window === 'undefined') return '/mail/u/0/#inbox';
+  if (typeof window === 'undefined') return '/mail/u/0#inbox';
   try {
-    return window.sessionStorage.getItem(LAST_ROUTE_KEY) || '/mail/u/0/#inbox';
+    return window.sessionStorage.getItem(LAST_ROUTE_KEY) || '/mail/u/0#inbox';
   } catch {
-    return '/mail/u/0/#inbox';
+    return '/mail/u/0#inbox';
   }
 }

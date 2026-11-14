@@ -95,10 +95,15 @@ export function ComposeEditor() {
   };
 
   const handleAttachClick = () => {
+    updateFields({ isAttaching: true });
     fileInputRef.current?.click();
+    setTimeout(() => {
+      updateFields({ isAttaching: false });
+    }, 1500);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFields({ isAttaching: false });
     if (e.target.files) {
       Array.from(e.target.files).forEach((file) => addAttachment(file));
       e.target.value = '';

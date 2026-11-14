@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Send, Trash2 } from 'lucide-react';
-import { useComposeStore } from '@/stores';
+import { useComposeStore, useMailStore } from '@/stores';
+import { emailsApi } from '@/lib/api';
 import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
 
@@ -12,6 +13,16 @@ interface ComposeToolbarProps {
 
 export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
   const close = useComposeStore((s) => s.close);
+  const draftId = useComposeStore((s) => s.draftId);
+  const deleteEmail = useMailStore((s) => s.deleteEmail);
+
+  const handleDiscard = () => {
+    if (draftId) {
+      deleteEmail(draftId);
+      emailsApi.deleteEmail(draftId, 'fld-drafts').catch(() => {});
+    }
+    close();
+  };
 
   return (
     <div className="h-10 border-b border-neutral-200 dark:border-neutral-700 px-3 flex items-center justify-between bg-white dark:bg-neutral-900 select-none">
@@ -31,7 +42,7 @@ export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
 
       <button
         type="button"
-        onClick={close}
+        onClick={handleDiscard}
         className="p-1 hover:text-red-600 text-neutral-500 rounded transition-colors cursor-pointer"
         title="Discard draft"
       >

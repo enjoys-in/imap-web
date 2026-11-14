@@ -64,7 +64,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setAccount(list[0] || null);
 
         if (isLoginPage) {
-          router.push('/mail/u/0/#inbox');
+          router.push('/mail/u/0#inbox');
         }
         return;
       }

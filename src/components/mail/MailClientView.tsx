@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useCallback, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useMailStore, useUiStore } from '@/stores';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { usePaneResize } from '@/hooks/usePaneResize';
@@ -9,29 +9,20 @@ import { FolderSidebar } from './folders';
 import { MailList } from './list';
 import { ReadingPane, ReadingPaneSkeleton } from './reading-pane';
 import { PopoutReadingModal } from './reading-pane/PopoutReadingModal';
-import { MailCommandBar, ImapSyncStatusWidget } from './command-bar';
+import { MailCommandBar } from './command-bar';
 import { RightAppsRail } from '@/components/right-apps/RightAppsRail';
 import { RightAppsPanel } from '@/components/right-apps/RightAppsPanel';
 import { getAccountByUserIndex } from '@/lib/accountRouter';
-import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
-import { emailsApi, foldersApi } from '@/lib/api';
+import { folderIdToSlug } from '@/lib/folderSlugUtils';
 import { cn } from '@/lib/utils';
-import { saveOpenMailSession, getOpenMailSession } from '@/lib/storage/mailSessionStorage';
+import { saveOpenMailSession } from '@/lib/storage/mailSessionStorage';
 import { ArrowLeft } from 'lucide-react';
+import { useMailClientHashSync } from './useMailClientHashSync';
 
 interface MailClientViewProps {
   userIndex?: number | string;
   currentFolderId?: string;
   currentMailId?: string;
-}
-
-function parseMailHash(rawHash: string) {
-  const clean = rawHash.replace(/^#\/?/, '').trim();
-  if (!clean) return { folderSlug: 'inbox', mailId: null };
-  const parts = clean.split('/');
-  if (parts.length >= 2) return { folderSlug: parts[0], mailId: parts[1] };
-  if (parts[0].startsWith('msg-')) return { folderSlug: 'inbox', mailId: parts[0] };
-  return { folderSlug: parts[0], mailId: null };
 }
 
 export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }: MailClientViewProps) {
@@ -45,7 +36,6 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   const setSelectedAccount = useMailStore((s) => s.setSelectedAccount);
   const setSelectedAccountIndex = useMailStore((s) => s.setSelectedAccountIndex);
   const fetchEmails = useMailStore((s) => s.fetchEmails);
-  const addOrSelectEmail = useMailStore((s) => s.addOrSelectEmail);
 
   const isSidebarOpen = useUiStore((s) => s.isSidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
@@ -57,111 +47,21 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   const activeFolderId = currentFolderId || selectedFolderId || 'fld-inbox';
   const hasSelectedMail = Boolean(currentMailId || selectedMailId);
 
-  // Sync account identity for this tab
   useEffect(() => {
     setSelectedAccount(activeAccount.id);
     setSelectedAccountIndex(parsedUserIndex);
     fetchEmails(activeFolderId, activeAccount.id);
   }, [activeAccount.id, parsedUserIndex, fetchEmails, setSelectedAccount, setSelectedAccountIndex, activeFolderId]);
 
-  // Handle URL hash changes (#inbox, #inbox/msg-jeelan, or missing/removed hash)
-  const syncFromHash = useCallback(async () => {
-    if (typeof window === 'undefined') return;
-    const clean = window.location.hash.replace(/^#\/?/, '').trim();
-
-    // If no hash or folder removed (e.g. /mail/u/0 or /mail/u/0/):
-    if (!clean) {
-      const savedSession = getOpenMailSession(parsedUserIndex);
-      if (savedSession && savedSession.mailId) {
-        const targetFolderId = savedSession.folderId || 'fld-inbox';
-        const targetSlug = savedSession.folderSlug || 'inbox';
-        setSelectedFolder(targetFolderId);
-        setSelectedMail(savedSession.mailId);
-        window.history.replaceState(null, '', `#${targetSlug}/${savedSession.mailId}`);
-        return;
-      }
-
-      const storeList = useMailStore.getState().localEmails;
-      const targetFolderId = 'fld-inbox';
-      const inboxList = storeList.filter((e) => !e.folderId || e.folderId === 'fld-inbox');
-      const firstId = inboxList[0]?.id || 'msg-candidate-outreach';
-
-      setSelectedFolder(targetFolderId);
-      setSelectedMail(firstId);
-      saveOpenMailSession(parsedUserIndex, targetFolderId, 'inbox', firstId);
-      window.history.replaceState(null, '', `#inbox/${firstId}`);
-      return;
-    }
-
-    const { folderSlug, mailId } = parseMailHash(window.location.hash);
-    const targetFolderId = slugToFolderId(folderSlug);
-    setSelectedFolder(targetFolderId);
-
-    if (mailId) {
-      const exists = useMailStore.getState().localEmails.some((e) => e.id === mailId);
-      if (exists) {
-        setSelectedMail(mailId);
-        saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
-      } else {
-        const fetched = await emailsApi.getEmailById(mailId);
-        if (fetched) {
-          addOrSelectEmail(fetched);
-          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
-        } else {
-          window.location.hash = `#${folderSlug}`;
-          setSelectedMail(null);
-        }
-      }
-    } else {
-      // Navigated to `#${folderSlug}` without mailId, check if session has mail for this folder
-      const savedSession = getOpenMailSession(parsedUserIndex);
-      if (savedSession && savedSession.folderSlug === folderSlug && savedSession.mailId) {
-        setSelectedMail(savedSession.mailId);
-        window.history.replaceState(null, '', `#${folderSlug}/${savedSession.mailId}`);
-        return;
-      }
-
-      const storeList = useMailStore.getState().localEmails;
-      const folderList = storeList.filter((e) =>
-        targetFolderId === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === targetFolderId
-      );
-      if (folderList.length > 0) {
-        setSelectedMail(folderList[0].id);
-        saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, folderList[0].id);
-        window.history.replaceState(null, '', `#${folderSlug}/${folderList[0].id}`);
-      } else {
-        const list = await emailsApi.getEmailsMetadata(targetFolderId, activeAccount.id);
-        if (list.length > 0) {
-          setSelectedMail(list[0].id);
-          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, list[0].id);
-          window.history.replaceState(null, '', `#${folderSlug}/${list[0].id}`);
-        }
-      }
-    }
-  }, [activeAccount.id, parsedUserIndex, setSelectedFolder, setSelectedMail, addOrSelectEmail]);
-
-  useEffect(() => {
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-    return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [syncFromHash]);
+  useMailClientHashSync(parsedUserIndex);
 
   const handleFolderChange = (folderId: string) => {
     const slug = folderIdToSlug(folderId);
     setSelectedFolder(folderId);
+    setSelectedMail(null);
+    saveOpenMailSession(parsedUserIndex, folderId, slug, null);
     if (isSidebarOpen) toggleSidebar();
-    
-    // Pick active mail for this folder from session or first mail
-    const storeList = useMailStore.getState().localEmails;
-    const folderList = storeList.filter((e) =>
-      folderId === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === folderId
-    );
-    const targetMailId = folderList[0]?.id || null;
-    setSelectedMail(targetMailId);
-    saveOpenMailSession(parsedUserIndex, folderId, slug, targetMailId);
-    if (typeof window !== 'undefined') {
-      window.location.hash = targetMailId ? `#${slug}/${targetMailId}` : `#${slug}`;
-    }
+    if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
   };
 
   const handleMailChange = (mailId: string) => {
@@ -178,6 +78,7 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   const handleBackToList = () => {
     const slug = folderIdToSlug(activeFolderId);
     setSelectedMail(null);
+    saveOpenMailSession(parsedUserIndex, activeFolderId, slug, null);
     if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
   };
 
@@ -190,110 +91,43 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
         <div className={cn('fixed inset-y-0 left-0 z-40 md:static md:z-auto transition-transform duration-200 ease-in-out md:translate-x-0', isSidebarOpen ? 'translate-x-0' : '-translate-x-full')}>
           <FolderSidebar activeFolderId={activeFolderId} accountIndex={parsedUserIndex} onSelectFolder={handleFolderChange} width={sidebarWidth} />
         </div>
+        <ResizeHandle onResize={handleSidebarResize} onDoubleClick={resetSidebar} className="hidden md:block" />
 
-        <ResizeHandle onResize={handleSidebarResize} onDoubleClick={resetSidebar} title="Drag to resize folders (double-click to reset)" />
+        <div
+          className={cn(
+            'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 select-none transition-all',
+            readingPaneLayout === 'fillScreen' && hasSelectedMail ? 'hidden' : 'w-full md:w-auto',
+            hasSelectedMail ? 'hidden md:flex' : 'flex'
+          )}
+          style={{ width: readingPaneLayout === 'fillScreen' && hasSelectedMail ? 0 : mailListWidth }}
+        >
+          <MailList activeFolderId={activeFolderId} onSelectMail={handleMailChange} activeMailId={currentMailId || selectedMailId || undefined} />
+        </div>
 
-        {/* 1. FILL SCREEN LAYOUT (Matching Image 2: Wide table list or Full-screen reading pane) */}
-        {readingPaneLayout === 'fillScreen' && (
-          <div className="flex-1 h-full overflow-hidden flex flex-col">
-            {hasSelectedMail ? (
-              <div className="flex-1 h-full flex flex-col overflow-hidden bg-white dark:bg-[#1f1f1f]">
-                {/* Return to list banner */}
-                <div className="h-9 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/80 dark:bg-[#181818] shrink-0">
-                  <button
-                    onClick={handleBackToList}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-[#0078d4] dark:text-blue-400 hover:underline cursor-pointer"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Return to message list</span>
-                  </button>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <Suspense fallback={<ReadingPaneSkeleton />}>
-                    <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
-                  </Suspense>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 h-full overflow-hidden">
-                <MailList
-                  activeFolderId={activeFolderId}
-                  activeMailId={currentMailId || selectedMailId || undefined}
-                  onSelectMail={handleMailChange}
-                  isWideLayout={true}
-                />
-              </div>
-            )}
+        {readingPaneLayout !== 'fillScreen' && (
+          <ResizeHandle onResize={handleMailListResize} onDoubleClick={resetMailList} className="hidden md:block" />
+        )}
+
+        <div className={cn('flex-1 flex flex-col overflow-hidden bg-white dark:bg-neutral-900', !hasSelectedMail ? 'hidden md:flex' : 'flex')}>
+          <div className="md:hidden flex items-center gap-2 p-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-850">
+            <button onClick={handleBackToList} className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Messages</span>
+            </button>
           </div>
-        )}
 
-        {/* 2. POPOUT ONLY LAYOUT (Full-width table list + Floating Window on click) */}
-        {readingPaneLayout === 'popoutOnly' && (
-          <>
-            <div className="flex-1 h-full overflow-hidden">
-              <MailList
-                activeFolderId={activeFolderId}
-                activeMailId={popoutMailId || undefined}
-                onSelectMail={handleMailChange}
-                isWideLayout={true}
-              />
-            </div>
-            <PopoutReadingModal
-              mailId={popoutMailId}
-              onClose={() => setPopoutMailId(null)}
-            />
-          </>
-        )}
+          <Suspense fallback={<ReadingPaneSkeleton />}>
+            <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
+          </Suspense>
+        </div>
 
-        {/* 3. BOTTOM LAYOUT (Vertical split with Top list & Bottom Reading Pane) */}
-        {readingPaneLayout === 'bottom' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="h-[45%] flex flex-col min-h-[160px] overflow-hidden">
-              <MailList
-                activeFolderId={activeFolderId}
-                activeMailId={currentMailId || selectedMailId || undefined}
-                onSelectMail={handleMailChange}
-                isWideLayout={true}
-              />
-            </div>
-
-            <div className="h-1 bg-neutral-200 dark:bg-neutral-800 hover:bg-[#0078d4] dark:hover:bg-[#0078d4] cursor-row-resize transition-colors" />
-
-            <div className="flex-1 min-h-[180px] overflow-hidden bg-white dark:bg-[#1f1f1f]">
-              <Suspense fallback={<ReadingPaneSkeleton />}>
-                <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
-              </Suspense>
-            </div>
-          </div>
-        )}
-
-        {/* 4. RIGHT LAYOUT (Default 3-column with draggable list resize) */}
-        {(!readingPaneLayout || readingPaneLayout === 'right') && (
-          <>
-            <div className={cn('flex-1 md:flex-initial h-full', hasSelectedMail ? 'hidden md:flex' : 'flex')}>
-              <MailList
-                activeFolderId={activeFolderId}
-                activeMailId={currentMailId || selectedMailId || undefined}
-                onSelectMail={handleMailChange}
-                width={mailListWidth}
-                isWideLayout={false}
-              />
-            </div>
-
-            <ResizeHandle onResize={handleMailListResize} onDoubleClick={resetMailList} title="Drag to resize inbox list (double-click to reset)" />
-
-            <div className={cn('flex-1 h-full overflow-hidden', !hasSelectedMail ? 'hidden md:flex' : 'flex')}>
-              <Suspense fallback={<ReadingPaneSkeleton />}>
-                <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
-              </Suspense>
-            </div>
-          </>
-        )}
-
-        <RightAppsPanel />
         <RightAppsRail />
-        <ImapSyncStatusWidget />
+        <RightAppsPanel />
       </div>
+
+      {popoutMailId && (
+        <PopoutReadingModal mailId={popoutMailId} onClose={() => setPopoutMailId(null)} />
+      )}
     </div>
   );
 }

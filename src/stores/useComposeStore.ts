@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { ComposeMode, ComposeSeed, buildComposeSeed } from '@/lib/replyBuilder';
 import { MailMessage, MailMessageMetadata } from '@/types';
 
+export type DraftSyncStatus = 'idle' | 'countdown' | 'saving' | 'saved';
+
 export interface ComposeState {
   isOpen: boolean;
   isMinimized: boolean;
@@ -15,13 +17,18 @@ export interface ComposeState {
   originalMessageId?: string;
   threadId?: string;
   attachments: File[];
+  draftId?: string;
+  draftStatus: DraftSyncStatus;
+  draftCountdown: number;
+  lastSavedTime?: string;
+  isAttaching: boolean;
   openNew: () => void;
   openReply: (msg: MailMessageMetadata | MailMessage, replyAll?: boolean) => void;
   openForward: (msg: MailMessageMetadata | MailMessage) => void;
   close: () => void;
   toggleMinimize: () => void;
   toggleMaximize: () => void;
-  updateFields: (fields: Partial<ComposeSeed>) => void;
+  updateFields: (fields: Partial<ComposeState>) => void;
   addAttachment: (file: File) => void;
   removeAttachment: (index: number) => void;
 }
@@ -37,6 +44,11 @@ export const useComposeStore = create<ComposeState>((set) => ({
   subject: '',
   body: '',
   attachments: [],
+  draftId: undefined,
+  draftStatus: 'idle',
+  draftCountdown: 3,
+  lastSavedTime: undefined,
+  isAttaching: false,
 
   openNew: () =>
     set({
@@ -51,6 +63,11 @@ export const useComposeStore = create<ComposeState>((set) => ({
       originalMessageId: undefined,
       threadId: undefined,
       attachments: [],
+      draftId: undefined,
+      draftStatus: 'idle',
+      draftCountdown: 3,
+      lastSavedTime: undefined,
+      isAttaching: false,
     }),
 
   openReply: (msg, replyAll = false) => {
@@ -67,6 +84,11 @@ export const useComposeStore = create<ComposeState>((set) => ({
       originalMessageId: msg.id,
       threadId: resolvedThreadId,
       attachments: [],
+      draftId: undefined,
+      draftStatus: 'idle',
+      draftCountdown: 3,
+      lastSavedTime: undefined,
+      isAttaching: false,
     });
   },
 
@@ -84,10 +106,27 @@ export const useComposeStore = create<ComposeState>((set) => ({
       originalMessageId: msg.id,
       threadId: resolvedThreadId,
       attachments: [],
+      draftId: undefined,
+      draftStatus: 'idle',
+      draftCountdown: 3,
+      lastSavedTime: undefined,
+      isAttaching: false,
     });
   },
 
-  close: () => set({ isOpen: false, isMinimized: false, isMaximized: false, originalMessageId: undefined, threadId: undefined }),
+  close: () =>
+    set({
+      isOpen: false,
+      isMinimized: false,
+      isMaximized: false,
+      originalMessageId: undefined,
+      threadId: undefined,
+      draftId: undefined,
+      draftStatus: 'idle',
+      draftCountdown: 3,
+      lastSavedTime: undefined,
+      isAttaching: false,
+    }),
   toggleMinimize: () => set((s) => ({ isMinimized: !s.isMinimized })),
   toggleMaximize: () => set((s) => ({ isMaximized: !s.isMaximized })),
   updateFields: (fields) => set((s) => ({ ...s, ...fields })),

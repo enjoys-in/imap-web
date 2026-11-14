@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useComposeStore, useMailStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
@@ -9,10 +9,12 @@ import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
 import { ComposeEditor } from './ComposeEditor';
+import { useComposeDraftSync } from './useComposeDraftSync';
 import { cn } from '@/lib/utils';
 import { MailMessage } from '@/types';
 
 export function ComposeModal() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const isOpen = useComposeStore((s) => s.isOpen);
   const isMinimized = useComposeStore((s) => s.isMinimized);
   const isMaximized = useComposeStore((s) => s.isMaximized);
@@ -22,10 +24,14 @@ export function ComposeModal() {
   const bcc = useComposeStore((s) => s.bcc);
   const subject = useComposeStore((s) => s.subject);
   const body = useComposeStore((s) => s.body);
+  const attachments = useComposeStore((s) => s.attachments);
   const originalMessageId = useComposeStore((s) => s.originalMessageId);
   const threadId = useComposeStore((s) => s.threadId);
+  const draftId = useComposeStore((s) => s.draftId);
   const close = useComposeStore((s) => s.close);
   const startPendingSend = useUndoSendStore((s) => s.startPendingSend);
+
+  const { handleFocusCapture, handleBlurCapture } = useComposeDraftSync(containerRef);
 
   if (!isOpen) return null;
 
@@ -41,6 +47,12 @@ export function ComposeModal() {
   const handleSend = () => {
     const isReplyOrForward = mode === 'reply' || mode === 'replyAll' || mode === 'forward';
     const resolvedThreadId = isReplyOrForward && threadId ? threadId : `thread-${Date.now()}`;
+
+    // Clean up draft if this compose had a saved draft
+    if (draftId) {
+      useMailStore.getState().deleteEmail(draftId);
+      emailsApi.deleteEmail(draftId, 'fld-drafts').catch(() => {});
+    }
 
     const newMsg: MailMessage = {
       id: `sent-${Date.now()}`,
@@ -66,7 +78,7 @@ export function ComposeModal() {
       isDraft: false,
       isThread: Boolean(isReplyOrForward && threadId),
       conversationType: isReplyOrForward && threadId ? 'thread' : 'single',
-      hasAttachments: false,
+      hasAttachments: attachments.length > 0,
       hasCalendar: false,
       isBodyDownloaded: true,
     };
@@ -106,6 +118,9 @@ export function ComposeModal() {
 
   return (
     <div
+      ref={containerRef}
+      onFocusCapture={handleFocusCapture}
+      onBlurCapture={handleBlurCapture}
       className={cn(
         'fixed z-50 transition-all duration-150 flex flex-col shadow-2xl overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900',
         isMaximized

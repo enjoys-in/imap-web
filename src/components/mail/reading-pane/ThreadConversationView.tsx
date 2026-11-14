@@ -34,13 +34,13 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   const [fetchedEmail, setFetchedEmail] = useState<MailMessage | null>(null);
   const [threadList, setThreadList] = useState<MailMessage[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [backPath, setBackPath] = useState('/mail/u/0/#inbox');
+  const [backPath, setBackPath] = useState('/mail/u/0#inbox');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace(/^#\/?/, '').trim();
       const slug = hash ? folderIdToSlug(slugToFolderId(hash)) : 'inbox';
-      setBackPath(`/mail/u/0/#${slug}`);
+      setBackPath(`/mail/u/0#${slug}`);
     }
   }, []);
 

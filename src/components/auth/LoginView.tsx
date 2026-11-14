@@ -150,7 +150,7 @@ export function LoginView() {
 
       if (res && res.success) {
         await refreshSession();
-        router.push('/mail/u/0/#inbox');
+        router.push('/mail/u/0#inbox');
         return;
       }
 
@@ -238,7 +238,7 @@ export function LoginView() {
         setCurrentStep('complete');
         await refreshSession();
         setTimeout(() => {
-          router.push('/mail/u/0/#inbox');
+          router.push('/mail/u/0#inbox');
         }, 1200);
       }
     } catch (err: any) {

@@ -52,6 +52,7 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    useComposeStore.getState().updateFields({ isAttaching: false });
     if (e.target.files) {
       Array.from(e.target.files).forEach((file) => {
         addAttachment(file);
@@ -65,6 +66,15 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
       e.target.value = '';
     }
     setIsOpen(false);
+  };
+
+  const handleOpenBrowse = () => {
+    setIsOpen(false);
+    useComposeStore.getState().updateFields({ isAttaching: true });
+    fileInputRef.current?.click();
+    setTimeout(() => {
+      useComposeStore.getState().updateFields({ isAttaching: false });
+    }, 1500);
   };
 
   const getFileIcon = (name: string, type: string) => {
@@ -139,10 +149,7 @@ export function ComposeAttachMenu({ variant = 'button', className }: ComposeAtta
           <div className="border-t border-neutral-200 dark:border-neutral-800 my-1 pt-1">
             <button
               type="button"
-              onClick={() => {
-                setIsOpen(false);
-                fileInputRef.current?.click();
-              }}
+              onClick={handleOpenBrowse}
               className="w-full text-left px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center gap-2 text-neutral-700 dark:text-neutral-300 font-medium cursor-pointer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-amber-500" />

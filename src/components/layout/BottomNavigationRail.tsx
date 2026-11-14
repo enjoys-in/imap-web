@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function BottomNavigationRail() {
   const pathname = usePathname();
-  const [mailHref, setMailHref] = useState('/mail/u/0/#inbox');
+  const [mailHref, setMailHref] = useState('/mail/u/0#inbox');
 
   useEffect(() => {
     const route = getLastMailRoute();
