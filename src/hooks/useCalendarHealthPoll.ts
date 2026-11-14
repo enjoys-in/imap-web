@@ -2,9 +2,17 @@
 
 import { useEffect, useCallback } from 'react';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
+import { STORAGE_KEYS, CALENDAR_HEALTH_CONFIG } from '@/constants';
 
-const POLL_INTERVAL_MS = 30000;
-const RETRY_INTERVAL_MS = 10000;
+function getSessionHealthTimestamp(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEYS.LAST_CALENDAR_HEALTH);
+    return raw ? parseInt(raw, 10) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function useCalendarHealthPoll() {
   const isHealthy = useCalendarsStore((s) => s.isHealthy);
@@ -20,34 +28,60 @@ export function useCalendarHealthPoll() {
     let timer: NodeJS.Timeout | null = null;
     let isCancelled = false;
 
+    const scheduleNext = (delayMs: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void tick();
+      }, delayMs);
+    };
+
     const tick = async () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        // Delay poll when backgrounded
-        timer = setTimeout(tick, POLL_INTERVAL_MS * 2);
+        scheduleNext(CALENDAR_HEALTH_CONFIG.NORMAL_POLL_INTERVAL_MS);
         return;
       }
 
       const ok = await pollHealth();
       if (!isCancelled) {
-        timer = setTimeout(tick, ok ? POLL_INTERVAL_MS : RETRY_INTERVAL_MS);
+        const nextDelay = ok
+          ? CALENDAR_HEALTH_CONFIG.NORMAL_POLL_INTERVAL_MS
+          : CALENDAR_HEALTH_CONFIG.RETRY_INTERVAL_MS;
+        scheduleNext(nextDelay);
       }
     };
 
-    // Initial check
-    void tick();
+    // On mount: check session storage; if last check > 30s ago (or never), fetch now
+    const lastSession = getSessionHealthTimestamp();
+    const now = Date.now();
+    if (!lastSession || now - lastSession >= CALENDAR_HEALTH_CONFIG.REFOCUS_THRESHOLD_MS) {
+      void tick();
+    } else {
+      const elapsed = now - lastSession;
+      const initialDelay = Math.max(1000, CALENDAR_HEALTH_CONFIG.NORMAL_POLL_INTERVAL_MS - elapsed);
+      scheduleNext(initialDelay);
+    }
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void pollHealth();
+    // Refocus handler: on window focus or visibility change to visible
+    const handleRefocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      const lastCheck = getSessionHealthTimestamp();
+      const current = Date.now();
+
+      // Refocus within 30 seconds: ignore. More than 30 seconds: fetch
+      if (lastCheck && current - lastCheck < CALENDAR_HEALTH_CONFIG.REFOCUS_THRESHOLD_MS) {
+        return;
       }
+      void pollHealth();
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleRefocus);
+    document.addEventListener('visibilitychange', handleRefocus);
 
     return () => {
       isCancelled = true;
       if (timer) clearTimeout(timer);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleRefocus);
+      document.removeEventListener('visibilitychange', handleRefocus);
     };
   }, [pollHealth]);
 
