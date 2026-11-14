@@ -14,13 +14,28 @@ interface CalendarWeekGridProps {
   pendingSlot?: { dayIndex: number; hour: number } | null;
 }
 
-const DAYS = [
-  { dayIndex: 0, label: '13 Mon', isToday: false },
-  { dayIndex: 1, label: '14 Tue', isToday: true },
-  { dayIndex: 2, label: '15 Wed', isToday: false },
-  { dayIndex: 3, label: '16 Thu', isToday: false },
-  { dayIndex: 4, label: '17 Fri', isToday: false },
-];
+function getWeekDays(referenceDate: Date = new Date()) {
+  const current = new Date(referenceDate);
+  const jsDay = current.getDay(); // 0 is Sun, 1 is Mon...
+  const currentDayIndex = jsDay === 0 ? 6 : jsDay - 1; // 0=Mon ... 6=Sun
+  
+  // Calculate Monday of current week
+  const monday = new Date(current);
+  monday.setDate(current.getDate() - currentDayIndex);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isToday = i === currentDayIndex;
+    const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = d.getDate();
+    return {
+      dayIndex: i,
+      label: `${dayNum} ${weekdayShort}`,
+      isToday,
+    };
+  });
+}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -39,6 +54,7 @@ export function CalendarWeekGrid({
 }: CalendarWeekGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
+  const days = React.useMemo(() => getWeekDays(), []);
 
   useEffect(() => {
     const update = () => setTimeInfo(getUserTimeInfo());
@@ -67,8 +83,8 @@ export function CalendarWeekGrid({
         <div className="w-20 sm:w-24 border-r border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">
           {timeInfo.tzAbbr}
         </div>
-        <div className="flex-1 grid grid-cols-5">
-          {DAYS.map((day) => (
+        <div className="flex-1 grid grid-cols-7">
+          {days.map((day) => (
             <button
               key={day.dayIndex}
               onClick={() => onSelectDayHeader?.(day.dayIndex)}
@@ -77,7 +93,7 @@ export function CalendarWeekGrid({
                 day.isToday ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20' : 'text-neutral-600 dark:text-neutral-400'
               )}
             >
-              <span className={cn('px-3 py-1 rounded-full transition-all', day.isToday && 'border border-blue-500 bg-white dark:bg-neutral-900 shadow-2xs font-bold')}>
+              <span className={cn('px-2 sm:px-3 py-1 rounded-full transition-all text-[11px] sm:text-xs', day.isToday && 'border border-blue-500 bg-white dark:bg-neutral-900 shadow-2xs font-bold')}>
                 {day.label}
               </span>
             </button>
@@ -102,18 +118,18 @@ export function CalendarWeekGrid({
           </div>
         </div>
 
-        {/* 5 Day Columns Canvas */}
-        <div className="flex-1 grid grid-cols-5 relative">
-          {/* Current Live Time Indicator Across the 5 Days (Blue dashed line) */}
-          <div className="absolute left-0 right-0 z-20 pointer-events-none grid grid-cols-5" style={{ top: `${nowLineTop}px` }}>
-            {DAYS.map((day) => (
+        {/* 7 Day Columns Canvas */}
+        <div className="flex-1 grid grid-cols-7 relative">
+          {/* Current Live Time Indicator Across the 7 Days (Blue dashed line) */}
+          <div className="absolute left-0 right-0 z-20 pointer-events-none grid grid-cols-7" style={{ top: `${nowLineTop}px` }}>
+            {days.map((day) => (
               <div key={day.dayIndex} className="relative flex items-center h-0">
                 <div className="w-full border-b-2 border-dashed border-[#2563eb]/90 dark:border-blue-400/90" />
               </div>
             ))}
           </div>
 
-          {DAYS.map((day) => {
+          {days.map((day) => {
             const dayEvents = events.filter((e) => e.dayIndex === day.dayIndex);
             return (
               <div

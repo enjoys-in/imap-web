@@ -16,13 +16,30 @@ interface CalendarDayViewProps {
 // 24 full hours: 0:00 (12:00 AM) to 23:00 (11:00 PM)
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-const DAY_LABELS = [
-  'Monday, Sept 13',
-  'Tuesday, Sept 14 (Today)',
-  'Wednesday, Sept 15',
-  'Thursday, Sept 16',
-  'Friday, Sept 17',
-];
+function getWeekDays(referenceDate: Date = new Date()) {
+  const current = new Date(referenceDate);
+  const jsDay = current.getDay(); // 0 is Sun, 1 is Mon...
+  const currentDayIndex = jsDay === 0 ? 6 : jsDay - 1; // 0=Mon ... 6=Sun
+  
+  // Calculate Monday of current week
+  const monday = new Date(current);
+  monday.setDate(current.getDate() - currentDayIndex);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isToday = i === currentDayIndex;
+    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = d.toLocaleDateString('en-US', { month: 'short' });
+    const dayNum = d.getDate();
+    return {
+      dayIndex: i,
+      date: d,
+      label: `${weekday}, ${month} ${dayNum}${isToday ? ' (Today)' : ''}`,
+      isToday,
+    };
+  });
+}
 
 function formatHour(h: number): string {
   const ampm = h >= 12 ? 'PM' : 'AM';
@@ -38,8 +55,12 @@ export function CalendarDayView({
 }: CalendarDayViewProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const weekDays = React.useMemo(() => getWeekDays(), []);
+  const activeDayInfo = weekDays[activeDayIndex] || weekDays[0];
+  const isToday = activeDayInfo?.isToday ?? false;
+  const dayLabel = activeDayInfo?.label ?? 'Day Schedule';
+
   const dayEvents = events.filter((e) => e.dayIndex === activeDayIndex);
-  const isToday = activeDayIndex === 1;
 
   // Live time info resolved from the user's system timezone (e.g. Asia/Kolkata / GMT+5:30)
   const [timeInfo, setTimeInfo] = useState<UserTimeInfo>(() => getUserTimeInfo());
@@ -82,7 +103,7 @@ export function CalendarDayView({
 
         <div className="flex-1 px-4 sm:px-6 flex items-center justify-between">
           <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <span>{DAY_LABELS[activeDayIndex] || 'Day Schedule'}</span>
+            <span>{dayLabel}</span>
             {isToday && (
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
             )}

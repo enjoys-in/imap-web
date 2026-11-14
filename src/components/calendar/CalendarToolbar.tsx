@@ -118,6 +118,11 @@ export function CalendarToolbar({
           </button>
         </div>
 
+        {/* Current Month & Year Header */}
+        <h2 className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-100 px-1 shrink-0">
+          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </h2>
+
         {/* User Timezone indicator - hidden on smaller screens */}
         <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300 shrink-0">
           <Globe className="w-3.5 h-3.5 text-[#0078d4]" />

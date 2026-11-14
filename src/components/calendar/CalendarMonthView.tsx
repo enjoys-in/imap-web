@@ -18,6 +18,9 @@ export function CalendarMonthView({
   onSlotClick,
   onEventClick,
 }: CalendarMonthViewProps) {
+  const today = new Date();
+  const currentDayNum = today.getDate();
+
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e]">
       {/* Month Days Header */}
@@ -35,14 +38,24 @@ export function CalendarMonthView({
       {/* 30 Day Cells Grid */}
       <div className="flex-1 grid grid-cols-7 auto-rows-fr min-h-[600px]">
         {MONTH_DAYS.map((dayNum) => {
-          const isToday = dayNum === 14;
-          // map sample events to days
-          const dayEvents = events.filter((e) => (e.dayIndex + 13) === dayNum);
+          const isToday = dayNum === currentDayNum;
+          // map events to days
+          const dayEvents = events.filter((e) => {
+            if (e.startUtc) {
+              const d = new Date(e.startUtc);
+              return d.getDate() === dayNum;
+            }
+            return (e.dayIndex + 9) === dayNum;
+          });
+
+          const targetDate = new Date(today.getFullYear(), today.getMonth(), dayNum);
+          const jsDay = targetDate.getDay();
+          const targetDayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
           return (
             <div
               key={dayNum}
-              onClick={() => onSlotClick((dayNum - 13) % 5, 9)}
+              onClick={() => onSlotClick(targetDayIndex, 9)}
               className={cn(
                 'min-h-[100px] p-2 border-b border-r border-neutral-100 dark:border-neutral-800/80 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/20 transition-colors flex flex-col cursor-pointer',
                 isToday && 'bg-blue-50/20 dark:bg-blue-950/10'

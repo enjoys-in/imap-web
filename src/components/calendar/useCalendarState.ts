@@ -54,9 +54,11 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
   const jsDay = startDate.getDay();
   const dayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
-  const startHour = isNaN(startDate.getHours()) ? 9 : startDate.getHours();
+  const startHour = isNaN(startDate.getHours())
+    ? 9
+    : startDate.getHours() + startDate.getMinutes() / 60;
   const durationMs = endDate.getTime() - startDate.getTime();
-  const durationHours = Math.max(0.5, Math.min(24, Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10));
+  const durationHours = Math.max(0.25, Math.min(24, Math.round((durationMs / (1000 * 60 * 60)) * 100) / 100));
 
   const formatTime = (d: Date) => {
     if (isNaN(d.getTime())) return '09:00 AM';
@@ -117,6 +119,8 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
     organizerEmail: apt.organizerEmail,
     isOrganizer: apt.isOrganizer,
     myResponse: apt.myResponse,
+    startUtc: apt.startUtc,
+    endUtc: apt.endUtc,
   };
 }
 
@@ -129,7 +133,11 @@ export function useCalendarState() {
   const [selectedProject, setSelectedProject] = useState('General');
   const [activeEssential, setActiveEssential] = useState('calendar');
   const [viewMode, setViewMode] = useState<CalendarViewMode>('Week');
-  const [activeDayIndex, setActiveDayIndex] = useState(1);
+  const getTodayDayIndex = () => {
+    const jsDay = new Date().getDay();
+    return jsDay === 0 ? 6 : jsDay - 1;
+  };
+  const [activeDayIndex, setActiveDayIndex] = useState(getTodayDayIndex);
   const [searchQuery, setSearchQuery] = useState('');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const calendars = useCalendarsStore((s) => s.calendars);
@@ -402,39 +410,62 @@ export function useCalendarState() {
     const isEdit = Boolean(editingId);
 
     try {
-      const now = new Date();
-      // Compute date based on target dayIndex (0=Mon, 1=Tue... 6=Sun)
-      const currentDay = now.getDay();
-      const currentDayIndex = currentDay === 0 ? 6 : currentDay - 1;
-      const targetDayIndex = newEventData.dayIndex ?? slotDay;
-      const dayDiff = targetDayIndex - currentDayIndex;
+      let startUtc = newEventData.startUtc;
+      let endUtc = newEventData.endUtc;
 
-      const start = new Date(now);
-      start.setDate(start.getDate() + dayDiff);
-      const startHour = newEventData.startHour ?? slotHour;
-      start.setHours(startHour, 0, 0, 0);
-      const durationHours = newEventData.durationHours || 1;
-      const end = new Date(start.getTime() + durationHours * 3600 * 1000);
+      if (!startUtc || !endUtc) {
+        const baseDate = newEventData.selectedDate || new Date();
+        const startHour = newEventData.startHour ?? slotHour;
+        const durationHours = newEventData.durationHours || 1;
+        const startHourInt = Math.floor(startHour);
+        const startMinInt = Math.round((startHour - startHourInt) * 60);
+
+        const start = new Date(baseDate);
+        start.setHours(startHourInt, startMinInt, 0, 0);
+        const end = new Date(start.getTime() + Math.round(durationHours * 60) * 60000);
+
+        startUtc = start.toISOString();
+        endUtc = end.toISOString();
+      }
+
+      if (newEventData.isAllDay) {
+        const start = new Date(startUtc);
+        startUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0)).toISOString();
+        endUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() + 1, 0, 0, 0)).toISOString();
+      }
+
       const calendarId = calendars.find((c) => c.name === selectedProject)?.id;
-
       const isRecurring = Boolean(newEventData.isRecurring);
       let recurrenceRule: string | undefined;
       if (isRecurring) {
         const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-        const jsDay = start.getDay();
+        const jsDay = new Date(startUtc).getDay();
         recurrenceRule = `FREQ=WEEKLY;BYDAY=${days[jsDay]}`;
-      }
-
-      let startUtc = start.toISOString();
-      let endUtc = end.toISOString();
-      if (newEventData.isAllDay) {
-        startUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0)).toISOString();
-        endUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() + 1, 0, 0, 0)).toISOString();
       }
 
       if (isEdit && editingId) {
         const isOccurrenceOnly = Boolean(newEventData.isOccurrenceOnly);
         const originalStart = newEventData.originalStart || selectedEvent?.originalStart;
+
+        // Optimistically update UI immediately so event moves to the new position without waiting
+        setEvents((prev) =>
+          prev.map((e) =>
+            e.id === editingId
+              ? {
+                  ...e,
+                  ...newEventData,
+                  startUtc,
+                  endUtc,
+                  dayIndex: newEventData.dayIndex ?? e.dayIndex,
+                  startHour: newEventData.startHour ?? e.startHour,
+                  durationHours: newEventData.durationHours ?? e.durationHours,
+                  startTime: newEventData.startTime || e.startTime,
+                  endTime: newEventData.endTime || e.endTime,
+                  title: newEventData.title || e.title,
+                }
+              : e
+          )
+        );
 
         await updateAppointment(
           editingId,
@@ -452,7 +483,7 @@ export function useCalendarState() {
           }
         );
       } else {
-        await createAppointment({
+        const createdApt = await createAppointment({
           title: newEventData.title || 'Untitled Schedule',
           location: newEventData.category,
           startUtc,
@@ -464,9 +495,13 @@ export function useCalendarState() {
           timeZone: newEventData.isAllDay ? undefined : Intl.DateTimeFormat().resolvedOptions().timeZone,
           recurrenceRule,
         });
+
+        if (createdApt) {
+          setEvents((prev) => [...prev, appointmentToCalendarEvent(createdApt)]);
+        }
       }
 
-      await loadEvents();
+      await loadEvents({ force: true });
       setSelectedEvent(null);
     } catch (err) {
       console.warn('[CalDev] Save schedule failed:', err);
