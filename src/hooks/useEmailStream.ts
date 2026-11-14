@@ -9,6 +9,7 @@ import {
   type MailboxChangeEventPayload,
   type MailboxExpungeEventPayload,
   type MessageFlagsEventPayload,
+  type QuotaUpdateEventPayload,
   type EmailStreamHandlers,
 } from '@/lib/api';
 
@@ -20,6 +21,7 @@ export type AirSendEventMap = {
   [EmailStreamEventType.MAILBOX_CHANGE]: MailboxChangeEventPayload;
   [EmailStreamEventType.MAILBOX_EXPUNGE]: MailboxExpungeEventPayload;
   [EmailStreamEventType.MESSAGE_FLAGS]: MessageFlagsEventPayload;
+  [EmailStreamEventType.QUOTA_UPDATE]: QuotaUpdateEventPayload;
   [EmailStreamEventType.WARNING]: { message: string };
 };
 
@@ -63,6 +65,9 @@ export function useEmailStream(callbacks?: EmailStreamHandlers): void {
   const { emit: emitMessageFlags } = useReactEvent<AirSendEventMap, EmailStreamEventType.MESSAGE_FLAGS>(
     EmailStreamEventType.MESSAGE_FLAGS
   );
+  const { emit: emitQuotaUpdate } = useReactEvent<AirSendEventMap, EmailStreamEventType.QUOTA_UPDATE>(
+    EmailStreamEventType.QUOTA_UPDATE
+  );
   const { emit: emitWarning } = useReactEvent<AirSendEventMap, EmailStreamEventType.WARNING>(
     EmailStreamEventType.WARNING
   );
@@ -88,6 +93,10 @@ export function useEmailStream(callbacks?: EmailStreamHandlers): void {
         emitMessageFlags(data);
         callbacksRef.current?.onMessageFlags?.(data);
       },
+      onQuotaUpdate: (data) => {
+        emitQuotaUpdate(data);
+        callbacksRef.current?.onQuotaUpdate?.(data);
+      },
       onWarning: (data) => {
         emitWarning(data);
         callbacksRef.current?.onWarning?.(data);
@@ -105,6 +114,7 @@ export function useEmailStream(callbacks?: EmailStreamHandlers): void {
     emitMailboxChange,
     emitMailboxExpunge,
     emitMessageFlags,
+    emitQuotaUpdate,
     emitWarning,
   ]);
 }

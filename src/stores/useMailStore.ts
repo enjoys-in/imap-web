@@ -44,7 +44,7 @@ interface MailState {
   lastSnapshot: MailMessageMetadata[] | null;
 
   fetchEmails: (folderId?: string, accountId?: string, options?: { force?: boolean }) => Promise<void>;
-  refreshFolder: (folderId: string) => Promise<void>;
+  refreshFolder: (folderId: string, options?: { stored?: boolean }) => Promise<void>;
   applyMessageFlags: (folderId: string, emailId: string, patch: Partial<MailMessageMetadata>) => void;
   removeEmailFromFolder: (folderId: string, emailId: string) => void;
   loadMoreEmails: () => Promise<void>;
@@ -185,11 +185,11 @@ export const useMailStore = create<MailState>((set, get) => ({
     }
   },
 
-  refreshFolder: async (folderId) => {
+  refreshFolder: async (folderId, options) => {
     const folder = getRegisteredFolder(folderId);
     if (!folder) return;
     try {
-      const result = await refreshFolderEmails(folder, folder.accountId || undefined);
+      const result = await refreshFolderEmails(folder, folder.accountId || undefined, options);
       if (get().selectedFolderId === folderId) {
         quietly(() =>
           set({ localEmails: result.emails, emailPage: result.pagesLoaded, hasMoreEmails: result.hasMore })

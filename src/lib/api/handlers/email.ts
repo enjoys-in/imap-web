@@ -48,11 +48,12 @@ export async function getEmailsMetadata(
   folder: Pick<MailFolder, 'id' | 'fullName'>,
   accountId?: string,
   page = 1,
-  limit = 25
+  limit = 25,
+  options: { stored?: boolean } = {}
 ): Promise<MailMessageMetadata[]> {
   const url = `/fetch-emails?folder=${encodeURIComponent(folder.fullName)}&page=${page}&limit=${limit}${
     accountId ? `&accountId=${encodeURIComponent(accountId)}` : ''
-  }`;
+  }${options.stored ? '&source=stored' : ''}`;
   const data = await apiClient.get<any>(url);
   const rawList: MailMessage[] = Array.isArray(data?.result)
     ? data.result

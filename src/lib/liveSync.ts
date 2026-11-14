@@ -3,6 +3,7 @@ import type {
   MailboxChangeEventPayload,
   MailboxExpungeEventPayload,
   MessageFlagsEventPayload,
+  QuotaUpdateEventPayload,
 } from '@/lib/api/handlers/stream';
 import type { MailFolder } from '@/types';
 import { findRegisteredFolderByPath } from '@/lib/folders';
@@ -38,7 +39,11 @@ async function applyTotals(
   }
 
   if (event.quota?.storage) setInboxQuota(event.quota);
-  else invalidateQuota();
+  else if (!event.quotaDeferred) invalidateQuota();
+}
+
+export function handleQuotaUpdate(event: QuotaUpdateEventPayload): void {
+  if (event.quota?.storage) setInboxQuota(event.quota);
 }
 
 const addedCount = (event: MailboxChangeEventPayload): number =>
@@ -67,7 +72,7 @@ export async function handleMailboxChange(event: MailboxChangeEventPayload): Pro
 
   if (!changed) return;
   if (changed.id === selectedFolderId) {
-    await useMailStore.getState().refreshFolder(changed.id);
+    await useMailStore.getState().refreshFolder(changed.id, { stored: true });
   } else if (addedCount(event) > 0) {
     await invalidateFolderSync(changed.id);
   }

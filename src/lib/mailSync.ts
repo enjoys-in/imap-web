@@ -78,9 +78,10 @@ export async function loadMoreFolderEmails(
 
 export async function refreshFolderEmails(
   folder: Pick<MailFolder, 'id' | 'fullName' | 'accountId' | 'totalCount'>,
-  accountId: string | undefined
+  accountId: string | undefined,
+  options: { stored?: boolean } = {}
 ): Promise<FolderEmails> {
-  const page = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE);
+  const page = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE, options);
   const state = await getFolderSyncState(folder.id);
   const cached = state ? await getCachedEmails(folder.id, accountId) : [];
 
