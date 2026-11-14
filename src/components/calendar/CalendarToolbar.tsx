@@ -16,6 +16,8 @@ interface CalendarToolbarProps {
   onSearchChange: (q: string) => void;
   onNewSchedule: () => void;
   isViewOnly?: boolean;
+  isHealthy?: boolean;
+  healthMessage?: string | null;
 }
 
 export function CalendarToolbar({
@@ -28,6 +30,8 @@ export function CalendarToolbar({
   onSearchChange,
   onNewSchedule,
   isViewOnly = false,
+  isHealthy = true,
+  healthMessage,
 }: CalendarToolbarProps) {
   const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
 
