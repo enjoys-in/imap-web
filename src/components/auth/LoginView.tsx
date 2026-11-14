@@ -61,6 +61,8 @@ export function LoginView() {
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState(587);
   const [smtpSecure, setSmtpSecure] = useState(false);
+  // IMAP is always required; sending (SMTP) is optional.
+  const [smtpEnabled, setSmtpEnabled] = useState(true);
 
   // Autodiscover state
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -231,8 +233,12 @@ export function LoginView() {
       setErrorMessage('Email and password are required.');
       return;
     }
-    if (!imapHost || !smtpHost) {
-      setErrorMessage('IMAP and SMTP hosts must be specified.');
+    if (!imapHost) {
+      setErrorMessage('The IMAP host must be specified.');
+      return;
+    }
+    if (smtpEnabled && !smtpHost) {
+      setErrorMessage('Specify the SMTP host, or turn off sending (SMTP) to set up this account for reading only.');
       return;
     }
 
@@ -259,13 +265,17 @@ export function LoginView() {
         imap_secure: Boolean(imapSecure),
         imap_username: email.trim(),
         imap_password: password,
-        smtp_host: smtpHost.trim(),
-        smtp_port: Number(smtpPort),
-        smtp_secure: Boolean(smtpSecure),
-        smtp_username: usesSameCredentials ? email.trim() : smtpUsername.trim() || email.trim(),
-        smtp_password: usesSameCredentials ? password : smtpPassword || password,
-        uses_same_credentials: usesSameCredentials,
         display_name: displayName.trim() || email.split('@')[0],
+        ...(smtpEnabled
+          ? {
+              smtp_host: smtpHost.trim(),
+              smtp_port: Number(smtpPort),
+              smtp_secure: Boolean(smtpSecure),
+              smtp_username: usesSameCredentials ? email.trim() : smtpUsername.trim() || email.trim(),
+              smtp_password: usesSameCredentials ? password : smtpPassword || password,
+              uses_same_credentials: usesSameCredentials,
+            }
+          : { uses_same_credentials: true }),
       };
 
       const res = await accountsApi.setupAccountStream(payload, (event) => {
@@ -283,7 +293,7 @@ export function LoginView() {
             status: event.status,
           },
         ]);
-      });
+      }, { skipSmtp: !smtpEnabled });
 
       if (res) {
         setSetupProgress(100);
@@ -589,9 +599,13 @@ export function LoginView() {
                       {
                         id: 'smtp_verify',
                         stepNumber: '2',
-                        label: 'Outbound SMTP Handshake',
-                        activeText: `Testing STARTTLS on ${smtpHost || 'smtp.server'}:${smtpPort}...`,
-                        completedText: `STARTTLS negotiated. Outbound relay verified.`,
+                        label: smtpEnabled ? 'Outbound SMTP Handshake' : 'Outbound SMTP (skipped)',
+                        activeText: smtpEnabled
+                          ? `Testing STARTTLS on ${smtpHost || 'smtp.server'}:${smtpPort}...`
+                          : 'Skipping SMTP: sending is turned off for this account.',
+                        completedText: smtpEnabled
+                          ? `STARTTLS negotiated. Outbound relay verified.`
+                          : 'SMTP skipped. This account can read mail but not send.',
                       },
                       {
                         id: 'mailbox_sync',
@@ -983,10 +997,30 @@ export function LoginView() {
                         Outgoing (SMTP):
                       </span>
                       <span className="font-mono text-neutral-900 dark:text-neutral-200 font-medium">
-                        {smtpHost || 'smtp.domain.com'}:{smtpPort} ({smtpSecure ? 'SSL' : 'STARTTLS'})
+                        {smtpEnabled
+                          ? `${smtpHost || 'smtp.domain.com'}:${smtpPort} (${smtpSecure ? 'SSL' : 'STARTTLS'})`
+                          : 'Disabled'}
                       </span>
                     </div>
                   </div>
+
+                  {/* SMTP is optional; IMAP is always required */}
+                  <label className="flex items-start gap-2 cursor-pointer px-1">
+                    <input
+                      type="checkbox"
+                      checked={smtpEnabled}
+                      onChange={(e) => setSmtpEnabled(e.target.checked)}
+                      className="mt-0.5 rounded text-[#0078d4] focus:ring-[#0078d4]"
+                    />
+                    <span className="text-[11px] leading-snug">
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-200 block">
+                        Enable sending mail (SMTP)
+                      </span>
+                      <span className="text-neutral-500 dark:text-neutral-400">
+                        Turn this off to use the account for reading only. Incoming (IMAP) is always required.
+                      </span>
+                    </span>
+                  </label>
 
                   {/* Advanced Server Settings Accordion */}
                   <div className="border-t border-neutral-200/80 dark:border-neutral-800/80 pt-1.5">
@@ -1039,6 +1073,8 @@ export function LoginView() {
                           </label>
                         </div>
 
+                        {smtpEnabled && (
+                        <>
                         {/* SMTP config */}
                         <div className="space-y-1.5 pt-2 border-t border-neutral-200 dark:border-neutral-700/50">
                           <span className="font-semibold text-neutral-800 dark:text-neutral-200 block text-[11px]">
@@ -1105,6 +1141,8 @@ export function LoginView() {
                             </div>
                           )}
                         </div>
+                        </>
+                        )}
                       </div>
                     )}
                   </div>

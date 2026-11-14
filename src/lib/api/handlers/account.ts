@@ -79,19 +79,29 @@ export interface SetupProgressEvent {
   mailboxes?: any[];
 }
 
+export interface SetupAccountOptions {
+  skipSmtp?: boolean;
+}
+
 /**
  * Initiates first-time setup with live SSE streaming updates.
  * Emits progress events for IMAP authentication, SMTP verification,
  * mailbox discovery, email pre-fetching, and token issuance.
  * Falls back to the plain `/validate` endpoint if streaming is unavailable.
+ *
+ * IMAP is always verified. With `skipSmtp`, the server skips the outbound SMTP
+ * check (`?skipSMTP=1`), so an unreachable or misconfigured SMTP server cannot
+ * block setup.
  */
 export async function setupAccountStream(
   config: any,
-  onProgress: (event: SetupProgressEvent) => void
+  onProgress: (event: SetupProgressEvent) => void,
+  options: SetupAccountOptions = {}
 ): Promise<{ user: any; token: string; mailboxes: any[] }> {
   const { apiUrl } = getClientConfig();
   const cleanApiUrl = apiUrl.replace(/\/+$/, '');
-  const url = cleanApiUrl.endsWith('/setup-stream') ? cleanApiUrl : `${cleanApiUrl}/setup-stream`;
+  const baseUrl = cleanApiUrl.endsWith('/setup-stream') ? cleanApiUrl : `${cleanApiUrl}/setup-stream`;
+  const url = options.skipSmtp ? `${baseUrl}?skipSMTP=1` : baseUrl;
 
   onProgress({
     step: 'init',
@@ -170,7 +180,7 @@ export async function setupAccountStream(
     // Any other failure (stream unsupported, network blip): retry via the plain validate endpoint.
   }
 
-  return validateViaApi(config, onProgress);
+  return validateViaApi(config, onProgress, options);
 }
 
 /**
@@ -180,7 +190,8 @@ export async function setupAccountStream(
  */
 async function validateViaApi(
   config: any,
-  onProgress: (event: SetupProgressEvent) => void
+  onProgress: (event: SetupProgressEvent) => void,
+  options: SetupAccountOptions
 ): Promise<{ user: any; token: string; mailboxes: any[] }> {
   const email = (config.imap_username || config.email || '').trim();
 
@@ -194,7 +205,7 @@ async function validateViaApi(
 
   let data: any;
   try {
-    data = await apiClient.post<any>('/validate', config, { skipAuth: true });
+    data = await apiClient.post<any>(options.skipSmtp ? '/validate?skipSMTP=1' : '/validate', config, { skipAuth: true });
   } catch (err: any) {
     onProgress({
       step: 'imap_connect',
