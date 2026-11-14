@@ -117,6 +117,8 @@ export function LoginView() {
   // form; on the setup screen it waits for a pause in typing before calling the API.
   const AUTODISCOVER_DELAY_MS = 2000;
   const lastDiscoveredEmailRef = useRef('');
+  // True while the host fields hold values filled in by a successful discovery.
+  const hostsAutoFilledRef = useRef(false);
 
   const triggerAutodiscovery = useCallback(async (targetEmail: string) => {
     const clean = targetEmail.trim();
@@ -130,7 +132,8 @@ export function LoginView() {
 
     try {
       const res = await accountsApi.autodiscover(clean);
-      if (res && res.imap && res.smtp) {
+      if (res) {
+        hostsAutoFilledRef.current = true;
         setDiscoveryResult(res);
         setImapHost(res.imap.host);
         setImapPort(res.imap.port);
@@ -142,6 +145,18 @@ export function LoginView() {
 
         if (res.displayName && !displayName) {
           setDisplayName(res.displayName);
+        }
+      } else {
+        // Not discovered: drop the badge and any hosts that came from a previous discovery.
+        setDiscoveryResult(null);
+        if (hostsAutoFilledRef.current) {
+          hostsAutoFilledRef.current = false;
+          setImapHost('');
+          setImapPort(993);
+          setImapSecure(true);
+          setSmtpHost('');
+          setSmtpPort(587);
+          setSmtpSecure(false);
         }
       }
     } catch {
