@@ -36,11 +36,23 @@ export function StorageSettingsView() {
   const totalQuotaMb = realTotalMb ?? 15360; // 15 GB default
   const percentUsed = quota?.storage?.percentage !== undefined ? Math.round(quota.storage.percentage) : Math.round((totalUsedMb / totalQuotaMb) * 100);
 
-  const handleEmpty = (folderId: string, name: string) => {
+  const handleEmpty = async (folderId: string, name: string) => {
     emptyFolder(folderId);
-    foldersApi.emptyFolder(folderId);
-    setFolderSizes((prev) => prev.map((f) => (f.id === folderId ? { ...f, sizeMb: 0 } : f)));
-    addToast({ title: 'Folder emptied', description: `Emptied all items in ${name}`, type: 'info' });
+    try {
+      const res = await foldersApi.emptyFolder(folderId);
+      setFolderSizes((prev) => prev.map((f) => (f.id === folderId ? { ...f, sizeMb: 0 } : f)));
+      addToast({
+        title: 'Folder emptied',
+        description: res?.message || `Emptied all items in ${name}`,
+        type: res?.success ? 'info' : 'warning',
+      });
+    } catch (err: any) {
+      addToast({
+        title: 'Error',
+        description: err?.message || `Failed to empty ${name}`,
+        type: 'error',
+      });
+    }
   };
 
   return (

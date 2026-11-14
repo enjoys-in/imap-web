@@ -19,12 +19,12 @@ export function SidebarFolderActions({ activeAccId }: SidebarFolderActionsProps)
 
   const handleConfirm = async (name: string) => {
     try {
-      await foldersApi.createFolder(activeAccId, name.trim());
+      const res = await foldersApi.createFolder(activeAccId, name.trim());
       queryClient.invalidateQueries({ queryKey: ['folders', activeAccId] });
-      addToast({ title: 'Folder Created', description: `Created folder "${name.trim()}".`, type: 'success' });
+      addToast({ title: 'Folder Created', description: (res as any)?.message || `Created folder "${name.trim()}".`, type: 'success' });
       setIsOpen(false);
-    } catch {
-      addToast({ title: 'Failed to create folder', description: 'Could not create folder on the server.', type: 'error' });
+    } catch (err: any) {
+      addToast({ title: 'Failed to create folder', description: err?.message || 'Could not create folder on the server.', type: 'error' });
     }
   };
 

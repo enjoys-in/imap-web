@@ -89,8 +89,10 @@ export function LoginView() {
 
   // Dark/Light Theme state
   const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window !== 'undefined') {
       const isDarkMode = document.documentElement.classList.contains('dark');
       setIsDark(isDarkMode);
@@ -360,7 +362,7 @@ export function LoginView() {
           title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
           aria-label="Toggle Theme"
         >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {mounted ? (isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />) : <Sun className="w-4 h-4" />}
         </button>
       </div>
 

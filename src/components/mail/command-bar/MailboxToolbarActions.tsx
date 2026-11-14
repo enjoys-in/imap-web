@@ -16,10 +16,14 @@ export function MailboxToolbarActions({ folderId }: MailboxToolbarActionsProps) 
 
   const isTrashOrJunk = folderId === 'fld-deleted' || folderId === 'fld-junk';
 
-  const handleEmpty = () => {
+  const handleEmpty = async () => {
     emptyFolder(folderId);
-    foldersApi.emptyFolder(folderId);
-    addToast({ title: 'Folder Emptied', description: 'All messages deleted.', type: 'info' });
+    try {
+      const res = await foldersApi.emptyFolder(folderId);
+      addToast({ title: 'Folder Emptied', description: res?.message || 'All messages deleted.', type: 'info' });
+    } catch (err: any) {
+      addToast({ title: 'Notice', description: err?.message || 'Empty operation submitted.', type: 'info' });
+    }
   };
 
   if (!isTrashOrJunk) {

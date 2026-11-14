@@ -3,17 +3,7 @@ import { MailFolder } from '@/types';
 import { MOCK_FOLDERS } from '@/lib/mock';
 import { isLiveApiAvailable } from '@/config/clientConfig';
 
-export interface StorageQuotaInfo {
-  storage: {
-    used: number;
-    limit: number;
-    percentage: number;
-  };
-  messages: {
-    used: number;
-    limit: number;
-  };
-}
+export { getQuota, type StorageQuotaInfo } from './folderQuota';
 
 /**
  * Fetch all mailbox folders for a given account.
@@ -26,9 +16,13 @@ export async function getFolders(accountId?: string): Promise<MailFolder[]> {
   try {
     const query = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
     const data = await apiClient.get<any>(`/fetch-mailboxes${query}`);
-    const list = Array.isArray(data)
+    const list = Array.isArray(data?.result)
+      ? data.result
+      : Array.isArray(data)
       ? data
-      : data?.mailboxes || data?.result || MOCK_FOLDERS;
+      : Array.isArray(data?.result?.mailboxes)
+      ? data.result.mailboxes
+      : data?.mailboxes || MOCK_FOLDERS;
     return list;
   } catch {
     return MOCK_FOLDERS.filter((f) => !accountId || f.accountId === accountId || !f.accountId);
@@ -120,15 +114,23 @@ export async function deleteFolder(folderId: string, fullName?: string): Promise
 /**
  * Empty all emails inside a folder (e.g. Trash or Junk).
  */
-export async function emptyFolder(folderId: string): Promise<{ deletedCount?: number; jobId?: string }> {
+export async function emptyFolder(
+  folderId: string
+): Promise<{ deletedCount?: number; jobId?: string; message: string; success: boolean }> {
   try {
     const res = await apiClient.post<any>(`/folders/${encodeURIComponent(folderId)}/empty`);
     return {
-      deletedCount: res?.result?.deletedCount ?? 0,
-      jobId: res?.result?.jobId,
+      success: res?.success ?? true,
+      message: res?.message || 'Folder emptied successfully',
+      deletedCount: res?.result?.deletedCount ?? res?.deletedCount ?? 0,
+      jobId: res?.result?.jobId || res?.jobId,
     };
-  } catch {
-    return { deletedCount: 0 };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'Failed to empty folder',
+      deletedCount: 0,
+    };
   }
 }
 
@@ -165,22 +167,5 @@ export async function syncSingleFolder(folder: string): Promise<any> {
     return data?.result || data;
   } catch {
     return null;
-  }
-}
-
-/**
- * Retrieve storage quota info for a mailbox.
- */
-export async function getQuota(folder = 'INBOX'): Promise<StorageQuotaInfo> {
-  const fallbackQuota: StorageQuotaInfo = {
-    storage: { used: 104857600, limit: 1073741824, percentage: 9.77 },
-    messages: { used: 250, limit: 10000 },
-  };
-
-  try {
-    const data = await apiClient.get<any>(`/quota?folder=${encodeURIComponent(folder)}`);
-    return data?.quota || data?.result || fallbackQuota;
-  } catch {
-    return fallbackQuota;
   }
 }

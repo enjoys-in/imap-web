@@ -4,25 +4,7 @@ import { MOCK_ACCOUNTS } from '@/lib/mock';
 import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
 import { detectPresetByEmail } from '@/lib/emailServerPresets';
 
-export interface AutodiscoverResult {
-  success: boolean;
-  source: 'preset' | 'thunderbird' | 'outlook' | 'mx' | 'heuristic';
-  domain: string;
-  email: string;
-  displayName?: string;
-  imap: {
-    host: string;
-    port: number;
-    secure: boolean;
-    username: string;
-  };
-  smtp: {
-    host: string;
-    port: number;
-    secure: boolean;
-    username: string;
-  };
-}
+export { autodiscover, type AutodiscoverResult } from './autodiscover';
 
 export interface CreateAccountDto {
   displayName: string;
@@ -65,16 +47,25 @@ export interface ConnectionStatusResponse {
  * Authenticates user with IMAP credentials and stores JWT token.
  */
 export async function login(username: string, password?: string): Promise<AuthLoginResponse> {
-  const data = await apiClient.post<AuthLoginResponse>('/authenticate', {
+  const data = await apiClient.post<any>('/authenticate', {
     imap_username: username,
     imap_password: password,
   });
 
-  if (data?.token) {
-    setAuthToken(data.token);
+  const result = data?.result || data;
+  const token = result?.token || data?.token;
+  if (token) {
+    setAuthToken(token);
   }
 
-  return data;
+  return {
+    success: data?.success ?? true,
+    message: data?.message || 'Authenticated successfully',
+    result: result,
+    token: token,
+    user: result?.user || data?.user,
+    mailboxes: result?.mailboxes || data?.mailboxes,
+  };
 }
 
 export interface SetupProgressEvent {
@@ -479,8 +470,12 @@ export async function getAccounts(): Promise<Account[]> {
   }
   try {
     const data = await apiClient.get<any>('/accounts', {}, MOCK_ACCOUNTS);
-    const list = Array.isArray(data) ? data : data?.accounts || data?.result || MOCK_ACCOUNTS;
-    return list;
+    const list = Array.isArray(data?.result)
+      ? data.result
+      : Array.isArray(data)
+      ? data
+      : data?.result?.accounts || data?.accounts || MOCK_ACCOUNTS;
+    return Array.isArray(list) ? list : MOCK_ACCOUNTS;
   } catch {
     return MOCK_ACCOUNTS;
   }
@@ -582,48 +577,4 @@ export async function getConnectionStatus(): Promise<ConnectionStatusResponse> {
   } catch {
     return { connected: false };
   }
-}
-
-/**
- * Autodiscovers IMAP and SMTP server parameters using:
- * 1. Backend XML Autoconfig (Mozilla Thunderbird / Outlook Autodiscover XML)
- * 2. DNS MX inspection
- * 3. Client provider presets
- */
-export async function autodiscover(email: string): Promise<AutodiscoverResult> {
-  const cleanEmail = email.trim();
-  const domain = cleanEmail.includes('@')
-    ? cleanEmail.split('@')[1]?.toLowerCase().trim()
-    : '';
-
-  try {
-    const res = await apiClient.get<any>(
-      `/autodiscover?email=${encodeURIComponent(cleanEmail)}`
-    );
-    if (res?.result?.imap) {
-      return res.result;
-    }
-  } catch {
-    // fallback to client preset heuristics
-  }
-
-  const preset = detectPresetByEmail(cleanEmail);
-  return {
-    success: true,
-    source: 'preset',
-    domain: domain || 'domain.com',
-    email: cleanEmail,
-    imap: {
-      host: preset.imapHost,
-      port: preset.imapPort,
-      secure: preset.imapSecurity === 'SslOnConnect',
-      username: cleanEmail,
-    },
-    smtp: {
-      host: preset.smtpHost,
-      port: preset.smtpPort,
-      secure: preset.smtpSecurity === 'SslOnConnect',
-      username: cleanEmail,
-    },
-  };
 }

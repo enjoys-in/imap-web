@@ -12,7 +12,13 @@ export async function getAppointments(): Promise<Appointment[]> {
   }
   try {
     const res = await apiClient.get<any>('/appointments', {}, MOCK_APPOINTMENTS);
-    const list = Array.isArray(res) ? res : res?.result || MOCK_APPOINTMENTS;
+    const list = Array.isArray(res?.result)
+      ? res.result
+      : Array.isArray(res)
+      ? res
+      : Array.isArray(res?.result?.appointments)
+      ? res.result.appointments
+      : MOCK_APPOINTMENTS;
     return list;
   } catch {
     return MOCK_APPOINTMENTS;

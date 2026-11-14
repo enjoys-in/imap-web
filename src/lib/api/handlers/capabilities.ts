@@ -43,10 +43,11 @@ export async function checkCapability(
       : { capability: capabilityOrCapabilities };
 
     const res = await apiClient.post<any>('/check-capability', body);
-    if (!isArray && res?.result?.supported !== undefined) {
-      return res.result.supported;
+    const result = res?.result !== undefined ? res.result : res;
+    if (!isArray && result?.supported !== undefined) {
+      return result.supported;
     }
-    return res?.result?.capabilities || {};
+    return result?.capabilities || result || {};
   } catch {
     return false;
   }

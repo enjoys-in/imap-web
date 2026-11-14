@@ -69,9 +69,11 @@ export async function getEmailsMetadata(
       accountId ? `&accountId=${encodeURIComponent(accountId)}` : ''
     }`;
     const data = await apiClient.get<any>(url);
-    const rawList: MailMessage[] = Array.isArray(data)
+    const rawList: MailMessage[] = Array.isArray(data?.result)
+      ? data.result
+      : Array.isArray(data)
       ? data
-      : data?.emails || data?.result?.emails || data?.result || [];
+      : data?.result?.emails || data?.emails || [];
 
     const list = rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -91,9 +93,11 @@ export async function getEmails(
   try {
     const url = `/emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}`;
     const data = await apiClient.get<any>(url);
-    const rawList: MailMessage[] = Array.isArray(data)
+    const rawList: MailMessage[] = Array.isArray(data?.result)
+      ? data.result
+      : Array.isArray(data)
       ? data
-      : data?.emails || data?.result?.emails || data?.result || [];
+      : data?.result?.emails || data?.emails || [];
     return rawList;
   } catch {
     return MOCK_EMAILS.filter((e) => e.folderId === folderId || folderId === 'fld-inbox');
@@ -199,16 +203,23 @@ export async function getUnseenEmails(): Promise<any[]> {
  */
 export async function sendEmail(
   payload: SendEmailPayload
-): Promise<{ success: boolean; id?: string; messageId?: string }> {
+): Promise<{ success: boolean; message: string; result?: any; id?: string; messageId?: string }> {
   try {
     const res = await apiClient.post<any>('/send-email', payload);
+    const result = res?.result || res;
     return {
       success: res?.success ?? true,
-      id: res?.result?.messageId || `sent-${Date.now()}`,
-      messageId: res?.result?.messageId,
+      message: res?.message || 'Email sent successfully',
+      result,
+      id: result?.messageId || result?.id || res?.messageId || `sent-${Date.now()}`,
+      messageId: result?.messageId || result?.id || res?.messageId,
     };
-  } catch {
-    return { success: true, id: `sent-${Date.now()}` };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'Failed to send email',
+      id: `sent-${Date.now()}`,
+    };
   }
 }
 
@@ -441,9 +452,15 @@ export async function searchEmails(
   try {
     const payload = typeof query === 'string' ? { q: query, folder } : { query, folder };
     const data = await apiClient.post<any>('/search-emails', payload);
-    const emails: MailMessageMetadata[] =
-      data?.emails || data?.result?.emails || (Array.isArray(data?.result) ? data.result : []);
-    const totalCount = data?.totalCount || data?.result?.totalCount || emails.length;
+    const result = data?.result || data;
+    const emails: MailMessageMetadata[] = Array.isArray(result)
+      ? result
+      : Array.isArray(result?.emails)
+      ? result.emails
+      : Array.isArray(data?.emails)
+      ? data.emails
+      : [];
+    const totalCount = result?.totalCount ?? data?.totalCount ?? emails.length;
     return { emails, totalCount };
   } catch {
     return { emails: [], totalCount: 0 };

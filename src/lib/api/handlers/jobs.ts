@@ -40,7 +40,8 @@ export async function getJobStatus(jobId: string): Promise<ImapJobInfo | null> {
 export async function listJobs(limit = 50): Promise<ImapJobInfo[]> {
   try {
     const res = await apiClient.get<any>(`/job-list?limit=${limit}`);
-    return res?.result || res || [];
+    const list = Array.isArray(res?.result) ? res.result : Array.isArray(res) ? res : [];
+    return list;
   } catch {
     return [];
   }

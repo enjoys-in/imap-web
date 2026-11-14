@@ -41,7 +41,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <link rel="canonical" href="https://airsend.in" />
       </head>
-      <body className="h-full overflow-hidden flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors duration-150">
+      <body
+        suppressHydrationWarning
+        className="h-full overflow-hidden flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors duration-150"
+      >
         <ConfigProvider initialConfig={initialConfig}>
           <QueryProvider>
             <Suspense fallback={null}>

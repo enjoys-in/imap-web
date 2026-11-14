@@ -71,7 +71,7 @@ export function AutoRepliesSettingsView() {
         }
       }
 
-      await settingsApi.updateAutoReplies(activeEmail, {
+      const res = await settingsApi.updateAutoReplies(activeEmail, {
         isEnabled,
         onlyDuringPeriod,
         startTime: startIso,
@@ -84,17 +84,17 @@ export function AutoRepliesSettingsView() {
       queryClient.invalidateQueries({ queryKey: ['autoReplies', activeEmail] });
 
       addToast({
-        title: isEnabled ? 'Automatic replies turned on' : 'Automatic replies saved',
-        description: isEnabled
+        title: 'Automatic replies',
+        description: (res as any)?.message || (isEnabled
           ? `Out of office active${onlyDuringPeriod ? ` until ${endDate} ${endTime}` : ''}.`
-          : 'Automatic replies are turned off.',
+          : 'Automatic replies are turned off.'),
         type: 'success',
       });
-    } catch {
+    } catch (err: any) {
       addToast({
-        title: 'Save note',
-        description: 'Automatic replies saved.',
-        type: 'info',
+        title: 'Automatic replies',
+        description: err?.message || 'Automatic replies could not be saved.',
+        type: 'error',
       });
     } finally {
       setIsSaving(false);

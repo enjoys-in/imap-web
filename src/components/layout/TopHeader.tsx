@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, Send, Settings, Sun, Moon, RefreshCw } from 'lucide-react';
 import { useUiStore } from '@/stores';
@@ -14,6 +14,11 @@ import { TopHeaderProfileMenu } from './TopHeaderProfileMenu';
 export function TopHeader() {
   const { theme, toggleTheme, toggleSidebar } = useUiStore();
   const { isSyncing, isBlocked, formattedCooldown, triggerManualSync } = useSyncManager();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="h-12 bg-gradient-to-r from-[#004578] via-[#005a9e] to-[#003056] dark:from-[#092244] dark:via-[#0c3160] dark:to-[#091e38] text-white flex items-center justify-between px-2.5 md:px-3 shrink-0 select-none shadow-sm z-40 relative">
@@ -48,10 +53,10 @@ export function TopHeader() {
         <button
           onClick={toggleTheme}
           className="p-1.5 hover:bg-white/15 rounded text-white transition-colors cursor-pointer"
-          title={theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
-          aria-label={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+          title={mounted && theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
+          aria-label={mounted && theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {mounted && theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
         {/* Sync Button: 2-minute cooldown block on manual click + auto-sync every 5 minutes */}

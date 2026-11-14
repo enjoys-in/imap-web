@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { useComposeStore, useMailStore } from '@/stores';
+import { useComposeStore, useMailStore, useToastStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
@@ -103,17 +103,31 @@ export function ComposeModal() {
         const ccRecipients = cc ? cc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
         const bccRecipients = bcc ? bcc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
 
-        emailsApi.sendEmail({
-          to: toRecipients.length > 0 ? toRecipients : to,
-          cc: ccRecipients,
-          bcc: bccRecipients,
-          subject: subject || '(No subject)',
-          bodyText: body,
-          bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
-          replyToMessageId: isReplyOrForward ? originalMessageId : undefined,
-        }).catch((err) => {
-          console.error('[SendEmail error]', err);
-        });
+        emailsApi
+          .sendEmail({
+            to: toRecipients.length > 0 ? toRecipients : to,
+            cc: ccRecipients,
+            bcc: bccRecipients,
+            subject: subject || '(No subject)',
+            bodyText: body,
+            bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+            replyToMessageId: isReplyOrForward ? originalMessageId : undefined,
+          })
+          .then((res) => {
+            useToastStore.getState().addToast({
+              title: res.success ? 'Message Sent' : 'Delivery Notice',
+              description: res.message || 'Email sent successfully',
+              type: res.success ? 'success' : 'warning',
+            });
+          })
+          .catch((err) => {
+            console.error('[SendEmail error]', err);
+            useToastStore.getState().addToast({
+              title: 'Sending Failed',
+              description: err?.message || 'Failed to dispatch email.',
+              type: 'error',
+            });
+          });
       }
     );
   };

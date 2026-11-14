@@ -43,23 +43,12 @@ interface SyncState {
 }
 
 export const useSyncStore = create<SyncState>((set, get) => {
-  const initialManual = getStoredTimestamp(STORAGE_KEY_LAST_MANUAL);
-  const initialAuto = getStoredTimestamp(STORAGE_KEY_LAST_AUTO);
-
-  let initialRemaining = 0;
-  if (initialManual) {
-    const elapsed = Date.now() - initialManual;
-    if (elapsed < MANUAL_SYNC_COOLDOWN_MS) {
-      initialRemaining = Math.max(0, Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 1000));
-    }
-  }
-
   return {
     isSyncing: false,
-    lastManualSyncTime: initialManual,
-    lastAutoSyncTime: initialAuto,
-    cooldownRemaining: initialRemaining,
-    isBlocked: initialRemaining > 0,
+    lastManualSyncTime: null,
+    lastAutoSyncTime: null,
+    cooldownRemaining: 0,
+    isBlocked: false,
 
     setIsSyncing: (isSyncing) => set({ isSyncing }),
 
@@ -80,17 +69,17 @@ export const useSyncStore = create<SyncState>((set, get) => {
     },
 
     updateCooldown: () => {
-      const { lastManualSyncTime, isSyncing } = get();
-      if (!lastManualSyncTime) {
-        set({ cooldownRemaining: 0, isBlocked: isSyncing });
+      const stored = get().lastManualSyncTime ?? getStoredTimestamp(STORAGE_KEY_LAST_MANUAL);
+      if (!stored) {
+        set({ cooldownRemaining: 0, isBlocked: get().isSyncing });
         return;
       }
-      const elapsed = Date.now() - lastManualSyncTime;
+      const elapsed = Date.now() - stored;
       if (elapsed >= MANUAL_SYNC_COOLDOWN_MS) {
-        set({ cooldownRemaining: 0, isBlocked: isSyncing });
+        set({ cooldownRemaining: 0, isBlocked: get().isSyncing, lastManualSyncTime: stored });
       } else {
         const remaining = Math.max(0, Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 1000));
-        set({ cooldownRemaining: remaining, isBlocked: true });
+        set({ cooldownRemaining: remaining, isBlocked: true, lastManualSyncTime: stored });
       }
     },
   };

@@ -1,38 +1,12 @@
-import { getClientConfig, isLiveApiAvailable } from '@/config/clientConfig';
-import { Appointment, MailFolder, MailMessage } from '@/types';
-import { MOCK_ACCOUNTS, MOCK_APPOINTMENTS, MOCK_EMAILS, MOCK_FOLDERS } from '@/lib/mock';
+import { getClientConfig } from '@/config/clientConfig';
+import { getAuthToken } from './tokenStorage';
+import { moldApiResponse } from './moldResponse';
+import { resolveEndpointUrl, isDirectBaseUrlRoute } from './directBaseRoutes';
 
-const TOKEN_STORAGE_KEY = 'airsend_access_token';
-
-let inMemoryToken: string | null = null;
-
-export function getAuthToken(): string | null {
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (stored) return stored;
-    } catch {}
-  }
-  return inMemoryToken;
-}
-
-export function setAuthToken(token: string): void {
-  inMemoryToken = token;
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    } catch {}
-  }
-}
-
-export function clearAuthToken(): void {
-  inMemoryToken = null;
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-    } catch {}
-  }
-}
+export { getAuthToken, setAuthToken, clearAuthToken } from './tokenStorage';
+export { moldApiResponse, type ApiResponse } from './moldResponse';
+export { DIRECT_BASE_URL_ROUTES, isDirectBaseUrlRoute, resolveEndpointUrl } from './directBaseRoutes';
+export { api } from './legacyApi';
 
 export interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;
@@ -42,7 +16,8 @@ export interface ApiRequestOptions extends RequestInit {
  * Core HTTP client that handles:
  * - Credentials & CORS cookies (`credentials: 'include'`)
  * - Bearer authorization headers
- * - Normalized JSON unwrapping (`data.result`, `data.data`, or `data`)
+ * - Direct baseUrl routing for public autodiscover / autoconfig routes
+ * - Standardized JSON molding: enforces { success, message, result }
  * - Graceful fallback to mock data when backend is unreachable or offline
  */
 export async function apiRequest<T>(
@@ -50,26 +25,23 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
   fallback?: T
 ): Promise<T> {
-  const { apiUrl } = getClientConfig();
+  const config = getClientConfig();
   const token = getAuthToken();
 
-  const isFullUrl = endpoint.startsWith('http://') || endpoint.startsWith('https://');
-  const cleanApiUrl = apiUrl.replace(/\/+$/, '');
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = isFullUrl ? endpoint : `${cleanApiUrl}${normalizedEndpoint}`;
+  const url = resolveEndpointUrl(endpoint, config);
+  const isBaseRoute = isDirectBaseUrlRoute(endpoint);
 
   const headers: Record<string, string> = {};
 
-  // Only set application/json if not sending FormData
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token && !options.skipAuth) {
+  // Set Authorization header unless skipped or targeting public direct base routes
+  if (token && !options.skipAuth && !isBaseRoute) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Merge any custom headers
   if (options.headers) {
     if (options.headers instanceof Headers) {
       options.headers.forEach((val, key) => {
@@ -91,20 +63,26 @@ export async function apiRequest<T>(
       headers,
     });
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => '');
-      let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMsg = errorJson.message || errorMsg;
-      } catch {}
-      throw new Error(errorMsg);
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+        if (json && typeof json === 'object') {
+          errorMsg = json.message || json.error || errorMsg;
+        }
+        throw new Error(errorMsg);
+      }
+
+      const molded = moldApiResponse<T>(json, res.status, res.statusText);
+      return molded as unknown as T;
     }
 
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const data = await res.json();
-      return data;
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '');
+      throw new Error(errorText || `HTTP ${res.status}: ${res.statusText}`);
     }
 
     const text = await res.text();
@@ -128,7 +106,19 @@ export const apiClient = {
       {
         ...options,
         method: 'POST',
-        body: body instanceof FormData ? body : JSON.stringify(body),
+        body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
+      },
+      fallback
+    );
+  },
+
+  put<T>(endpoint: string, body?: any, options?: ApiRequestOptions, fallback?: T): Promise<T> {
+    return apiRequest<T>(
+      endpoint,
+      {
+        ...options,
+        method: 'PUT',
+        body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
       },
       fallback
     );
@@ -140,7 +130,7 @@ export const apiClient = {
       {
         ...options,
         method: 'PATCH',
-        body: body instanceof FormData ? body : JSON.stringify(body),
+        body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
       },
       fallback
     );
@@ -149,64 +139,9 @@ export const apiClient = {
   delete<T>(endpoint: string, options?: ApiRequestOptions, fallback?: T): Promise<T> {
     return apiRequest<T>(endpoint, { ...options, method: 'DELETE' }, fallback);
   },
-};
 
-/**
- * Legacy API client facade for backward compatibility
- */
-export const api = {
-  async getAccounts(): Promise<any[]> {
-    return apiClient.get('/accounts', {}, MOCK_ACCOUNTS);
-  },
-
-  async getFolders(accountId: string): Promise<MailFolder[]> {
-    return apiClient.get<MailFolder[]>(
-      `/fetch-mailboxes?accountId=${accountId}`,
-      {},
-      MOCK_FOLDERS.filter((f) => f.accountId === accountId || !f.accountId)
-    );
-  },
-
-  async getEmails(folderId: string): Promise<MailMessage[]> {
-    return apiClient.get<MailMessage[]>(
-      `/fetch-emails?folderId=${folderId}`,
-      {},
-      MOCK_EMAILS.filter((e) => e.folderId === folderId || folderId === 'fld-inbox')
-    );
-  },
-
-  async getEmailBody(messageId: string): Promise<{ bodyHtml?: string; bodyText?: string }> {
-    const match = MOCK_EMAILS.find((e) => e.id === messageId);
-    return apiClient.get(
-      `/fetch-email-body?messageId=${messageId}`,
-      {},
-      { bodyHtml: match?.bodyHtml, bodyText: match?.bodyText }
-    );
-  },
-
-  async toggleFlag(messageId: string, isFlagged: boolean): Promise<boolean> {
-    return apiClient.patch(
-      '/handle-flags',
-      { messageId, flag: '\\Flagged', value: isFlagged },
-      {},
-      true
-    );
-  },
-
-  async markAsRead(messageId: string, isRead: boolean): Promise<boolean> {
-    return apiClient.patch(
-      '/handle-flags',
-      { messageId, flag: '\\Seen', value: isRead },
-      {},
-      true
-    );
-  },
-
-  async deleteEmail(messageId: string): Promise<boolean> {
-    return apiClient.delete(`/delete-email?messageId=${messageId}`, {}, true);
-  },
-
-  async getAppointments(): Promise<Appointment[]> {
-    return apiClient.get<Appointment[]>('/appointments', {}, MOCK_APPOINTMENTS);
+  async unwrap<T>(endpoint: string, options?: ApiRequestOptions, fallback?: T): Promise<T> {
+    const res = await apiRequest<any>(endpoint, options, fallback);
+    return (res?.result !== undefined ? res.result : res) as T;
   },
 };

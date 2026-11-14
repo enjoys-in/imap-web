@@ -79,11 +79,11 @@ export function FolderContextMenu({
         });
         if (!subName?.trim()) return;
         try {
-          await foldersApi.createFolder(folder.accountId || 'acc-1', subName.trim(), folder.fullName || folder.displayName);
+          const res = await foldersApi.createFolder(folder.accountId || 'acc-1', subName.trim(), folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({ title: 'Subfolder Created', description: `Created "${subName.trim()}" inside ${folder.displayName}.`, type: 'success' });
-        } catch {
-          addToast({ title: 'Failed to create subfolder', description: 'Could not create subfolder on the server.', type: 'error' });
+          addToast({ title: 'Subfolder Created', description: (res as any)?.message || `Created "${subName.trim()}" inside ${folder.displayName}.`, type: 'success' });
+        } catch (err: any) {
+          addToast({ title: 'Failed to create subfolder', description: err?.message || 'Could not create subfolder on the server.', type: 'error' });
         }
       },
     },
@@ -113,11 +113,11 @@ export function FolderContextMenu({
         });
         if (!newName?.trim() || newName.trim() === folder.displayName) return;
         try {
-          await foldersApi.renameFolder(folder.id, newName.trim(), folder.fullName || folder.displayName);
+          const res = await foldersApi.renameFolder(folder.id, newName.trim(), folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({ title: 'Folder Renamed', description: `Renamed to ${newName.trim()}.`, type: 'success' });
-        } catch {
-          addToast({ title: 'Rename Failed', description: 'Could not rename folder on the server.', type: 'error' });
+          addToast({ title: 'Folder Renamed', description: (res as any)?.message || `Renamed to ${newName.trim()}.`, type: 'success' });
+        } catch (err: any) {
+          addToast({ title: 'Rename Failed', description: err?.message || 'Could not rename folder on the server.', type: 'error' });
         }
       },
     });
@@ -136,11 +136,11 @@ export function FolderContextMenu({
         });
         if (!confirm) return;
         try {
-          await foldersApi.deleteFolder(folder.id, folder.fullName || folder.displayName);
+          const res = await foldersApi.deleteFolder(folder.id, folder.fullName || folder.displayName);
           queryClient.invalidateQueries({ queryKey: ['folders'] });
-          addToast({ title: 'Folder Deleted', description: `Removed folder ${folder.displayName}.`, type: 'success' });
-        } catch {
-          addToast({ title: 'Delete Failed', description: 'Could not delete folder from the server.', type: 'error' });
+          addToast({ title: 'Folder Deleted', description: (res as any)?.message || `Removed folder ${folder.displayName}.`, type: 'success' });
+        } catch (err: any) {
+          addToast({ title: 'Delete Failed', description: err?.message || 'Could not delete folder from the server.', type: 'error' });
         }
       },
     });
