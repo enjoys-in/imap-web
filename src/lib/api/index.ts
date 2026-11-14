@@ -10,6 +10,7 @@ export * as settingsApi from './handlers/settings';
 export * as jobsApi from './handlers/jobs';
 export * as capabilitiesApi from './handlers/capabilities';
 export * as streamApi from './handlers/stream';
+export * as pushApi from './handlers/push';
 
 // All handler functions directly accessible
 export * from './handlers';

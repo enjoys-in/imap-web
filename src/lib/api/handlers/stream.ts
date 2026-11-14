@@ -32,11 +32,19 @@ export interface QuotaUpdateEventPayload {
   quota: StorageQuotaInfo;
 }
 
+export interface MailboxChangeMessage {
+  uid: number;
+  from?: string;
+  subject?: string;
+  date?: string;
+}
+
 export interface MailboxChangeEventPayload extends FolderTotalsPayload {
   path: string;
   count: number;
   prevCount: number;
   newCount?: number;
+  messages?: MailboxChangeMessage[];
 }
 
 export interface MailboxExpungeEventPayload extends FolderTotalsPayload {

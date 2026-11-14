@@ -2,6 +2,7 @@ import { apiClient, clearAuthToken, setAuthToken } from '../client';
 import { Account } from '@/types';
 import { clearCachedEmails, getCachedAccounts, replaceCachedAccounts } from '@/lib/idb/mailCacheDb';
 import { getClientConfig } from '@/config/clientConfig';
+import { disablePush } from '@/lib/webPush';
 
 export { autodiscover, type AutodiscoverResult } from './autodiscover';
 
@@ -269,6 +270,7 @@ export async function reLogin(): Promise<any> {
  */
 export async function logout(): Promise<{ success: boolean }> {
   try {
+    await disablePush().catch(() => undefined);
     await apiClient.post('/logout');
   } finally {
     clearAuthToken();

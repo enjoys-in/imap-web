@@ -24,6 +24,7 @@ import {
   requestWebPushPermission,
   dispatchNotification,
 } from '@/lib/notificationDispatcher';
+import { enablePush, sendTestNotification } from '@/lib/webPush';
 import { cn } from '@/lib/utils';
 
 export function NotificationsSettingsView() {
@@ -70,15 +71,63 @@ export function NotificationsSettingsView() {
     }
   }, []);
 
+  const handleTestPush = async () => {
+    try {
+      const result = await sendTestNotification();
+      if (!result) {
+        addToast({
+          title: 'No push subscription yet',
+          description: 'Allow notifications and save your settings first.',
+          type: 'warning',
+        });
+        return;
+      }
+      addToast(
+        result.sent > 0
+          ? {
+              title: 'Test notification sent',
+              description: 'It should appear in a moment, even when AirSend is closed.',
+              type: 'success',
+            }
+          : {
+              title: 'Test notification failed',
+              description: 'The push service did not accept it. Try again in a moment.',
+              type: 'warning',
+            }
+      );
+    } catch (error) {
+      addToast({
+        title: 'Push is not available',
+        description: error instanceof Error ? error.message : 'Try again later.',
+        type: 'warning',
+      });
+    }
+  };
+
   const handleRequestPermission = async () => {
     const granted = await requestWebPushPermission();
     if (granted) {
       setBrowserPermission('granted');
-      addToast({
-        title: 'Push Permission Granted',
-        description: 'AirSend can now send desktop notifications.',
-        type: 'success',
-      });
+      const setup = await enablePush({
+        audience: pushAudience,
+        includePreview: pushIncludePreview,
+      }).catch(() => null);
+      addToast(
+        setup === 'on'
+          ? {
+              title: 'Push Permission Granted',
+              description: 'AirSend will notify you about new mail, even when it is closed.',
+              type: 'success',
+            }
+          : {
+              title: 'Permission Granted',
+              description:
+                setup === 'unconfigured'
+                  ? 'Notifications work while AirSend is open. Background push is not set up on the server yet.'
+                  : 'AirSend can now send desktop notifications.',
+              type: 'info',
+            }
+      );
     } else {
       setBrowserPermission('denied');
       addToast({
@@ -551,6 +600,19 @@ export function NotificationsSettingsView() {
                   className="w-4 h-4 accent-[#0078d4] rounded cursor-pointer"
                 />
               </label>
+
+              {browserPermission === 'granted' && (
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestPush}
+                    className="px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Send test push</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

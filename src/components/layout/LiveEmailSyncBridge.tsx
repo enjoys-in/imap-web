@@ -3,14 +3,17 @@
 import { useEffect } from 'react';
 import { useSession } from '@/components/providers/SessionProvider';
 import { useEmailStream } from '@/hooks/useEmailStream';
+import { usePushSubscriptionSync } from '@/hooks/usePushSubscriptionSync';
 import { useSyncScheduler } from '@/hooks/useSyncManager';
 import {
   handleMailboxChange,
   handleMailboxExpunge,
   handleMessageFlags,
   handleQuotaUpdate,
+  newMessageCount,
   shouldNotifyNewMail,
 } from '@/lib/liveSync';
+import { alertNewMail } from '@/lib/newMailAlert';
 import { pingStreamPresence, startStreamPresence } from '@/lib/streamPresence';
 import { useToastStore } from '@/stores/useToastStore';
 
@@ -19,6 +22,7 @@ export function LiveEmailSyncBridge() {
   const addToast = useToastStore((s) => s.addToast);
 
   useSyncScheduler();
+  usePushSubscriptionSync(isAuthenticated);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -39,6 +43,7 @@ export function LiveEmailSyncBridge() {
           description: `Folder "${data.path}" updated (${data.count} messages)`,
           type: 'info',
         });
+        void alertNewMail(data, newMessageCount(data));
       }
     },
     onMailboxExpunge: (data) => {
