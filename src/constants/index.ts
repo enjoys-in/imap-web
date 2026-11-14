@@ -25,6 +25,7 @@ export const STORAGE_KEYS = {
   THEME: 'airsend_theme',
   LAST_MANUAL_SYNC: 'airsend_last_manual_sync_timestamp',
   LAST_AUTO_SYNC: 'airsend_last_auto_sync_timestamp',
+  LAST_CALENDAR_HEALTH: 'airsend_last_calendar_health_check',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -35,6 +36,15 @@ export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 export const SYNC_CONFIG = {
   MANUAL_COOLDOWN_MS: 2 * 60 * 1000, // 2 minutes cooldown between manual clicks
   AUTO_SYNC_INTERVAL_MS: 30 * 60 * 1000, // 30 minutes auto-sync interval for /sync-all
+} as const;
+
+/**
+ * Calendar Health Polling Intervals & Cooldowns
+ */
+export const CALENDAR_HEALTH_CONFIG = {
+  NORMAL_POLL_INTERVAL_MS: 5 * 60 * 1000, // 5 minutes normal polling
+  REFOCUS_THRESHOLD_MS: 30 * 1000, // Within 30 seconds ignore; > 30 seconds fetch
+  RETRY_INTERVAL_MS: 60 * 1000, // 1 minute on failure
 } as const;
 
 /**
