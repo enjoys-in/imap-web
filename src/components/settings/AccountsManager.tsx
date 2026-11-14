@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, UserPlus, ExternalLink } from 'lucide-react';
-import { accountsApi } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { accountsQuery } from '@/hooks/useEmailsQuery';
 import { Account } from '@/types';
 import { AccountRowItem } from './AccountRowItem';
 import { AddAccountModal } from './AddAccountModal';
@@ -14,10 +15,21 @@ export function AccountsManager() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const addToast = useToastStore((s) => s.addToast);
+  const queryClient = useQueryClient();
 
+  // Reads the shared accounts cache (already loaded by the session) instead of calling /accounts again.
   useEffect(() => {
-    accountsApi.getAccounts().then(setAccounts);
-  }, []);
+    let cancelled = false;
+    queryClient
+      .fetchQuery(accountsQuery)
+      .then((list) => {
+        if (!cancelled) setAccounts(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient]);
 
   const handleAdd = (newAcc: Account) => {
     setAccounts((prev) => [...prev, newAcc]);

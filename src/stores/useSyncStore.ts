@@ -69,18 +69,25 @@ export const useSyncStore = create<SyncState>((set, get) => {
     },
 
     updateCooldown: () => {
-      const stored = get().lastManualSyncTime ?? getStoredTimestamp(STORAGE_KEY_LAST_MANUAL);
-      if (!stored) {
-        set({ cooldownRemaining: 0, isBlocked: get().isSyncing });
+      const state = get();
+      const stored = state.lastManualSyncTime ?? getStoredTimestamp(STORAGE_KEY_LAST_MANUAL);
+
+      let cooldownRemaining = 0;
+      let isBlocked = state.isSyncing;
+      if (stored) {
+        const elapsed = Date.now() - stored;
+        if (elapsed < MANUAL_SYNC_COOLDOWN_MS) {
+          cooldownRemaining = Math.max(0, Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 1000));
+          isBlocked = true;
+        }
+      }
+
+      // Runs every second: only write (and notify subscribers) when something changed.
+      const sameTimestamp = stored ? state.lastManualSyncTime === stored : true;
+      if (state.cooldownRemaining === cooldownRemaining && state.isBlocked === isBlocked && sameTimestamp) {
         return;
       }
-      const elapsed = Date.now() - stored;
-      if (elapsed >= MANUAL_SYNC_COOLDOWN_MS) {
-        set({ cooldownRemaining: 0, isBlocked: get().isSyncing, lastManualSyncTime: stored });
-      } else {
-        const remaining = Math.max(0, Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 1000));
-        set({ cooldownRemaining: remaining, isBlocked: true, lastManualSyncTime: stored });
-      }
+      set({ cooldownRemaining, isBlocked, ...(stored ? { lastManualSyncTime: stored } : {}) });
     },
   };
 });

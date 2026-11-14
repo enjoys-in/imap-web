@@ -6,11 +6,10 @@ import { useMailStore, useToastStore, useSyncStore, AUTO_SYNC_INTERVAL_MS } from
 import { foldersApi } from '@/lib/api';
 
 /**
- * Custom hook to coordinate IMAP sync:
- * 1. Blocks re-clicking manual sync button for 2 minutes (cooldown).
- * 2. Automatically syncs mailbox every 5 minutes in background.
+ * Sync state and actions (manual sync, cooldown, auto-sync trigger) without any
+ * timers, so it is safe to call from several components.
  */
-export function useSyncManager() {
+function useSyncCore() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
@@ -101,6 +100,37 @@ export function useSyncManager() {
     return executeSync({ isAuto: true, notify: false });
   }, [executeSync]);
 
+  return {
+    isSyncing,
+    isBlocked,
+    cooldownRemaining,
+    formattedCooldown,
+    lastManualSyncTime,
+    lastAutoSyncTime,
+    triggerManualSync,
+    triggerAutoSync,
+  };
+}
+
+/**
+ * Coordinates IMAP sync for UI components:
+ * 1. Blocks re-clicking the manual sync button for 2 minutes (cooldown).
+ * 2. Exposes manual and automatic sync triggers.
+ * The background timers live in `useSyncScheduler`, which runs once for the app.
+ */
+export function useSyncManager() {
+  return useSyncCore();
+}
+
+/**
+ * Background timers for sync. Mount exactly once (see LiveEmailSyncBridge):
+ * - ticks the manual-sync cooldown every second
+ * - automatically syncs the mailbox every 5 minutes
+ */
+export function useSyncScheduler(): void {
+  const { triggerAutoSync } = useSyncCore();
+  const updateCooldown = useSyncStore((s) => s.updateCooldown);
+
   // Cooldown countdown tick every 1s
   useEffect(() => {
     updateCooldown();
@@ -139,15 +169,4 @@ export function useSyncManager() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [triggerAutoSync]);
-
-  return {
-    isSyncing,
-    isBlocked,
-    cooldownRemaining,
-    formattedCooldown,
-    lastManualSyncTime,
-    lastAutoSyncTime,
-    triggerManualSync,
-    triggerAutoSync,
-  };
 }

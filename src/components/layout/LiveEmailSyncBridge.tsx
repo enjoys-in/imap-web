@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/components/providers/SessionProvider';
 import { useEmailStream } from '@/hooks/useEmailStream';
+import { useSyncScheduler } from '@/hooks/useSyncManager';
 import { useMailStore } from '@/stores/useMailStore';
 import { useToastStore } from '@/stores/useToastStore';
 
@@ -15,6 +16,9 @@ export function LiveEmailSyncBridge() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const fetchEmails = useMailStore((s) => s.fetchEmails);
+
+  // The only place the sync timers run (cooldown tick + 5-minute auto-sync).
+  useSyncScheduler();
 
   useEmailStream({
     onConnected: () => {

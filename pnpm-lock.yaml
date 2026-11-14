@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@emoji-mart/data':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@enjoys/react-api':
         specifier: ^0.0.8
         version: 0.0.8(dexie@4.4.7)(dot-object@2.1.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -38,6 +41,9 @@ importers:
       dot-object:
         specifier: ^2.1.5
         version: 2.1.5
+      emoji-mart:
+        specifier: ^5.6.0
+        version: 5.6.0
       lucide-react:
         specifier: ^1.16.0
         version: 1.72.0(@types/react@19.3.0)(react@19.3.0)
@@ -160,6 +166,9 @@ packages:
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
+
+  '@emoji-mart/data@1.2.1':
+    resolution: {integrity: sha512-no2pQMWiBy6gpBEiqGeU77/bFejDqUTRY7KX+0+iur13op3bqUsXdnwoZs6Xb1zbv0gAj5VvS1PWoUUckSr5Dw==}
 
   '@enjoys/react-api@0.0.8':
     resolution: {integrity: sha512-XeeVw6MpKjAor9WILjAivo8BMnSJuxfq8g6lL0NXXtSlrUK2pJfORMby4jf0/ABr4Upb/3KXCj4Ldfh4Eunbzw==}
@@ -1045,6 +1054,9 @@ packages:
 
   electron-to-chromium@1.5.485:
     resolution: {integrity: sha512-m3uadzR0Z+sR19HGWgfxoZcKv9hE/edVM9OZ+FJ4wNRyfuFtkwZJIDoehEty5sisYVwmge8lKV1tenWOyClVgw==}
+
+  emoji-mart@5.6.0:
+    resolution: {integrity: sha512-eJp3QRe79pjwa+duv+n7+5YsNhRcMl812EcFVwrnRvYKoNPoQb5qxU8DG6Bgwji0akHdp6D4Ln6tYLG58MFSow==}
 
   emoji-regex@9.2.2:
     resolution: {integrity: sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==}
@@ -2255,6 +2267,8 @@ snapshots:
       tslib: 2.9.1
     optional: true
 
+  '@emoji-mart/data@1.2.1': {}
+
   '@enjoys/react-api@0.0.8(dexie@4.4.7)(dot-object@2.1.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       react: 19.3.0
@@ -3026,6 +3040,8 @@ snapshots:
       gopd: 1.2.0
 
   electron-to-chromium@1.5.485: {}
+
+  emoji-mart@5.6.0: {}
 
   emoji-regex@9.2.2: {}
 

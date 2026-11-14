@@ -24,10 +24,10 @@ interface ReadingPaneProps {
   onBack?: () => void;
 }
 
-function getInitialBody(id?: string | null, mail?: MailMessage | MailMessageMetadata) {
+function getInitialBody(id?: string | null, bodyHtml?: string, bodyText?: string) {
   if (!id) return null;
-  if (mail && 'bodyHtml' in mail && (mail.bodyHtml || mail.bodyText)) {
-    return { bodyHtml: mail.bodyHtml, bodyText: mail.bodyText };
+  if (bodyHtml || bodyText) {
+    return { bodyHtml, bodyText };
   }
   return null;
 }
@@ -50,7 +50,15 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const [fallbackEmail, setFallbackEmail] = useState<MailMessage | null>(null);
 
   const email = (emailInStore || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
-  const initialBody = useMemo(() => getInitialBody(currentId, email), [currentId, email]);
+  const hasEmailInStore = Boolean(emailInStore);
+  // Primitives, not the email object: the store replaces that object on every read/flag
+  // change, which must not re-run the body effect and re-request the body.
+  const inlineBodyHtml = email && 'bodyHtml' in email ? email.bodyHtml : undefined;
+  const inlineBodyText = email && 'bodyText' in email ? email.bodyText : undefined;
+  const initialBody = useMemo(
+    () => getInitialBody(currentId, inlineBodyHtml, inlineBodyText),
+    [currentId, inlineBodyHtml, inlineBodyText]
+  );
 
   const [allowExternalImages, setAllowExternalImages] = useState(false);
   const [hideHistory, setHideHistory] = useState(false);
@@ -69,7 +77,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   // If the email is not in the local store, resolve it from the local cache
   useEffect(() => {
     if (!currentId) return;
-    if (emailInStore) {
+    if (hasEmailInStore) {
       setFallbackEmail(null);
       return;
     }
@@ -82,14 +90,13 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId, emailInStore]);
+  }, [currentId, hasEmailInStore]);
 
   // Fetch full email body for the current active message (instant if already in memory)
   useEffect(() => {
     if (!currentId) return;
-    const immediate = getInitialBody(currentId, email);
-    if (immediate) {
-      setFetchedBody(immediate);
+    if (initialBody) {
+      setFetchedBody(initialBody);
       setIsBodyLoading(false);
       return;
     }
@@ -112,7 +119,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId, email]);
+  }, [currentId, initialBody]);
 
   // Fetch full thread messages whenever threadId is active
   useEffect(() => {

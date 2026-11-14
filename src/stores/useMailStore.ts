@@ -86,6 +86,9 @@ function getInitialState() {
 
 const initialState = getInitialState();
 
+// Identifies the newest list request so a slow, superseded response cannot overwrite a newer list.
+let latestFetchId = 0;
+
 export const useMailStore = create<MailState>((set, get) => ({
   selectedAccountId: initialState.selectedAccountId,
   selectedAccountIndex: initialState.selectedAccountIndex,
@@ -110,24 +113,27 @@ export const useMailStore = create<MailState>((set, get) => ({
   fetchEmails: async (folderId, accountId) => {
     const fId = folderId || get().selectedFolderId || 'fld-inbox';
     const aId = accountId || get().selectedAccountId || '';
+    const requestId = ++latestFetchId;
     set({ isLoadingEmails: true, emailPage: 1 });
     try {
       const cached = await getCachedEmails(fId, aId);
-      if (cached.length > 0 && get().localEmails.length === 0) {
+      if (requestId === latestFetchId && cached.length > 0 && get().localEmails.length === 0) {
         set({ localEmails: cached, selectedFolderId: fId });
       }
     } catch {}
     try {
       const list = await emailsApi.getEmailsMetadata(fId, aId || undefined, 1, 25);
+      saveCachedEmails(list);
+      // A newer fetch (e.g. the user switched folder) owns the list and the loading flag now.
+      if (requestId !== latestFetchId) return;
       set({
         localEmails: list,
         emailPage: 1,
         hasMoreEmails: list.length >= 25,
         isLoadingEmails: false,
       });
-      saveCachedEmails(list);
     } catch {
-      set({ isLoadingEmails: false });
+      if (requestId === latestFetchId) set({ isLoadingEmails: false });
     }
   },
 
@@ -139,6 +145,11 @@ export const useMailStore = create<MailState>((set, get) => ({
     set({ isLoadingMore: true });
     try {
       const nextBatch = await emailsApi.getEmailsMetadata(fId, aId || undefined, nextPage, 25);
+      // The user moved to another folder/account while this page loaded: drop it.
+      if (get().selectedFolderId !== fId || get().selectedAccountId !== aId) {
+        set({ isLoadingMore: false });
+        return;
+      }
       const current = get().localEmails;
       const currentIds = new Set(current.map((e) => e.id));
       const fresh = nextBatch.filter((e) => !currentIds.has(e.id));

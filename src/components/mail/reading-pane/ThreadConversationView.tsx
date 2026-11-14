@@ -88,15 +88,18 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
     });
   }, [targetEmail?.threadId]);
 
+  // Keyed by id: the store replaces the email object on read/flag changes,
+  // which must not trigger another body request.
+  const targetEmailId = targetEmail?.id;
   useEffect(() => {
-    if (!targetEmail) return;
+    if (!targetEmailId) return;
     emailsApi
-      .getEmailBody(targetEmail.id)
+      .getEmailBody(targetEmailId)
       .then((b) => {
-        if (b.bodyHtml) setThreadBodies((prev) => ({ ...prev, [targetEmail.id]: b.bodyHtml || '' }));
+        if (b.bodyHtml) setThreadBodies((prev) => ({ ...prev, [targetEmailId]: b.bodyHtml || '' }));
       })
       .catch(() => {});
-  }, [targetEmail]);
+  }, [targetEmailId]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));

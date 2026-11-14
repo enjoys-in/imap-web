@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useMailStore } from '@/stores';
 import { useAccountSettingsStore } from '@/stores/useAccountSettingsStore';
 import { MailListItem } from './MailListItem';
 import { MailListHeader } from './MailListHeader';
 import { MailItemContextMenu } from './MailItemContextMenu';
 import { MailThreadSubItems } from './MailThreadSubItems';
-import { useSession } from '@/components/providers/SessionProvider';
+import { getDefaultPerAccountSettings } from '@/lib/accountSettingsDefaults';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { useMailListFilterSort } from './useMailListFilterSort';
+
+const DEFAULT_CARDS_ROWS = getDefaultPerAccountSettings('').appearance.cardsViewRows;
 
 interface MailListProps {
   activeFolderId?: string;
@@ -29,15 +32,31 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
     generalReadingLayout === 'bottom' || (typeof width === 'number' && width >= 480)
   );
 
+  // Subscribe only to what this list renders, not to the whole store.
   const {
-    selectedMailId, selectedIds, searchQuery, isSearchingServer, clearSearch,
-    setSelectedMail, toggleSelectId, selectedAccountId, localEmails,
-    hasMoreEmails, isLoadingMore, loadMoreEmails,
-  } = useMailStore();
+    selectedMailId, selectedIds, searchQuery, isSearchingServer,
+    selectedAccountId, localEmails, hasMoreEmails, isLoadingMore,
+  } = useMailStore(
+    useShallow((s) => ({
+      selectedMailId: s.selectedMailId,
+      selectedIds: s.selectedIds,
+      searchQuery: s.searchQuery,
+      isSearchingServer: s.isSearchingServer,
+      selectedAccountId: s.selectedAccountId,
+      localEmails: s.localEmails,
+      hasMoreEmails: s.hasMoreEmails,
+      isLoadingMore: s.isLoadingMore,
+    }))
+  );
+  const clearSearch = useMailStore((s) => s.clearSearch);
+  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
+  const toggleSelectId = useMailStore((s) => s.toggleSelectId);
+  const loadMoreEmails = useMailStore((s) => s.loadMoreEmails);
 
-  const getSettings = useAccountSettingsStore((s) => s.getSettings);
-  const { account } = useSession();
-  const cardsRows = getSettings(selectedAccountId, account?.email).appearance.cardsViewRows;
+  // A pure read: never writes defaults into the store while rendering.
+  const cardsRows = useAccountSettingsStore(
+    (s) => s.settingsByAccount[selectedAccountId]?.appearance.cardsViewRows ?? DEFAULT_CARDS_ROWS
+  );
 
   const [contextMenu, setContextMenu] = useState<{
     email: MailMessageMetadata | MailMessage;

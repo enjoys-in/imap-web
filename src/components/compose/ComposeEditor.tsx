@@ -93,6 +93,22 @@ export function ComposeEditor() {
     }, 10);
   };
 
+  // Inserts at the caret (or replaces the selection). The textarea keeps its selection indices while blurred.
+  const handleInsertEmoji = (emoji: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      updateFields({ body: body + emoji });
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    updateFields({ body: body.substring(0, start) + emoji + body.substring(end) });
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 10);
+  };
+
   const handleInsertSignature = () => {
     const text = savedSignature.trim() || [account?.displayName, account?.email].filter(Boolean).join('\n');
     if (!text) return;
@@ -128,6 +144,7 @@ export function ComposeEditor() {
         onFormat={handleFormat}
         onAttachClick={handleAttachClick}
         onInsertSignature={handleInsertSignature}
+        onInsertEmoji={handleInsertEmoji}
         canvasLight={canvasLight}
         onToggleCanvas={() => setCanvasLight((v) => !v)}
         importance={importance}

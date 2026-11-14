@@ -1,9 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
 import { accountsApi, clearAuthToken } from '@/lib/api';
+import { accountsQuery } from '@/hooks/useEmailsQuery';
 import { Account } from '@/types';
 
 interface SessionContextType {
@@ -35,6 +37,7 @@ export function useSession() {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const isLoginPage = pathname === '/login';
 
   const [isLoading, setIsLoading] = useState(!isLoginPage);
@@ -44,33 +47,63 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
   const [statusText, setStatusText] = useState('Fetching user session...');
 
+  // Set once a session has loaded, so a route change (e.g. login -> mail) does not load it again.
+  const sessionLoadedRef = useRef(false);
+
+  /**
+   * Loads the profile (`/me`) and the accounts. Accounts go through the shared
+   * react-query entry, so later `useAccounts()` consumers reuse this result
+   * instead of calling `/accounts` again.
+   */
+  const loadSession = useCallback(
+    async (options: { force?: boolean; onProfile?: () => void } = {}) => {
+      const profile = await accountsApi.getProfile();
+      if (!(profile && (profile.email || profile.mid))) {
+        throw new Error('Not authenticated');
+      }
+      options.onProfile?.();
+      const list = await queryClient.fetchQuery({
+        ...accountsQuery,
+        staleTime: options.force ? 0 : accountsQuery.staleTime,
+      });
+      return { profile, list };
+    },
+    [queryClient]
+  );
+
+  const applySession = useCallback(
+    (profile: any, list: Account[]) => {
+      sessionLoadedRef.current = true;
+      setUser(profile.user || profile);
+      setAccounts(list);
+      setAccount(list[0] || null);
+      setIsAuthenticated(true);
+    },
+    []
+  );
+
+  const clearSession = useCallback(() => {
+    sessionLoadedRef.current = false;
+    setUser(null);
+    setAccount(null);
+    setAccounts([]);
+    setIsAuthenticated(false);
+  }, []);
+
   const refreshSession = useCallback(async () => {
     try {
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('airsend_logged_out');
       }
       setStatusText('Validating connection...');
-      const profile = await accountsApi.getProfile();
+      const { profile, list } = await loadSession({ force: true });
+      applySession(profile, list);
 
-      if (profile && (profile.email || profile.mid)) {
-        setUser(profile.user || profile);
-        setIsAuthenticated(true);
-
-        const list = await accountsApi.getAccounts();
-        setAccounts(list);
-        setAccount(list[0] || null);
-
-        if (isLoginPage) {
-          router.push('/mail/u/0#inbox');
-        }
-        return;
+      if (isLoginPage) {
+        router.push('/mail/u/0#inbox');
       }
-      throw new Error('Not authenticated');
     } catch {
-      setUser(null);
-      setAccount(null);
-      setAccounts([]);
-      setIsAuthenticated(false);
+      clearSession();
 
       if (!isLoginPage) {
         router.push('/login');
@@ -78,33 +111,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoginPage, router]);
+  }, [isLoginPage, router, loadSession, applySession, clearSession]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function init() {
-      if (isLoginPage) {
+      if (isLoginPage || sessionLoadedRef.current) {
         setIsLoading(false);
         return;
       }
 
       try {
         setStatusText('Fetching user session...');
-        const profile = await accountsApi.getProfile();
-
-        if (isMounted && profile && (profile.email || profile.mid)) {
-          setUser(profile.user || profile);
-          setIsAuthenticated(true);
-
-          setStatusText('Synchronizing mailbox folders...');
-          const list = await accountsApi.getAccounts();
-          if (isMounted) {
-            setAccounts(list);
-            setAccount(list[0] || null);
-          }
-        } else {
-          throw new Error('Not authenticated');
+        const { profile, list } = await loadSession({
+          onProfile: () => {
+            if (isMounted) setStatusText('Synchronizing mailbox folders...');
+          },
+        });
+        if (isMounted) {
+          applySession(profile, list);
         }
       } catch {
         if (isMounted) {
@@ -125,7 +151,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [isLoginPage, router]);
+  }, [isLoginPage, router, loadSession, applySession]);
 
   const logout = useCallback(async () => {
     try {
@@ -135,13 +161,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('airsend_logged_out', 'true');
       }
-      setUser(null);
-      setAccount(null);
-      setAccounts([]);
-      setIsAuthenticated(false);
+      // Cached server data belongs to the signed-out mailbox.
+      queryClient.clear();
+      clearSession();
       router.push('/login');
     }
-  }, [router]);
+  }, [router, queryClient, clearSession]);
+
+  // Stable identity: consumers re-render only when session data actually changes.
+  const value = useMemo<SessionContextType>(
+    () => ({
+      account,
+      accounts,
+      user,
+      isAuthenticated,
+      isLoading,
+      statusText,
+      refreshSession,
+      logout,
+    }),
+    [account, accounts, user, isAuthenticated, isLoading, statusText, refreshSession, logout]
+  );
 
   if (isLoading && !isLoginPage) {
     return <AirSendSplashScreen statusMessage={statusText} />;
@@ -152,20 +192,5 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return <AirSendSplashScreen statusMessage="Redirecting to sign in..." />;
   }
 
-  return (
-    <SessionContext.Provider
-      value={{
-        account,
-        accounts,
-        user,
-        isAuthenticated,
-        isLoading,
-        statusText,
-        refreshSession,
-        logout,
-      }}
-    >
-      {children}
-    </SessionContext.Provider>
-  );
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

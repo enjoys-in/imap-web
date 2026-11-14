@@ -15,12 +15,18 @@ import {
 } from '@/lib/api';
 import { MailFolder, MailMessageMetadata, Account, Appointment } from '@/types';
 
+/**
+ * Shared definition of the accounts query so the session, settings screens and
+ * `useAccounts` all read one cache entry instead of each calling `/accounts`.
+ */
+export const accountsQuery = {
+  queryKey: ['accounts'] as const,
+  queryFn: () => accountsApi.getAccounts(),
+  staleTime: 60000,
+};
+
 export function useAccounts() {
-  return useQuery<Account[]>({
-    queryKey: ['accounts'],
-    queryFn: () => accountsApi.getAccounts(),
-    staleTime: 60000,
-  });
+  return useQuery<Account[]>(accountsQuery);
 }
 
 export function useFolders(accountId: string) {

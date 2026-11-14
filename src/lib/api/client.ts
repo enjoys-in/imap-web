@@ -12,15 +12,48 @@ export interface ApiRequestOptions extends RequestInit {
 }
 
 /**
+ * GET requests currently on the wire, keyed by user + URL. Identical GETs fired
+ * while one is in flight (several components asking for the same data, or React
+ * StrictMode re-running an effect in development) share that single request.
+ */
+const inflightGets = new Map<string, Promise<unknown>>();
+
+/**
  * Core HTTP client that handles:
  * - Credentials & CORS cookies (`credentials: 'include'`)
  * - Bearer authorization headers
  * - Direct baseUrl routing for public autodiscover / autoconfig routes
  * - Standardized JSON molding: enforces { success, message, result }
+ * - De-duplication of identical in-flight GET requests
  */
 export async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {}
+): Promise<T> {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') {
+    return performRequest<T>(endpoint, options);
+  }
+
+  const key = `${getAuthToken() || ''}|${resolveEndpointUrl(endpoint, getClientConfig())}`;
+  const pending = inflightGets.get(key);
+  if (pending) {
+    // Each caller gets its own copy so one cannot mutate what another received.
+    return (pending as Promise<T>).then((value) =>
+      typeof value === 'object' && value !== null ? structuredClone(value) : value
+    );
+  }
+
+  const request = performRequest<T>(endpoint, options).finally(() => {
+    inflightGets.delete(key);
+  });
+  inflightGets.set(key, request);
+  return request;
+}
+
+async function performRequest<T>(
+  endpoint: string,
+  options: ApiRequestOptions
 ): Promise<T> {
   const config = getClientConfig();
   const token = getAuthToken();

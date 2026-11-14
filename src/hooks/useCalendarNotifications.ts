@@ -5,17 +5,24 @@ import { useCalendarNotificationStore } from '@/stores';
 import { calendarApi } from '@/lib/api';
 import { requestWebPushPermission } from '@/lib/notificationDispatcher';
 
+const REMINDER_POLL_MS = 60_000;
+const REMINDER_POLL_MAX_MS = 30 * 60_000;
+
 export function useCalendarNotifications() {
   const triggerReminder = useCalendarNotificationStore((s) => s.triggerReminder);
   const simulateUpcomingReminder = useCalendarNotificationStore(
     (s) => s.simulateUpcomingReminder
   );
 
-  // Periodically check appointments for upcoming meetings
+  // Periodically check appointments for upcoming meetings. A failing request
+  // (e.g. the server has no calendar endpoint) backs off instead of retrying every minute.
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let delay = REMINDER_POLL_MS;
 
     const checkUpcomingMeetings = async () => {
+      let succeeded = true;
       try {
         const appointments = await calendarApi.getAppointments();
         const now = Date.now();
@@ -38,15 +45,22 @@ export function useCalendarNotifications() {
           }
         }
       } catch {
-        // Reminders are best-effort; try again on the next tick
+        // Reminders are best-effort
+        succeeded = false;
       }
+
+      if (cancelled) return;
+      delay = succeeded ? REMINDER_POLL_MS : Math.min(delay * 2, REMINDER_POLL_MAX_MS);
+      timer = setTimeout(checkUpcomingMeetings, delay);
     };
 
-    // Check on mount and every 60 seconds
+    // Check on mount, then on a schedule
     checkUpcomingMeetings();
-    timer = setInterval(checkUpcomingMeetings, 60000);
 
-    return () => clearInterval(timer);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [triggerReminder]);
 
   const requestPermission = useCallback(async () => {

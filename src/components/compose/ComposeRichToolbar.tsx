@@ -37,11 +37,13 @@ import {
 import { useToastStore } from '@/stores/useToastStore';
 import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
+import { ComposeEmojiMenu } from './ComposeEmojiMenu';
 
 interface ComposeRichToolbarProps {
   onFormat: (command: string, value?: string) => void;
   onAttachClick?: () => void;
   onInsertSignature?: () => void;
+  onInsertEmoji?: (emoji: string) => void;
   canvasLight?: boolean;
   onToggleCanvas?: () => void;
   importance?: 'normal' | 'high' | 'low';
@@ -52,6 +54,7 @@ export function ComposeRichToolbar({
   onFormat,
   onAttachClick,
   onInsertSignature,
+  onInsertEmoji,
   canvasLight = false,
   onToggleCanvas,
   importance = 'normal',
@@ -125,6 +128,7 @@ export function ComposeRichToolbar({
       <ComposeAttachMenu variant="icon" />
       <button type="button" onClick={() => onFormat('createLink')} className={btnClass} title="Insert link (Ctrl+K)"><Link2 className="w-3.5 h-3.5" /><ChevronDown className="w-2.5 h-2.5 opacity-60" /></button>
       <ComposeSignatureMenu />
+      {onInsertEmoji && <ComposeEmojiMenu onSelect={onInsertEmoji} />}
       <button type="button" onClick={handleDictate} className={`${btnClass} ${isDictating ? 'bg-red-100 dark:bg-red-950/50 text-red-600' : 'text-[#0078d4]'}`} title="Dictate audio"><Mic className="w-3.5 h-3.5" /></button>
 
       <div className="w-px h-4 bg-neutral-300 dark:bg-neutral-700 mx-1 shrink-0" />

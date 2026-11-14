@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "@enjoys/react-api": "^0.0.8",
     "@tanstack/react-query": "^5.67.1",
     "@tanstack/react-virtual": "^3.13.2",
@@ -19,6 +20,7 @@
     "dexie-observable": "4.0.1-beta.13",
     "dompurify": "^3.2.4",
     "dot-object": "^2.1.5",
+    "emoji-mart": "^5.6.0",
     "lucide-react": "^1.16.0",
     "next": "16.4.6",
     "react": "19.3.0",
