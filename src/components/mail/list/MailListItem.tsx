@@ -26,11 +26,12 @@ interface MailListItemProps {
   onDelete: (id: string) => void;
   onToggleThreadExpand?: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, email: MailMessageMetadata | MailMessage) => void;
+  onOpen?: (email: MailMessageMetadata | MailMessage) => void;
 }
 
 export const MailListItem = React.memo(function MailListItem({
   email, isSelected, isChecked, hasAnySelection = false, isThread, isThreadExpanded = false, isWideLayout = false, cardsRows = 3,
-  onSelect, onToggleCheck, onToggleFlag, onTogglePin, onToggleRead, onDelete, onToggleThreadExpand, onContextMenu,
+  onSelect, onToggleCheck, onToggleFlag, onTogglePin, onToggleRead, onDelete, onToggleThreadExpand, onContextMenu, onOpen,
 }: MailListItemProps) {
   const dateFormatted = formatDisplayDate(email.date);
   const hasThread = Boolean(isThread ?? (email.isThread || (email.threadCount && email.threadCount > 1)));
@@ -46,6 +47,7 @@ export const MailListItem = React.memo(function MailListItem({
       draggable
       onDragStart={handleDragStart}
       onClick={() => onSelect(email.id)}
+      onDoubleClick={onOpen ? () => onOpen(email) : undefined}
       onContextMenu={(e) => onContextMenu && onContextMenu(e, email)}
       className={cn(
         'group relative flex items-start gap-2 px-3 py-2 cursor-pointer border-b select-none transition-colors text-xs border-neutral-200 dark:border-neutral-800/80',

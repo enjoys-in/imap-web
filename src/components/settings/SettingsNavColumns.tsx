@@ -123,7 +123,7 @@ export function SettingsNavColumns() {
                 className={`relative flex items-center gap-2.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                   isActive
                     ? 'text-[#0078d4] font-semibold bg-[#c7e0f4]/50 dark:text-white dark:bg-[#252525]'
-                    : 'text-neutral-600 hover:bg-neutral-200/60 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#202020]'
+                    : 'text-neutral-600 hover:bg-neutral-200/60 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#202020] dark:hover:text-white'
                 }`}
               >
                 {isActive && (
@@ -155,7 +155,7 @@ export function SettingsNavColumns() {
                 className={`relative flex items-center px-3 py-1.5 rounded text-xs transition-colors whitespace-nowrap ${
                   isSubActive
                     ? 'text-[#0078d4] font-semibold bg-[#c7e0f4]/50 dark:text-white dark:bg-[#252525]'
-                    : 'text-neutral-600 hover:bg-neutral-200/60 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#222222]'
+                    : 'text-neutral-600 hover:bg-neutral-200/60 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#222222] dark:hover:text-white'
                 }`}
               >
                 {isSubActive && (

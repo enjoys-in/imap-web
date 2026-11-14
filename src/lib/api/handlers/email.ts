@@ -1,5 +1,6 @@
 import { apiClient } from '../client';
-import { MailFolder, MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
+import { MailFolder, MailMessage, MailMessageMetadata, OutgoingAttachment, ThreadConversation } from '@/types';
+import { buildRawMessage } from '@/lib/mimeBuilder';
 import { getClientConfig } from '@/config/clientConfig';
 import { toFolderPath, getRegisteredFolder, findRegisteredSpecialFolder } from '@/lib/folders';
 import { flagBody, folderQuery, mutate, toUids, transferBody, withQuery, type MutationResult } from './messageRequest';
@@ -17,7 +18,7 @@ export interface SendEmailPayload {
   subject: string;
   bodyHtml?: string;
   bodyText?: string;
-  attachments?: any[];
+  attachments?: OutgoingAttachment[];
   replyToMessageId?: string;
 }
 
@@ -29,7 +30,7 @@ export interface DraftPayload {
   subject?: string;
   bodyHtml?: string;
   bodyText?: string;
-  attachments?: Array<{ name: string; size: number; type: string }>;
+  attachments?: OutgoingAttachment[];
 }
 
 export interface EmailSearchQuery {
@@ -190,16 +191,14 @@ export async function sendEmail(
  */
 export async function saveDraft(payload: DraftPayload): Promise<{ id: string }> {
   try {
-    const headers = [
-      payload.to ? `To: ${payload.to}` : null,
-      payload.cc ? `Cc: ${payload.cc}` : null,
-      payload.bcc ? `Bcc: ${payload.bcc}` : null,
-      `Subject: ${payload.subject || ''}`,
-    ]
-      .filter(Boolean)
-      .join('\r\n');
-
-    const raw = `${headers}\r\n\r\n${payload.bodyText || payload.bodyHtml || ''}`;
+    const raw = buildRawMessage({
+      to: payload.to,
+      cc: payload.cc,
+      bcc: payload.bcc,
+      subject: payload.subject,
+      bodyText: payload.bodyText || payload.bodyHtml || '',
+      attachments: payload.attachments,
+    });
     const res = await apiClient.post<any>('/append-message', {
       mailbox: findRegisteredSpecialFolder('Drafts')?.fullName ?? 'Drafts',
       rawMessage: raw,
@@ -333,5 +332,6 @@ export async function downloadAttachment(
   const { apiUrl } = getClientConfig();
   const cleanApiUrl = apiUrl.replace(/\/+$/, '');
   const res = await fetch(`${cleanApiUrl}${url}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`Attachment download failed (${res.status})`);
   return res.blob();
 }

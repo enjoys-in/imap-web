@@ -52,7 +52,7 @@ export function SidebarFolderActions({ activeAccId }: SidebarFolderActionsProps)
         title="New Folder"
         description="Create a custom folder to organize your messages."
         label="Folder name"
-        placeholder="e.g. Invoices, Projects, Personal"
+        placeholder="e.g. Invoices, Projects"
         confirmText="Create folder"
         onConfirm={handleConfirm}
         onClose={() => setIsOpen(false)}

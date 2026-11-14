@@ -7,6 +7,7 @@ import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { isServerMessageId } from '@/lib/messageKey';
+import { toOutgoingAttachments } from '@/lib/attachmentFiles';
 import { useSession } from '@/components/providers/SessionProvider';
 import { MailMessage } from '@/types';
 
@@ -31,6 +32,18 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
   const hasContent = useCallback(() => {
     return Boolean(to.trim() || subject.trim() || body.trim() || attachments.length > 0);
   }, [to, subject, body, attachments]);
+
+  const hashSeededRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) {
+      hashSeededRef.current = false;
+      return;
+    }
+    if (hashSeededRef.current) return;
+    hashSeededRef.current = true;
+    prevAttachmentsCountRef.current = attachments.length;
+    lastSavedHashRef.current = mode === 'editDraft' && draftId ? getHash() : '';
+  }, [isOpen, mode, draftId, attachments.length, getHash]);
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
@@ -102,7 +115,7 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
         subject: subject.trim(),
         bodyText: body,
         bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
-        attachments: attachments.map((a) => ({ name: a.name, size: a.size, type: a.type })),
+        attachments: await toOutgoingAttachments(attachments),
       });
       savedId = res?.id ?? currentDraftId;
       const draftsFolderId = findRegisteredSpecialFolder('Drafts', accountId)?.id;

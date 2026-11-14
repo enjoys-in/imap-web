@@ -14,6 +14,8 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { useMailListFilterSort } from './useMailListFilterSort';
+import { isDraftMessage } from '@/lib/draftUtils';
+import { openDraftForEditing } from '@/lib/openDraft';
 
 const DEFAULT_CARDS_ROWS = getDefaultPerAccountSettings('').appearance.cardsViewRows;
 
@@ -82,6 +84,10 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
     [onSelectMail, setSelectedMail, activeId]
   );
 
+  const handleOpen = useCallback((email: MailMessageMetadata | MailMessage) => {
+    if (isDraftMessage(email)) void openDraftForEditing(email);
+  }, []);
+
   return (
     <div
       style={{ width: width ? `${width}px` : undefined }}
@@ -106,7 +112,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
               <MailListItem
                 key={`pin-${email.id}`} email={email} isSelected={email.id === activeId}
                 isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
-                isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect}
+                isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect} onOpen={handleOpen}
                 onToggleCheck={toggleSelectId} onToggleFlag={(id) => dispatchMailAction({ action: 'toggle-flag', targetEmailId: id })}
                 onTogglePin={(id) => dispatchMailAction({ action: 'toggle-pin', targetEmailId: id })}
                 onToggleRead={(id) => dispatchMailAction({ action: 'toggle-read', targetEmailId: id })}
@@ -135,7 +141,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
                     email={email} isSelected={email.id === activeId}
                     isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
                     isThread={hasThread} isThreadExpanded={isExpanded} onToggleThreadExpand={handleToggleThreadExpand}
-                    isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect}
+                    isWideLayout={effectiveIsWide} cardsRows={cardsRows} onSelect={handleSelect} onOpen={handleOpen}
                     onToggleCheck={toggleSelectId} onToggleFlag={(id) => dispatchMailAction({ action: 'toggle-flag', targetEmailId: id })}
                     onTogglePin={(id) => dispatchMailAction({ action: 'toggle-pin', targetEmailId: id })}
                     onToggleRead={(id) => dispatchMailAction({ action: 'toggle-read', targetEmailId: id })}

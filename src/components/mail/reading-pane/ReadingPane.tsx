@@ -14,6 +14,9 @@ import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
+import { ReadingPaneDraftBanner } from './ReadingPaneDraftBanner';
+import { isDraftMessage } from '@/lib/draftUtils';
+import { openDraftForEditing } from '@/lib/openDraft';
 import { useSession } from '@/components/providers/SessionProvider';
 import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 import { cn } from '@/lib/utils';
@@ -65,6 +68,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const [canvasLight, setCanvasLight] = useState(false);
   const [fetchedBody, setFetchedBody] = useState<{ bodyHtml?: string; bodyText?: string } | null>(initialBody);
   const [isBodyLoading, setIsBodyLoading] = useState(false);
+  const [isOpeningDraft, setIsOpeningDraft] = useState(false);
   const [threadMessages, setThreadMessages] = useState<MailMessage[]>([]);
   const [expandedHistoryIds, setExpandedHistoryIds] = useState<string[]>([]);
 
@@ -168,6 +172,13 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     if (email) openForward(email);
   }, [email, openForward]);
 
+  const handleEditDraft = useCallback(async () => {
+    if (!email) return;
+    setIsOpeningDraft(true);
+    await openDraftForEditing(email);
+    setIsOpeningDraft(false);
+  }, [email]);
+
   const handleDelete = useCallback(() => {
     if (email) {
       dispatchMailAction({ action: 'delete', targetEmailId: email.id, targetEmail: email });
@@ -216,6 +227,10 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
         onToggleHistory={() => setHideHistory((prev) => !prev)}
         onToggleCanvas={() => setCanvasLight((v) => !v)}
       />
+
+      {isDraftMessage(email) && (
+        <ReadingPaneDraftBanner isLoading={isOpeningDraft} onEdit={handleEditDraft} />
+      )}
 
       <ReadingPaneSecurityBanner
         isContentAllowed={allowExternalImages}

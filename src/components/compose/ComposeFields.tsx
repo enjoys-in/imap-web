@@ -18,12 +18,7 @@ export function ComposeFields() {
   const [showCc, setShowCc] = useState(Boolean(cc));
   const [showBcc, setShowBcc] = useState(Boolean(bcc));
 
-  const handleToggleBcc = () => {
-    setShowBcc(true);
-    if (!bcc) {
-      updateFields({ bcc: 'Jeelan Basha Shaik <jeelan.shaik@recruitment.com>' });
-    }
-  };
+  const handleToggleBcc = () => setShowBcc(true);
 
   return (
     <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1 space-y-1 text-xs">

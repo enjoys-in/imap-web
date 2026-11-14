@@ -51,8 +51,8 @@ export function AccountsManager() {
 
   const handleAddSubscription = () => {
     addToast({
-      title: 'Microsoft 365 Subscription',
-      description: 'Redirecting to Microsoft identity verification...',
+      title: 'Enjoys In Subscription',
+      description: 'Redirecting to Enjoys In identity verification...',
       type: 'info',
     });
   };
@@ -93,18 +93,18 @@ export function AccountsManager() {
         </div>
       </section>
 
-      {/* Additional Microsoft accounts section */}
+      {/* Additional Enjoys In accounts section */}
       <section className="space-y-3 pt-4 border-t border-neutral-200 dark:border-[#2b2b2b]">
         <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-          Additional Microsoft accounts
+          Additional Enjoys In accounts
         </h3>
 
         <div className="p-4 rounded-lg border border-neutral-200 dark:border-[#2b2b2b] bg-white dark:bg-[#1a1a1a]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-xl">
-            If you have a subscription on a Microsoft account that is setup with a
-            non-Microsoft email address (Gmail, Yahoo, etc.), add it here.{' '}
+            If you have a subscription on an Enjoys In account that is set up with a
+            non-Enjoys In email address (Gmail, Yahoo, etc.), add it here.{' '}
             <a
-              href="https://support.microsoft.com"
+              href="https://enjoys.in"
               target="_blank"
               rel="noreferrer"
               className="text-[#0078d4] dark:text-[#2b88d8] hover:underline inline-flex items-center gap-0.5 ml-1"

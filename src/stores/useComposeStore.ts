@@ -25,6 +25,7 @@ export interface ComposeState {
   openNew: () => void;
   openReply: (msg: MailMessageMetadata | MailMessage, replyAll?: boolean) => void;
   openForward: (msg: MailMessageMetadata | MailMessage) => void;
+  openDraft: (msg: MailMessageMetadata | MailMessage, body: string, attachments: File[]) => void;
   close: () => void;
   toggleMinimize: () => void;
   toggleMaximize: () => void;
@@ -57,7 +58,7 @@ export const useComposeStore = create<ComposeState>((set) => ({
       mode: 'new',
       to: '',
       cc: '',
-      bcc: 'Jeelan Basha Shaik <jeelan.shaik@recruitment.com>',
+      bcc: '',
       subject: '',
       body: '',
       originalMessageId: undefined,
@@ -107,6 +108,28 @@ export const useComposeStore = create<ComposeState>((set) => ({
       threadId: resolvedThreadId,
       attachments: [],
       draftId: undefined,
+      draftStatus: 'idle',
+      draftCountdown: 3,
+      lastSavedTime: undefined,
+      isAttaching: false,
+    });
+  },
+
+  openDraft: (msg, body, attachments) => {
+    const seed = buildComposeSeed('editDraft', msg);
+    set({
+      isOpen: true,
+      isMinimized: false,
+      mode: 'editDraft',
+      to: seed.to,
+      cc: seed.cc,
+      bcc: seed.bcc ?? '',
+      subject: seed.subject,
+      body,
+      originalMessageId: undefined,
+      threadId: undefined,
+      attachments,
+      draftId: msg.id,
       draftStatus: 'idle',
       draftCountdown: 3,
       lastSavedTime: undefined,

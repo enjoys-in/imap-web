@@ -6,6 +6,7 @@ import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
+import { toOutgoingAttachments } from '@/lib/attachmentFiles';
 import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
@@ -41,6 +42,8 @@ export function ComposeModal() {
   const title =
     mode === 'new'
       ? 'New message'
+      : mode === 'editDraft'
+      ? 'Edit draft'
       : mode === 'reply'
       ? `RE: ${subject}`
       : mode === 'replyAll'
@@ -105,16 +108,19 @@ export function ComposeModal() {
         const ccRecipients = cc ? cc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
         const bccRecipients = bcc ? bcc.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : undefined;
 
-        emailsApi
-          .sendEmail({
-            to: toRecipients.length > 0 ? toRecipients : to,
-            cc: ccRecipients,
-            bcc: bccRecipients,
-            subject: subject || '(No subject)',
-            bodyText: body,
-            bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
-            replyToMessageId: isReplyOrForward ? originalMessageId : undefined,
-          })
+        toOutgoingAttachments(attachments)
+          .then((outgoingAttachments) =>
+            emailsApi.sendEmail({
+              to: toRecipients.length > 0 ? toRecipients : to,
+              cc: ccRecipients,
+              bcc: bccRecipients,
+              subject: subject || '(No subject)',
+              bodyText: body,
+              bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+              attachments: outgoingAttachments,
+              replyToMessageId: isReplyOrForward ? originalMessageId : undefined,
+            })
+          )
           .then((res) => {
             useToastStore.getState().addToast({
               title: res.success ? 'Message Sent' : 'Delivery Notice',

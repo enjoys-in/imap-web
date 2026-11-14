@@ -36,6 +36,13 @@ export interface MailAttachment {
   part?: string;
 }
 
+export interface OutgoingAttachment {
+  filename: string;
+  content: string;
+  encoding: 'base64';
+  contentType: string;
+}
+
 export interface AddressItem {
   name: string;
   address: string;
