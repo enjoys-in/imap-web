@@ -6,13 +6,20 @@ interface MailUserPageProps {
   params: Promise<{ userIndex: string }>;
 }
 
-// React Server Component handling multi-account routes (/mail/u/0, /mail/u/1, etc.)
-export default async function MailUserPage({ params }: MailUserPageProps) {
+async function MailUserContent({
+  params,
+}: {
+  params: Promise<{ userIndex: string }>;
+}) {
   const { userIndex } = await params;
+  return <MailClientView userIndex={userIndex} />;
+}
 
+// React Server Component handling multi-account routes (/mail/u/0, /mail/u/1, etc.)
+export default function MailUserPage({ params }: MailUserPageProps) {
   return (
     <Suspense fallback={<OutlookAppSkeleton />}>
-      <MailClientView userIndex={userIndex} />
+      <MailUserContent params={params} />
     </Suspense>
   );
 }
