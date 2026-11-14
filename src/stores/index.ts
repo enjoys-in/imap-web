@@ -7,3 +7,4 @@ export * from './useAccountSettingsStore';
 export * from './useGeneralSettingsStore';
 export * from './useRightAppsStore';
 export * from './useAlertStore';
+export * from './useSyncStore';

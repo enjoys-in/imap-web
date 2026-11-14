@@ -46,6 +46,7 @@ export function SandboxedEmailBody({
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <style>
+            * { box-sizing: border-box; }
             html, body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
               font-size: 13.5px;
@@ -55,8 +56,11 @@ export function SandboxedEmailBody({
               margin: 0;
               padding: 16px;
               word-break: break-word;
+              overflow-x: auto;
             }
             img { max-width: 100%; height: auto; }
+            table { max-width: 100% !important; border-collapse: collapse; }
+            pre { max-width: 100%; white-space: pre-wrap; word-break: break-word; }
             a { color: ${link} !important; text-decoration: underline; }
             blockquote { border-left: 3px solid ${quote}; margin-left: 0; padding-left: 12px; }
             p { margin: 0 0 12px 0; }

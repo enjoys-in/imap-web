@@ -7,48 +7,31 @@ import { useConnectionStatus } from '@/hooks/useEmailsQuery';
 import { foldersApi } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export function ImapSyncStatusWidget() {
-  const [status, setStatus] = useState<'syncing' | 'connected'>('connected');
+  const {
+    isSyncing,
+    isBlocked,
+    formattedCooldown,
+    triggerManualSync,
+  } = useSyncManager();
+
+  const [localFolderSwitching, setLocalFolderSwitching] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
-  const selectedAccountId = useMailStore((s) => s.selectedAccountId);
-  const fetchEmails = useMailStore((s) => s.fetchEmails);
-  const addToast = useToastStore((s) => s.addToast);
-  const queryClient = useQueryClient();
   const { data: connStatus } = useConnectionStatus();
-
-  const triggerSync = async () => {
-    setStatus('syncing');
-    try {
-      await foldersApi.syncCompleteMailbox();
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
-      queryClient.invalidateQueries({ queryKey: ['quota'] });
-      await fetchEmails(selectedFolderId || 'fld-inbox', selectedAccountId || undefined);
-      addToast({
-        title: 'Mailbox Synchronized',
-        description: 'All folders and counts updated from the IMAP server.',
-        type: 'success',
-      });
-    } catch {
-      // Fallback
-    } finally {
-      setTimeout(() => {
-        setStatus('connected');
-      }, 700);
-    }
-  };
 
   // Brief sync animation when switching folders
   useEffect(() => {
-    setStatus('syncing');
+    setLocalFolderSwitching(true);
     const timer = setTimeout(() => {
-      setStatus('connected');
+      setLocalFolderSwitching(false);
     }, 600);
     return () => clearTimeout(timer);
   }, [selectedFolderId]);
 
+  const activeSyncing = isSyncing || localFolderSwitching;
   const isConnected = connStatus?.connected ?? true;
   const isIdling = connStatus?.idling ?? false;
 
@@ -57,25 +40,32 @@ export function ImapSyncStatusWidget() {
       {/* Docked Status Pill */}
       <button
         type="button"
+        disabled={isBlocked || activeSyncing}
         onClick={() => {
-          if (status === 'connected') {
-            triggerSync();
+          if (!isBlocked && !activeSyncing) {
+            triggerManualSync();
           }
         }}
         onContextMenu={(e) => {
           e.preventDefault();
           setShowLogs((v) => !v);
         }}
-        title="IMAP Status: Click to synchronize mailbox (Right-click to view logs)"
+        title={
+          isBlocked
+            ? `IMAP Status: Sync cooldown active (${formattedCooldown} remaining)`
+            : 'IMAP Status: Click to synchronize mailbox (Right-click to view logs)'
+        }
         className={cn(
           'h-6 px-2.5 rounded-full border shadow-sm flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md',
           'bg-white/95 dark:bg-[#181818]/95 border-neutral-300 dark:border-neutral-700/80',
-          status === 'syncing'
+          activeSyncing
             ? 'text-neutral-800 dark:text-neutral-100 border-blue-400 dark:border-blue-500'
+            : isBlocked
+            ? 'text-neutral-500 dark:text-neutral-400 opacity-75 cursor-not-allowed'
             : 'text-neutral-600 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-500'
         )}
       >
-        {status === 'syncing' ? (
+        {activeSyncing ? (
           <>
             <RefreshCw className="w-3 h-3 text-[#0078d4] animate-spin shrink-0" />
             <span className="font-medium text-[11px] text-neutral-800 dark:text-neutral-200">
@@ -88,8 +78,8 @@ export function ImapSyncStatusWidget() {
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400 opacity-60' : 'bg-rose-400 opacity-60'}`} />
               <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
             </span>
-            <span className="font-medium text-[11px] text-neutral-700 dark:text-neutral-300">
-              {isConnected ? (isIdling ? 'Connected (IDLE)' : 'Connected') : 'Offline'}
+            <span className="font-medium text-[11px]">
+              {isBlocked ? `Synced (${formattedCooldown})` : isIdling ? 'IMAP Idle (Live)' : 'Connected'}
             </span>
           </>
         )}
