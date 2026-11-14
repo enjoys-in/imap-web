@@ -23,7 +23,7 @@ export function RightAppsRail() {
   const toggleApp = useRightAppsStore((s) => s.toggleApp);
 
   return (
-    <aside className="w-10 bg-neutral-100 dark:bg-[#181818] border-l border-neutral-200 dark:border-neutral-800 flex flex-col items-center py-2 shrink-0 select-none transition-colors z-20">
+    <aside className="hidden md:flex w-10 bg-neutral-100 dark:bg-[#181818] border-l border-neutral-200 dark:border-neutral-800 flex-col items-center py-2 shrink-0 select-none transition-colors z-20">
       <div className="flex flex-col items-center gap-2 w-full">
         {APPS.map(({ id, label, icon: Icon }) => {
           const isActive = activeApp === id;

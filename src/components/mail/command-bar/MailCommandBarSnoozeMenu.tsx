@@ -3,7 +3,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Clock, Sun, Sunrise, Calendar, ChevronDown } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { useAnchoredPosition } from '@/hooks/useAnchoredPosition';
 import { cn } from '@/lib/utils';
+
+const DROPDOWN_WIDTH = 224;
 
 export const SNOOZE_PRESETS = [
   { label: 'Later today', time: '6:00 PM', icon: Sun },
@@ -27,6 +30,15 @@ export function MailCommandBarSnoozeMenu({
 }: MailCommandBarSnoozeMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { anchorRef, menuStyle, measure } = useAnchoredPosition<HTMLButtonElement>({
+    width: DROPDOWN_WIDTH,
+    isOpen,
+  });
+
+  const handleToggle = () => {
+    if (!isOpen) measure();
+    setIsOpen((v) => !v);
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -64,7 +76,7 @@ export function MailCommandBarSnoozeMenu({
           )}
         >
           <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
+            <Clock className={cn('w-3.5 h-3.5', enabled ? 'text-amber-500' : 'text-neutral-400')} />
             <span>Snooze until...</span>
           </div>
           <ChevronDown className="w-3 h-3 opacity-60" />
@@ -98,9 +110,10 @@ export function MailCommandBarSnoozeMenu({
   return (
     <div ref={containerRef} className="relative inline-block">
       <button
+        ref={anchorRef}
         type="button"
         disabled={!enabled}
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={handleToggle}
         className={cn(
           'h-7 px-2 rounded flex items-center gap-1.5 transition-colors text-xs whitespace-nowrap select-none',
           enabled
@@ -115,7 +128,7 @@ export function MailCommandBarSnoozeMenu({
       </button>
 
       {isOpen && enabled && (
-        <div className="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100">
+        <div style={menuStyle} className="bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-1.5 font-semibold text-[10px] text-neutral-400 uppercase tracking-wider border-b border-neutral-100 dark:border-neutral-800">
             Snooze until...
           </div>

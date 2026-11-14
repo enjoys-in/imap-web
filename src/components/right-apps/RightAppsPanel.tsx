@@ -40,7 +40,7 @@ export function RightAppsPanel() {
     <aside
       aria-label="Side app panel"
       className={cn(
-        'h-full flex flex-col shrink-0 select-none z-20 bg-white dark:bg-[#1a1a1a] overflow-hidden',
+        'hidden md:flex h-full flex-col shrink-0 select-none z-20 bg-white dark:bg-[#1a1a1a] overflow-hidden',
         'transition-all duration-300 ease-in-out',
         isOpen
           ? 'w-80 md:w-88 border-l border-neutral-200 dark:border-neutral-800 shadow-lg opacity-100'

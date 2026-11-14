@@ -6,7 +6,10 @@ import { CommandBarActionItem } from './commandBarTypes';
 import { MailCommandBarMoveMenu } from './MailCommandBarMoveMenu';
 import { MailCommandBarSnoozeMenu } from './MailCommandBarSnoozeMenu';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { useAnchoredPosition } from '@/hooks/useAnchoredPosition';
 import { cn } from '@/lib/utils';
+
+const MENU_WIDTH = 208;
 
 interface MailCommandBarOverflowMenuProps {
   actions: CommandBarActionItem[];
@@ -15,6 +18,15 @@ interface MailCommandBarOverflowMenuProps {
 export function MailCommandBarOverflowMenu({ actions }: MailCommandBarOverflowMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { anchorRef, menuStyle, measure } = useAnchoredPosition<HTMLButtonElement>({
+    width: MENU_WIDTH,
+    isOpen,
+  });
+
+  const handleToggle = () => {
+    if (!isOpen) measure();
+    setIsOpen((v) => !v);
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -33,8 +45,9 @@ export function MailCommandBarOverflowMenu({ actions }: MailCommandBarOverflowMe
   return (
     <div ref={containerRef} className="relative inline-block shrink-0">
       <button
+        ref={anchorRef}
         type="button"
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={handleToggle}
         className={cn(
           'h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer select-none',
           isOpen
@@ -49,7 +62,7 @@ export function MailCommandBarOverflowMenu({ actions }: MailCommandBarOverflowMe
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 w-52 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100">
+        <div style={menuStyle} className="bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-1 font-semibold text-[10px] text-neutral-400 uppercase tracking-wider border-b border-neutral-100 dark:border-neutral-800">
             More actions
           </div>
@@ -60,7 +73,7 @@ export function MailCommandBarOverflowMenu({ actions }: MailCommandBarOverflowMe
                 return (
                   <React.Fragment key={action.id}>
                     {action.dividerBefore && idx > 0 && (
-                      <div className="h-px bg-neutral-200 dark:border-neutral-800 my-1" />
+                      <div className="h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
                     )}
                     <MailCommandBarMoveMenu
                       enabled={action.enabled}
@@ -75,7 +88,7 @@ export function MailCommandBarOverflowMenu({ actions }: MailCommandBarOverflowMe
                 return (
                   <React.Fragment key={action.id}>
                     {action.dividerBefore && idx > 0 && (
-                      <div className="h-px bg-neutral-200 dark:border-neutral-800 my-1" />
+                      <div className="h-px bg-neutral-200 dark:bg-neutral-800 my-1" />
                     )}
                     <MailCommandBarSnoozeMenu
                       enabled={action.enabled}

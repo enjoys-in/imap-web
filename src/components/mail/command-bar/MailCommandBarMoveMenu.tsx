@@ -5,7 +5,10 @@ import { FolderInput, ChevronDown } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 import { useFolders } from '@/hooks/useEmailsQuery';
 import { useMailStore } from '@/stores';
+import { useAnchoredPosition } from '@/hooks/useAnchoredPosition';
 import { cn } from '@/lib/utils';
+
+const DROPDOWN_WIDTH = 176;
 
 interface MailCommandBarMoveMenuProps {
   enabled: boolean;
@@ -22,6 +25,10 @@ export function MailCommandBarMoveMenu({
 }: MailCommandBarMoveMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { anchorRef, menuStyle, measure } = useAnchoredPosition<HTMLButtonElement>({
+    width: DROPDOWN_WIDTH,
+    isOpen,
+  });
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
   const { data: serverFolders } = useFolders(selectedAccountId);
 
@@ -38,6 +45,11 @@ export function MailCommandBarMoveMenu({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen) measure();
+    setIsOpen((v) => !v);
+  };
 
   const handleSelectFolder = (folderId: string, folderName: string) => {
     setIsOpen(false);
@@ -91,9 +103,10 @@ export function MailCommandBarMoveMenu({
   return (
     <div ref={containerRef} className="relative inline-block">
       <button
+        ref={anchorRef}
         type="button"
         disabled={!enabled}
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={handleToggle}
         className={cn(
           'h-7 px-2 rounded flex items-center gap-1.5 transition-colors text-xs whitespace-nowrap select-none',
           enabled
@@ -109,7 +122,7 @@ export function MailCommandBarMoveMenu({
       </button>
 
       {isOpen && enabled && (
-        <div className="absolute left-0 top-full mt-1 w-44 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div style={menuStyle} className="bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
           {targetFolders.map((f) => (
             <button
               key={f.id}
