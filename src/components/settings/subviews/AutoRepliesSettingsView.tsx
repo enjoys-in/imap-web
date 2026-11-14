@@ -113,7 +113,7 @@ export function AutoRepliesSettingsView() {
   ];
 
   return (
-    <div className="max-w-4xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none pb-12">
+    <div className="max-w-4xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 pb-12">
       {/* Header */}
       <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
         <div>
@@ -159,7 +159,7 @@ export function AutoRepliesSettingsView() {
 
       {/* Main Toggle Switch */}
       <div className="pt-2">
-        <label className="flex items-center gap-3 cursor-pointer select-none">
+        <label className="flex items-center gap-3 cursor-pointer">
           <div className="relative inline-flex items-center">
             <input
               type="checkbox"

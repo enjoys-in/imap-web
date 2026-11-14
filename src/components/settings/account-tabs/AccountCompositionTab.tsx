@@ -15,7 +15,7 @@ export function AccountCompositionTab({ settings, onChange }: AccountComposition
   const inputClass = 'h-7 px-2 text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525]';
 
   return (
-    <div className="space-y-5 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="space-y-5 text-xs text-neutral-800 dark:text-neutral-200">
       <div>
         <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
           <PenTool className="w-4 h-4 text-[#0078d4]" />

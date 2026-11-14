@@ -11,7 +11,7 @@ interface AccountReceiptsTabProps {
 
 export function AccountReceiptsTab({ settings, onChange }: AccountReceiptsTabProps) {
   return (
-    <div className="space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="space-y-6 text-xs text-neutral-800 dark:text-neutral-200">
       <div>
         <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
           <MailCheck className="w-4 h-4 text-[#0078d4]" />

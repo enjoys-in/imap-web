@@ -93,7 +93,7 @@ export function AccountGeneralSettingsView() {
   const inputClass = 'w-full h-8 px-2.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#252525] text-neutral-800 dark:text-neutral-200 text-xs focus:outline-none focus:border-[#0078d4] transition-colors';
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100 select-none text-xs">
+    <form onSubmit={handleSave} className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100 text-xs">
       <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">Account Settings & Server</h2>

@@ -51,7 +51,7 @@ export function ReadingPaneHeader({
   };
 
   return (
-    <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-200 select-none transition-colors p-3 md:p-4">
+    <div className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-200 transition-colors p-3 md:p-4">
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <h1 className="text-base md:text-xl font-bold text-neutral-900 dark:text-white tracking-tight truncate">
           {email.subject || '(No subject)'}

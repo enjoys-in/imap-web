@@ -16,7 +16,7 @@ export function LanguageSettingsView() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200">
       <div>
         <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Language and time</h2>
         <p className="text-neutral-500 mt-0.5">Customize your display language, time zone, and date formatting.</p>

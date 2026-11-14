@@ -33,7 +33,7 @@ export function StartupSettingsView() {
     'h-8 px-3 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#222222] text-neutral-800 dark:text-neutral-200 text-xs focus:outline-none focus:border-[#0078d4] transition-colors cursor-pointer';
 
   return (
-    <div className="max-w-4xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none pb-12">
+    <div className="max-w-4xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 pb-12">
       <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">

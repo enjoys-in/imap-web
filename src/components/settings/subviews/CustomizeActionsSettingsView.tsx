@@ -126,7 +126,7 @@ export function CustomizeActionsSettingsView() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100 select-none pb-12">
+    <div className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100 pb-12">
       {/* Header */}
       <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
         <div>

@@ -18,7 +18,7 @@ export function SettingsView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-y-auto select-none p-4 md:p-6">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-y-auto p-4 md:p-6">
       <div className="max-w-3xl space-y-6">
         <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
           <Settings className="w-6 h-6 text-[#0078d4]" />

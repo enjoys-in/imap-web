@@ -9,7 +9,7 @@ interface SettingsLayoutProps {
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
-    <div className="flex-1 flex flex-col h-full bg-neutral-100 dark:bg-[#202020] select-none overflow-hidden transition-colors">
+    <div className="flex-1 flex flex-col h-full bg-neutral-100 dark:bg-[#202020] overflow-hidden transition-colors">
       {/* Settings Top Bar */}
       <div className="h-11 bg-neutral-50 dark:bg-[#181818] border-b border-neutral-200 dark:border-[#2b2b2b] px-4 flex items-center justify-between shrink-0 transition-colors">
         <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">

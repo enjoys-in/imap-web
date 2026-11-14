@@ -40,7 +40,7 @@ export function CategoriesSettingsView() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200">
       <div>
         <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Categories</h2>
         <p className="text-neutral-500 mt-0.5">Organize and tag email conversations and calendar events by color.</p>

@@ -67,7 +67,7 @@ export function RulesSettingsView() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Rules</h2>

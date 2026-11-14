@@ -47,7 +47,7 @@ export function AccountsManager() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl select-none">
+    <div className="space-y-8 max-w-4xl">
       <div>
         <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
           Your accounts

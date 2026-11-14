@@ -65,7 +65,7 @@ export function ConfigureAccountModal({ account, isOpen, onClose, onUpdate }: Co
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-2 sm:p-4 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-2 sm:p-4">
       <div className="bg-white dark:bg-[#1c1c1c] border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col h-[90vh] max-h-[820px] transition-colors">
         {/* Modal Top Header */}
         <div className="p-3.5 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0 bg-neutral-50/70 dark:bg-neutral-800/40">

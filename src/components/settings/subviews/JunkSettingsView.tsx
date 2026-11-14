@@ -85,7 +85,7 @@ export function JunkSettingsView() {
   };
 
   return (
-    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 select-none pb-12">
+    <div className="max-w-3xl space-y-6 text-xs text-neutral-800 dark:text-neutral-200 pb-12">
       {/* Page Title & Status Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-neutral-200 dark:border-neutral-800">
         <div>

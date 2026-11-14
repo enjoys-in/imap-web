@@ -30,7 +30,7 @@ export function MailSettingsView() {
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100 select-none">
+    <form onSubmit={handleSave} className="space-y-6 max-w-4xl text-neutral-800 dark:text-neutral-100">
       <div className="pb-3 border-b border-neutral-200 dark:border-[#2b2b2b] flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">Compose & Message Handling</h2>
