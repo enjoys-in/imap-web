@@ -29,7 +29,6 @@ export function MailboxQuotaPopover({ isHighlighted }: MailboxQuotaPopoverProps)
     }
   }, [isOpen]);
 
-  // No quota reported by the server: show nothing rather than made-up numbers.
   if (!quota?.storage?.limit) return null;
 
   const usedMb = quota.storage.used ? Math.round(quota.storage.used / (1024 * 1024)) : 0;

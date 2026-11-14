@@ -25,7 +25,6 @@ export function MailCommandBarMoveMenu({
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
   const { data: serverFolders } = useFolders(selectedAccountId);
 
-  // Only the backend's folders; there is no built-in fallback list.
   const targetFolders = (serverFolders ?? []).map((f) => ({ id: f.id, name: f.displayName }));
 
   useEffect(() => {

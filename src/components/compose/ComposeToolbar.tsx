@@ -18,7 +18,6 @@ export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
 
   const handleDiscard = () => {
     if (draftId) {
-      // The draft lives in Drafts, whichever folder is open: delete it there.
       const accountId = useMailStore.getState().selectedAccountId;
       deleteEmail(draftId, findRegisteredSpecialFolder('Drafts', accountId)?.id);
     }

@@ -5,10 +5,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useMailStore, useToastStore, useSyncStore, useFolderStore, AUTO_SYNC_INTERVAL_MS } from '@/stores';
 import { foldersApi } from '@/lib/api';
 
-/**
- * Sync state and actions (manual sync, cooldown, auto-sync trigger) without any
- * timers, so it is safe to call from several components.
- */
 function useSyncCore() {
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
@@ -57,14 +53,12 @@ function useSyncCore() {
         await foldersApi.syncCompleteMailbox();
 
         // Invalidate React Query caches for immediate UI update
-        // The backend is the source of truth: fresh folder counts (other folders whose count changed are marked stale)...
         await useFolderStore.getState().syncFolders(selectedAccountId, selectedFolderId);
         queryClient.invalidateQueries({ queryKey: ['emails'] });
         queryClient.invalidateQueries({ queryKey: ['quota'] });
         queryClient.invalidateQueries({ queryKey: ['connection-status'] });
 
         // Update current folder emails
-        // ...then the open folder is reloaded from the backend, replacing the local copy.
         await fetchEmails(selectedFolderId, selectedAccountId || undefined, { force: true });
 
         if (notify) {
@@ -113,21 +107,10 @@ function useSyncCore() {
   };
 }
 
-/**
- * Coordinates IMAP sync for UI components:
- * 1. Blocks re-clicking the manual sync button for 2 minutes (cooldown).
- * 2. Exposes manual and automatic sync triggers.
- * The background timers live in `useSyncScheduler`, which runs once for the app.
- */
 export function useSyncManager() {
   return useSyncCore();
 }
 
-/**
- * Background timers for sync. Mount exactly once (see LiveEmailSyncBridge):
- * - ticks the manual-sync cooldown every second
- * - automatically syncs the mailbox every 5 minutes
- */
 export function useSyncScheduler(): void {
   const { triggerAutoSync } = useSyncCore();
   const updateCooldown = useSyncStore((s) => s.updateCooldown);

@@ -54,10 +54,8 @@ export function MailClientView({
   const readingPaneLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
   const [popoutMailId, setPopoutMailId] = useState<string | null>(null);
 
-  // The backend owns folder identity: local copy first, backend list replaces it.
   const { data: folders } = useFolders(activeAccountId);
 
-  // Always one of the backend's folders: the one in the URL, else the selected one, else its Inbox.
   const activeFolder = useMemo(() => {
     if (!folders?.length) return undefined;
     const fromUrl = currentFolderId ? findFolderBySlug(folders, currentFolderId) : undefined;
@@ -71,7 +69,6 @@ export function MailClientView({
   const activeFolderId = activeFolder?.id ?? '';
 
   useEffect(() => {
-    // Nothing to load until the account and its folder list are known.
     if (!activeAccountId || !activeFolderId) return;
     setSelectedAccount(activeAccountId);
     setSelectedAccountIndex(parsedUserIndex);

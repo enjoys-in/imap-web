@@ -1,5 +1,6 @@
 import { getClientConfig } from '@/config/clientConfig';
 import { getAuthToken } from '../client';
+import type { StorageQuotaInfo } from './folderQuota';
 
 /**
  * Standardized IMAP IDLE Server-Sent Event types emitted by backend /api/stream.
@@ -16,20 +17,32 @@ export enum EmailStreamEventType {
 export const ImapStreamEvent = EmailStreamEventType;
 export type ImapStreamEvent = EmailStreamEventType;
 
-export interface MailboxChangeEventPayload {
+export type MutationReason = 'delete' | 'move' | 'copy' | 'flags' | 'empty' | 'append';
+
+export interface FolderTotalsPayload {
+  totalCount?: number;
+  unreadCount?: number;
+  quota?: StorageQuotaInfo | null;
+  reason?: MutationReason;
+}
+
+export interface MailboxChangeEventPayload extends FolderTotalsPayload {
   path: string;
   count: number;
   prevCount: number;
+  newCount?: number;
 }
 
-export interface MailboxExpungeEventPayload {
+export interface MailboxExpungeEventPayload extends FolderTotalsPayload {
   path: string;
   seq?: number;
   uid?: number;
   vanished: boolean;
+  removed?: number[];
+  removedCount?: number;
 }
 
-export interface MessageFlagsEventPayload {
+export interface MessageFlagsEventPayload extends FolderTotalsPayload {
   path: string;
   seq?: number;
   uid?: number;

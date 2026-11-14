@@ -18,10 +18,6 @@ import {
 } from '@/lib/api';
 import { MailFolder, MailMessageMetadata, Account, Appointment } from '@/types';
 
-/**
- * Shared definition of the accounts query so the session, settings screens and
- * `useAccounts` all read one cache entry instead of each calling `/accounts`.
- */
 export const accountsQuery = {
   queryKey: ['accounts'] as const,
   queryFn: () => accountsApi.getAccounts(),
@@ -32,11 +28,6 @@ export function useAccounts() {
   return useQuery<Account[]>(accountsQuery);
 }
 
-/**
- * Folders for an account, from the folder store: the local IndexedDB copy shows
- * at once and the backend list replaces it. Requesting is shared and throttled
- * by the store, so any number of components can call this safely.
- */
 export function useFolders(accountId: string): { data: MailFolder[] | undefined; isLoading: boolean } {
   const folders = useFolderStore((s) => s.byAccount[accountId]);
 
@@ -80,7 +71,6 @@ export function useQuota(folder = 'INBOX') {
   return useQuery<StorageQuotaInfo>({
     queryKey: ['quota', folder],
     queryFn: () => foldersApi.getQuota(folder),
-    // Fetched once; server events and syncs invalidate it (see LiveEmailSyncBridge / useSyncManager).
     staleTime: Infinity,
   });
 }
@@ -118,5 +108,3 @@ export function useAutoReplies(accountId?: string) {
     staleTime: 30000,
   });
 }
-
-

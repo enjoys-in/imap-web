@@ -5,7 +5,6 @@ import { Smile } from 'lucide-react';
 import { useUiStore } from '@/stores/useUiStore';
 import { cn } from '@/lib/utils';
 
-// emoji-mart's default picker size (perLine 9, no preview bar).
 const PICKER_WIDTH = 352;
 const PICKER_HEIGHT = 435;
 const GAP = 6;
@@ -16,11 +15,6 @@ interface ComposeEmojiMenuProps {
   className?: string;
 }
 
-/**
- * Toolbar button that opens an emoji picker (emoji-mart + @emoji-mart/data) and
- * hands the chosen emoji to `onSelect`. The picker and its ~500 KB of data are
- * loaded only the first time it is opened.
- */
 export function ComposeEmojiMenu({ onSelect, className }: ComposeEmojiMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -29,7 +23,6 @@ export function ComposeEmojiMenu({ onSelect, className }: ComposeEmojiMenuProps)
   const hostRef = useRef<HTMLDivElement>(null);
   const theme = useUiStore((s) => s.theme);
 
-  // Always call the latest handler without re-creating the picker when it changes.
   const onSelectRef = useRef(onSelect);
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -40,7 +33,6 @@ export function ComposeEmojiMenu({ onSelect, className }: ComposeEmojiMenuProps)
       setIsOpen(false);
       return;
     }
-    // Fixed positioning escapes the toolbar's horizontal scroll container, which would clip a dropdown.
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect) {
       const left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - PICKER_WIDTH - MARGIN));
@@ -52,7 +44,6 @@ export function ComposeEmojiMenu({ onSelect, className }: ComposeEmojiMenuProps)
     setIsOpen(true);
   };
 
-  // Close on outside click or Escape
   useEffect(() => {
     if (!isOpen) return;
     const handlePointerDown = (e: MouseEvent) => {
@@ -71,7 +62,6 @@ export function ComposeEmojiMenu({ onSelect, className }: ComposeEmojiMenuProps)
     };
   }, [isOpen]);
 
-  // Mount the picker while open (lazy-loaded)
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;

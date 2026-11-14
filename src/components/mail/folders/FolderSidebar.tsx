@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronRight, User } from 'lucide-react';
 import { useMailStore } from '@/stores';
@@ -12,8 +12,9 @@ import { SidebarAccountsList } from './SidebarAccountsList';
 import { SidebarFolderActions } from './SidebarFolderActions';
 import { MailFolder } from '@/types';
 import { useToastStore } from '@/stores/useToastStore';
-import { useFolderStore } from '@/stores/useFolderStore';
 import { getClientConfig } from '@/config/clientConfig';
+
+const NO_FOLDERS: MailFolder[] = [];
 
 interface FolderSidebarProps {
   activeFolderId?: string;
@@ -49,17 +50,8 @@ export function FolderSidebar({
 
   const activeAccId = primaryAccount.id || selectedAccountId;
   const { data: folders } = useFolders(activeAccId);
-  const unreadDelta = useFolderStore((s) => s.unreadDelta);
 
-  // Counts are the backend's (kept fresh by server events), adjusted by local read/unread
-  // changes the backend has not reported back yet. They do not depend on how many messages are loaded.
-  const foldersWithCounts = useMemo(() => {
-    if (!folders) return [];
-    return folders.map((f) => ({
-      ...f,
-      unreadCount: Math.max(0, (Number(f.unreadCount) || 0) + (unreadDelta[f.id] ?? 0)),
-    }));
-  }, [folders, unreadDelta]);
+  const foldersWithCounts = folders ?? NO_FOLDERS;
 
   const notesFolder = foldersWithCounts.find((f) => f.displayName === 'Notes');
 

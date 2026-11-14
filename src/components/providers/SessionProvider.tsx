@@ -50,14 +50,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
   const [statusText, setStatusText] = useState('Fetching user session...');
 
-  // Set once a session has loaded, so a route change (e.g. login -> mail) does not load it again.
   const sessionLoadedRef = useRef(false);
 
-  /**
-   * Loads the profile (`/me`) and the accounts. Accounts go through the shared
-   * react-query entry, so later `useAccounts()` consumers reuse this result
-   * instead of calling `/accounts` again.
-   */
   const loadSession = useCallback(
     async (options: { force?: boolean; onProfile?: () => void } = {}) => {
       const profile = await accountsApi.getProfile();
@@ -67,12 +61,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       options.onProfile?.();
       const list = await queryClient.fetchQuery({
         ...accountsQuery,
-        // After a fresh sign-in the backend decides; otherwise the local copy is used when it is this user's.
         queryFn: () =>
           accountsApi.getAccounts({ refresh: options.force, forEmail: profile.email }),
         staleTime: options.force ? 0 : accountsQuery.staleTime,
       });
-      // `/me` carries the folder list: update the local copy from it (only what changed), no `/fetch-mailboxes` needed.
       await ingestSessionPayload(profile, { queryClient, accountId: list[0]?.id });
       return { profile, list };
     },
@@ -169,7 +161,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('airsend_logged_out', 'true');
       }
-      // Cached server data belongs to the signed-out mailbox.
       queryClient.clear();
       useFolderStore.getState().reset();
       useMailStore.setState({
@@ -187,7 +178,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, queryClient, clearSession]);
 
-  // Stable identity: consumers re-render only when session data actually changes.
   const value = useMemo<SessionContextType>(
     () => ({
       account,

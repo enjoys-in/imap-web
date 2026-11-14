@@ -3,8 +3,6 @@ import { Account } from '@/types';
 /**
  * Resolves an account from a numerical user index (e.g. 0, 1, 2)
  * matching modern multi-account URL paths like /mail/u/0/ or /mail/u/1/.
- * Falls back to the first account when the index is out of range, and to
- * null when the session has no accounts.
  */
 export function getAccountByUserIndex(
   accounts: Account[],

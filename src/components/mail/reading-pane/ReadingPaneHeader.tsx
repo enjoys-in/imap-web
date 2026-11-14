@@ -41,7 +41,6 @@ export function ReadingPaneHeader({
   const formattedDate = format(new Date(email.date), 'EEE M/d/yyyy h:mm a');
   const senderName = email.fromName || email.fromAddress;
 
-  // Slug of the folder this message is in, from the backend's folder list.
   const messageFolder = getRegisteredFolder(email.folderId);
   const openInWindowSlug = messageFolder ? folderSlug(messageFolder) : 'inbox';
 

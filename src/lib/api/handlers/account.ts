@@ -87,11 +87,6 @@ export interface SetupAccountOptions {
  * Initiates first-time setup with live SSE streaming updates.
  * Emits progress events for IMAP authentication, SMTP verification,
  * mailbox discovery, email pre-fetching, and token issuance.
- * Falls back to the plain `/validate` endpoint if streaming is unavailable.
- *
- * IMAP is always verified. With `skipSmtp`, the server skips the outbound SMTP
- * check (`?skipSMTP=1`), so an unreachable or misconfigured SMTP server cannot
- * block setup.
  */
 export async function setupAccountStream(
   config: any,
@@ -172,22 +167,15 @@ export async function setupAccountStream(
       }
     }
   } catch (streamErr: any) {
-    // Credential / auth failures are final; surface them to the user.
     const errMsg = streamErr?.message || '';
     if (errMsg.includes('401') || errMsg.toLowerCase().includes('password') || errMsg.toLowerCase().includes('credential')) {
       throw streamErr;
     }
-    // Any other failure (stream unsupported, network blip): retry via the plain validate endpoint.
   }
 
   return validateViaApi(config, onProgress, options);
 }
 
-/**
- * Non-streaming setup path: provisions the account through the real `/validate`
- * endpoint and reports honest progress. Never fabricates a user, token or
- * mailbox list — if the server does not confirm the account, this throws.
- */
 async function validateViaApi(
   config: any,
   onProgress: (event: SetupProgressEvent) => void,
@@ -226,7 +214,6 @@ async function validateViaApi(
     setAuthToken(token);
   }
 
-  // The session is cookie- or token-based; without either we are not signed in.
   if (!user && !token) {
     const message = data?.message || 'The server did not return a session for this account.';
     onProgress({
@@ -285,12 +272,10 @@ export async function logout(): Promise<{ success: boolean }> {
     await apiClient.post('/logout');
   } finally {
     clearAuthToken();
-    // The local mail cache belongs to the signed-in mailbox; never leak it to the next session.
     await clearCachedEmails();
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('airsend_logged_out', 'true');
-        // Legacy keys written by the removed offline/demo flow.
         localStorage.removeItem('airsend_active_user');
         localStorage.removeItem('airsend_custom_accounts');
       } catch {}
@@ -303,10 +288,6 @@ function hasIdentity(value: any): boolean {
   return Boolean(value && (value.email || value.mid));
 }
 
-/**
- * Fetch the current authenticated user profile.
- * Resolves to `null` when signed out; rejects when the server rejects the session.
- */
 export async function getProfile(): Promise<any> {
   if (typeof window !== 'undefined' && sessionStorage.getItem('airsend_logged_out') === 'true') {
     return null;
@@ -319,10 +300,6 @@ export async function getProfile(): Promise<any> {
   return null;
 }
 
-/**
- * Builds an Account from the session profile for single-mailbox backends.
- * Only uses values the server actually returned.
- */
 function accountFromProfile(profile: any): Account {
   const email: string = profile.email || profile.mid || '';
   const secure = (value: any) => (value === false || value === 'false' ? 'StartTls' : 'SslOnConnect');
@@ -341,15 +318,7 @@ function accountFromProfile(profile: any): Account {
   };
 }
 
-/**
- * Fetch all configured email accounts. The backend is the source of truth:
- * what it returns replaces the copy kept in IndexedDB, and that copy is only
- * used when the backend cannot be reached at all. Backends without a
- * multi-account endpoint expose the signed-in mailbox through the session
- * profile instead.
- */
 export async function getAccounts(options: { refresh?: boolean; forEmail?: string } = {}): Promise<Account[]> {
-  // Fetched before: read the local copy, no request. `forEmail` makes sure the copy belongs to the signed-in user.
   if (!options.refresh) {
     const stored = await getCachedAccounts();
     const usable = options.forEmail ? stored.some((a) => a.email === options.forEmail) : stored.length > 0;
@@ -368,7 +337,6 @@ export async function getAccounts(options: { refresh?: boolean; forEmail?: strin
       return list;
     }
   } catch {
-    // `/accounts` is optional; fall through to the session profile.
   }
 
   try {
@@ -378,7 +346,6 @@ export async function getAccounts(options: { refresh?: boolean; forEmail?: strin
     await replaceCachedAccounts(derived);
     return derived;
   } catch (err) {
-    // Backend unreachable: the last synced copy keeps the app usable offline.
     const cached = await getCachedAccounts();
     if (cached.length > 0) return cached;
     throw err;

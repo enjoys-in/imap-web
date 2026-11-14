@@ -93,7 +93,6 @@ export function ComposeEditor() {
     }, 10);
   };
 
-  // Inserts at the caret (or replaces the selection). The textarea keeps its selection indices while blurred.
   const handleInsertEmoji = (emoji: string) => {
     const ta = textareaRef.current;
     if (!ta) {

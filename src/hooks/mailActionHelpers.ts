@@ -11,7 +11,6 @@ export function handleMoveAction(
   const { selectedIds, moveEmailToFolder, bulkMoveToFolder, selectedMailId } = useMailStore.getState();
   const targetId = detail.targetEmailId || (selectedIds.length === 0 ? selectedMailId : null);
 
-  // The store sends the request itself, once.
   if (targetId) {
     moveEmailToFolder(targetId, targetFolder);
   } else if (selectedIds.length > 0) {
@@ -24,7 +23,6 @@ export function handleDeleteAction(detail: MailActionEventDetail) {
   const { selectedIds, deleteEmail, bulkDelete, selectedMailId } = useMailStore.getState();
   const targetId = detail.targetEmailId || (selectedIds.length === 0 ? selectedMailId : null);
 
-  // The store sends the request itself, once.
   if (targetId) {
     deleteEmail(targetId);
     useToastStore.getState().addToast({ title: 'Deleted', description: 'Conversation deleted', type: 'info' });

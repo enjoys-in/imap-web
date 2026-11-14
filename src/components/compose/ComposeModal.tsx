@@ -55,13 +55,11 @@ export function ComposeModal() {
 
     // Clean up draft if this compose had a saved draft
     if (draftId) {
-      // The draft lives in Drafts, whichever folder is open: delete it there.
       useMailStore.getState().deleteEmail(draftId, findRegisteredSpecialFolder('Drafts', accountId)?.id);
     }
 
     const newMsg: MailMessage = {
       id: `sent-${Date.now()}`,
-      // The account's Sent folder as classified by the backend.
       folderId: findRegisteredSpecialFolder('Sent', accountId)?.id ?? '',
       accountId,
       uid: Math.floor(Math.random() * 10000),
@@ -101,7 +99,6 @@ export function ComposeModal() {
             : e
         );
         useMailStore.setState({ localEmails: [msg, ...updatedList] });
-        // The sent message exists on the server with its own uid: have Sent fetch again when it is opened.
         if (msg.folderId) void invalidateFolderSync(msg.folderId);
 
         const toRecipients = to.split(/[,;]/).map((s) => s.trim()).filter(Boolean);

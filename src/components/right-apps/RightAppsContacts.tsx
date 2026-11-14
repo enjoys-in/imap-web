@@ -11,7 +11,6 @@ export function RightAppsContacts() {
   const openNew = useComposeStore((s) => s.openNew);
   const updateFields = useComposeStore((s) => s.updateFields);
 
-  // Contacts are the people found in the user's own mail.
   const contacts = useMailContacts();
 
   const q = query.toLowerCase();

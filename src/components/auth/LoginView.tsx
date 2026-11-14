@@ -64,7 +64,6 @@ export function LoginView() {
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState(587);
   const [smtpSecure, setSmtpSecure] = useState(false);
-  // IMAP is always required; sending (SMTP) is optional.
   const [smtpEnabled, setSmtpEnabled] = useState(true);
 
   // Autodiscover state
@@ -82,8 +81,6 @@ export function LoginView() {
   const [setupProgress, setSetupProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>('init');
   const [failedStep, setFailedStep] = useState<string | null>(null);
-  // Latest status the server reported for each setup step, so a step turns green
-  // as soon as its own success arrives rather than when the next step starts.
   const [stepResults, setStepResults] = useState<Record<string, 'running' | 'success' | 'warning' | 'error'>>({});
   const [copiedLogs, setCopiedLogs] = useState(false);
   const [setupLogs, setSetupLogs] = useState<{ id: string; time: string; text: string; status: 'running' | 'success' | 'warning' | 'error' }[]>([]);
@@ -121,11 +118,8 @@ export function LoginView() {
     }
   };
 
-  // Autodiscovery belongs to account setup only. It never runs from the sign-in
-  // form; on the setup screen it waits for a pause in typing before calling the API.
   const AUTODISCOVER_DELAY_MS = 2000;
   const lastDiscoveredEmailRef = useRef('');
-  // True while the host fields hold values filled in by a successful discovery.
   const hostsAutoFilledRef = useRef(false);
 
   const triggerAutodiscovery = useCallback(async (targetEmail: string) => {
@@ -155,7 +149,6 @@ export function LoginView() {
           setDisplayName(res.displayName);
         }
       } else {
-        // Not discovered: drop the badge and any hosts that came from a previous discovery.
         setDiscoveryResult(null);
         if (hostsAutoFilledRef.current) {
           hostsAutoFilledRef.current = false;
@@ -174,7 +167,6 @@ export function LoginView() {
     }
   }, [displayName]);
 
-  // Debounced discovery: only while on the setup screen, only once per email.
   useEffect(() => {
     if (view !== 'setup' || isSetupRunning) return;
     const clean = email.trim();
@@ -199,7 +191,6 @@ export function LoginView() {
       const res = await accountsApi.login(email.trim(), password);
 
       if (res && res.success) {
-        // `/authenticate` already sent the folders and the INBOX quota: store them now, no extra requests.
         await ingestSessionPayload(res.result ?? res, { queryClient });
         await refreshSession();
         router.push('/mail/u/0#inbox');
@@ -288,7 +279,6 @@ export function LoginView() {
       };
 
       const res = await accountsApi.setupAccountStream(payload, (event) => {
-        // SMTP is turned off: keep it out of the progress view entirely.
         if (!smtpEnabled && event.step === 'smtp_verify') return;
         setSetupProgress(event.progress);
         setCurrentStep(event.step);
@@ -310,7 +300,6 @@ export function LoginView() {
       if (res) {
         setSetupProgress(100);
         setCurrentStep('complete');
-        // Setup already returned the folders (and quota): store them now, no extra requests.
         await ingestSessionPayload(res, { queryClient });
         await refreshSession();
         setTimeout(() => {

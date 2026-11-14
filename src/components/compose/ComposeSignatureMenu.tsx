@@ -27,7 +27,6 @@ export function ComposeSignatureMenu({ className }: { className?: string }) {
   const addToast = useToastStore((s) => s.addToast);
   const { account } = useSession();
 
-  // Signature choices come from the user's saved signature and their real account details.
   const signatureOptions = useMemo<SignatureOption[]>(() => {
     const options: SignatureOption[] = [];
     if (settingsSig.trim()) {

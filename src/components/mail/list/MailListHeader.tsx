@@ -32,7 +32,6 @@ export function MailListHeader({ totalEmailsCount, currentEmailIds, isWideLayout
     else selectAllIds(currentEmailIds);
   };
 
-  // The title is the backend folder's own name (normalized for display).
   const folderTitle = getRegisteredFolder(selectedFolderId)?.displayName ?? '';
 
   const filterTabs: { id: MailFilterTab; label: string; icon?: React.ElementType }[] = [

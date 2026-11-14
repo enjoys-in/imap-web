@@ -17,7 +17,6 @@ export function MailboxToolbarActions({ folderId }: MailboxToolbarActionsProps) 
   const isTrashOrJunk = isTrashOrJunkFolder(getRegisteredFolder(folderId));
 
   const handleEmpty = async () => {
-    // One request: the store sends it, updates the screen at once, and keeps the local copy only if the server refuses.
     const res = await emptyFolder(folderId);
     addToast(
       res.success

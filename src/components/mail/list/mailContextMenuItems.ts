@@ -15,7 +15,6 @@ export function buildMailContextMenuItems(
   email: MailMessageMetadata | MailMessage,
   actions: MailContextActions
 ): ContextMenuItem[] {
-  // Destinations are the backend's own folders for this message's account (not the one it is in).
   const destinations = listRegisteredFolders(email.accountId).filter((f) => f.id !== email.folderId);
   const archiveFolder = findRegisteredSpecialFolder('Archive', email.accountId);
 

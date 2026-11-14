@@ -2,6 +2,7 @@ import { apiClient } from '../client';
 import { MailFolder, MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
 import { getClientConfig } from '@/config/clientConfig';
 import { toFolderPath, getRegisteredFolder, findRegisteredSpecialFolder } from '@/lib/folders';
+import { flagBody, folderQuery, mutate, toUids, transferBody, withQuery, type MutationResult } from './messageRequest';
 import {
   getCachedEmailBody,
   saveCachedEmailBody,
@@ -43,14 +44,6 @@ export interface EmailSearchQuery {
   [key: string]: any;
 }
 
-/**
- * Fetch email METADATA for a folder (never bodies; a body is requested only
- * when the user opens a message, see `getEmailBody`).
- *
- * The request uses the folder's IMAP path from the backend's own folder list,
- * and every returned message is tagged with that folder's backend id, so list,
- * sidebar and cache all agree on one id.
- */
 export async function getEmailsMetadata(
   folder: Pick<MailFolder, 'id' | 'fullName'>,
   accountId?: string,
@@ -93,11 +86,6 @@ export async function getEmails(
   return rawList;
 }
 
-/**
- * Fetch a single email message by ID.
- * The backend exposes messages through folder listings, so this resolves from
- * the local cache populated by those listings and returns null on a miss.
- */
 export async function getEmailById(messageId: string): Promise<MailMessage | null> {
   const meta = await getCachedEmailById(messageId);
   if (!meta) return null;
@@ -105,9 +93,6 @@ export async function getEmailById(messageId: string): Promise<MailMessage | nul
   return { ...meta, bodyHtml: body?.bodyHtml, bodyText: body?.bodyText };
 }
 
-/**
- * Fetch thread messages (oldest first) from the local cache of fetched listings.
- */
 export async function getThreadMessages(threadId: string): Promise<MailMessage[]> {
   const matches = await getCachedThread(threadId);
   return matches.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -136,11 +121,6 @@ export async function getEmailConversation(
   };
 }
 
-/**
- * Fetch the body (HTML & plaintext) of ONE message, only when the user asks for it.
- * Checks the local IndexedDB copy first; the cache and the request are both
- * scoped to the message's folder, because an IMAP uid repeats across folders.
- */
 export async function getEmailBody(
   messageId: string,
   folderId?: string
@@ -241,208 +221,57 @@ export async function appendMessage(
   return apiClient.post('/append-message', { mailbox, rawMessage, flags });
 }
 
-/**
- * Move a single email message to target folder.
- * Resolves `true` only when the server accepted the move.
- */
-export async function moveEmail(
-  messageId: string,
+export const moveEmail = (messageId: string, targetFolderId: string, currentFolder = 'INBOX'): Promise<MutationResult | null> =>
+  bulkMoveEmails([messageId], targetFolderId, currentFolder);
+
+export const bulkMoveEmails = (
+  messageIds: readonly string[],
   targetFolderId: string,
   currentFolder = 'INBOX'
-): Promise<boolean> {
-  const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-  try {
-    await apiClient.patch('/move-email', {
-      uids: [uid],
-      current: toFolderPath(currentFolder),
-      target: toFolderPath(targetFolderId),
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
+): Promise<MutationResult | null> =>
+  mutate(() => apiClient.patch('/move-email', transferBody(messageIds, targetFolderId, currentFolder)));
 
-/**
- * Move multiple emails in bulk to target folder.
- */
-export async function bulkMoveEmails(
-  messageIds: string[],
-  targetFolderId: string,
-  currentFolder = 'INBOX'
-): Promise<boolean> {
-  const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
-  try {
-    await apiClient.patch('/move-email', {
-      uids,
-      current: toFolderPath(currentFolder),
-      target: toFolderPath(targetFolderId),
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export const copyEmail = (messageId: string, targetFolderId: string, currentFolder = 'INBOX'): Promise<MutationResult | null> =>
+  mutate(() => apiClient.patch('/copy-email', transferBody([messageId], targetFolderId, currentFolder)));
 
-/**
- * Copy multiple emails to target folder.
- */
-export async function copyEmail(
-  messageId: string,
-  targetFolderId: string,
-  currentFolder = 'INBOX'
-): Promise<boolean> {
-  const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-  try {
-    await apiClient.patch('/copy-email', {
-      uids: [uid],
-      current: toFolderPath(currentFolder),
-      target: toFolderPath(targetFolderId),
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export const bulkDeleteEmails = (messageIds: readonly string[], folder?: string): Promise<MutationResult | null> =>
+  mutate(() =>
+    apiClient.delete(withQuery('/delete-email', folderQuery(folder)), {
+      body: JSON.stringify({ uids: toUids(messageIds) }),
+    })
+  );
 
-/**
- * Bulk delete messages.
- * Resolves `true` only when the server accepted the delete.
- */
-export async function bulkDeleteEmails(messageIds: string[], folder?: string): Promise<boolean> {
-  const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
-  try {
-    const path = toFolderPath(folder);
-    const query = path ? `?folder=${encodeURIComponent(path)}` : '';
-    await apiClient.delete(`/delete-email${query}`, {
-      body: JSON.stringify({ uids }),
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
+export const deleteEmail = (messageId: string, folder?: string): Promise<MutationResult | null> =>
+  bulkDeleteEmails([messageId], folder);
 
-/**
- * Delete a single email message.
- */
-export async function deleteEmail(messageId: string, folder?: string): Promise<boolean> {
-  return bulkDeleteEmails([messageId], folder);
-}
+const patchFlag = (flag: string, messageIds: readonly string[], folder?: string): Promise<MutationResult | null> =>
+  mutate(() =>
+    apiClient.patch(withQuery('/handle-flags', `flag=${flag}`, folderQuery(folder)), {
+      uids: toUids(messageIds),
+    })
+  );
 
-/**
- * Mark messages as read / unread.
- */
-export async function markAsRead(
-  messageId: string,
-  isRead: boolean,
-  folder?: string
-): Promise<boolean> {
-  const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-  const flag = isRead ? 'mark_as_read' : 'mark_as_unread';
-  const path = toFolderPath(folder);
-  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
-  try {
-    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
-      uids: [uid],
-    });
-    return true;
-  } catch {
-    return true;
-  }
-}
+export const markAsRead = (messageId: string, isRead: boolean, folder?: string): Promise<MutationResult | null> =>
+  patchFlag(isRead ? 'mark_as_read' : 'mark_as_unread', [messageId], folder);
 
-/**
- * Mark EVERY message in a folder as read (the server runs it as a background job).
- */
-export async function markAllAsRead(folder: string): Promise<boolean> {
-  const path = toFolderPath(folder) ?? folder;
-  try {
-    await apiClient.patch(`/handle-flags?flag=mark_all_as_read&folder=${encodeURIComponent(path)}`, { uids: [] });
-    return true;
-  } catch {
-    return true;
-  }
-}
+export const bulkMarkAsRead = (messageIds: readonly string[], isRead: boolean, folder?: string): Promise<MutationResult | null> =>
+  patchFlag(isRead ? 'mark_as_read' : 'mark_as_unread', messageIds, folder);
 
-/**
- * Bulk mark messages as read / unread.
- */
-export async function bulkMarkAsRead(
-  messageIds: string[],
-  isRead: boolean,
-  folder?: string
-): Promise<boolean> {
-  const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
-  const flag = isRead ? 'mark_as_read' : 'mark_as_unread';
-  const path = toFolderPath(folder);
-  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
-  try {
-    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
-      uids,
-    });
-    return true;
-  } catch {
-    return true;
-  }
-}
+export const markAllAsRead = (folder: string): Promise<MutationResult | null> => patchFlag('mark_all_as_read', [], folder);
 
-/**
- * Toggle starred/flagged status on email.
- */
-export async function toggleFlag(messageId: string, isFlagged: boolean, folder?: string): Promise<boolean> {
-  const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-  const flag = isFlagged ? 'flag' : 'unflag';
-  const path = toFolderPath(folder);
-  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
-  try {
-    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
-      uids: [uid],
-    });
-    return true;
-  } catch {
-    return true;
-  }
-}
+export const toggleFlag = (messageId: string, isFlagged: boolean, folder?: string): Promise<MutationResult | null> =>
+  patchFlag(isFlagged ? 'flag' : 'unflag', [messageId], folder);
 
-/**
- * Bulk toggle flagged status.
- */
-export async function bulkToggleFlag(messageIds: string[], isFlagged: boolean, folder?: string): Promise<boolean> {
-  const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
-  const flag = isFlagged ? 'flag' : 'unflag';
-  const path = toFolderPath(folder);
-  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
-  try {
-    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
-      uids,
-    });
-    return true;
-  } catch {
-    return true;
-  }
-}
+export const bulkToggleFlag = (messageIds: readonly string[], isFlagged: boolean, folder?: string): Promise<MutationResult | null> =>
+  patchFlag(isFlagged ? 'flag' : 'unflag', messageIds, folder);
 
-/**
- * Add or remove custom IMAP keywords/flags.
- */
-export async function handleCustomFlags(
-  messageIds: string[],
+export const handleCustomFlags = (
+  messageIds: readonly string[],
   addFlags?: string[],
-  removeFlags?: string[]
-): Promise<boolean> {
-  const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
-  try {
-    await apiClient.patch('/custom-flags', {
-      uids,
-      addFlags,
-      removeFlags,
-    });
-    return true;
-  } catch {
-    return true;
-  }
-}
+  removeFlags?: string[],
+  folder?: string
+): Promise<MutationResult | null> =>
+  mutate(() => apiClient.patch('/custom-flags', flagBody(messageIds, folder, addFlags, removeFlags)));
 
 /**
  * Search emails by IMAP search criteria or structured query string.
@@ -465,7 +294,6 @@ export async function searchEmails(
       ? data.emails
       : [];
     const totalCount = result?.totalCount ?? data?.totalCount ?? emails.length;
-    // Tag results with the folder that was searched, so they agree with the sidebar and list.
     const searched = getRegisteredFolder(folder);
     return {
       emails: searched ? emails.map((e) => ({ ...e, folderId: searched.id })) : emails,

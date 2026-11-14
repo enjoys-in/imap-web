@@ -11,11 +11,6 @@ export interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;
 }
 
-/**
- * GET requests currently on the wire, keyed by user + URL. Identical GETs fired
- * while one is in flight (several components asking for the same data, or React
- * StrictMode re-running an effect in development) share that single request.
- */
 const inflightGets = new Map<string, Promise<unknown>>();
 
 /**
@@ -24,7 +19,6 @@ const inflightGets = new Map<string, Promise<unknown>>();
  * - Bearer authorization headers
  * - Direct baseUrl routing for public autodiscover / autoconfig routes
  * - Standardized JSON molding: enforces { success, message, result }
- * - De-duplication of identical in-flight GET requests
  */
 export async function apiRequest<T>(
   endpoint: string,
@@ -38,7 +32,6 @@ export async function apiRequest<T>(
   const key = `${getAuthToken() || ''}|${resolveEndpointUrl(endpoint, getClientConfig())}`;
   const pending = inflightGets.get(key);
   if (pending) {
-    // Each caller gets its own copy so one cannot mutate what another received.
     return (pending as Promise<T>).then((value) =>
       typeof value === 'object' && value !== null ? structuredClone(value) : value
     );

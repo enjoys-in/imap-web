@@ -37,7 +37,7 @@ export function AboutSettingsBrandingCard() {
             Modern Outlook-Class Webmail, IMAP/SMTP Real-Time Synchronizer & Calendar Engine.
           </p>
           <p className="text-neutral-400 text-[10px]">
-            Build ID: 2026.11.14-release &bull; Storage: Multi-Engine TTL (Memory, Redis, RocksDB)
+            Build ID: 2026.11.14-release &bull; Storage: Multi-Engine
           </p>
         </div>
       </div>

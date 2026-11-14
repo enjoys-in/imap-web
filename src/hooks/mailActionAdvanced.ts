@@ -22,7 +22,6 @@ export function handleAdvancedMailAction(
       if (!hasTarget) return true;
       const junk = requireSpecialFolder('Junk', 'Junk');
       if (!junk) return true;
-      // moveEmailToFolder / bulkMoveToFolder also send the move request.
       if (hasExplicitTarget && detail.targetEmailId) {
         moveEmailToFolder(detail.targetEmailId, junk.id);
       } else if (hasBulkSelection) {

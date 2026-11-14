@@ -20,14 +20,6 @@ export interface AutodiscoverResult {
   };
 }
 
-/**
- * Asks the server to autodiscover IMAP and SMTP settings for an email address
- * (public `GET /autodiscover?email=...` on the base URL).
- *
- * Resolves with the discovered settings only when the server answers
- * `success: true`. Anything else (`success: false` / HTTP 404 for an unknown
- * domain, or a network error) resolves to null so the UI shows nothing.
- */
 export async function autodiscover(email: string): Promise<AutodiscoverResult | null> {
   const cleanEmail = email.trim();
   if (!cleanEmail.includes('@')) return null;
@@ -42,7 +34,6 @@ export async function autodiscover(email: string): Promise<AutodiscoverResult | 
       return { ...result, success: true };
     }
   } catch {
-    // success: false (HTTP 404) or unreachable server: nothing discovered.
   }
   return null;
 }

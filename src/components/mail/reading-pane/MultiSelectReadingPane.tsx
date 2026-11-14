@@ -16,7 +16,6 @@ export function MultiSelectReadingPane({ folderName = 'Inbox', folderEmailIds }:
   const clearSelectedIds = useMailStore((s) => s.clearSelectedIds);
   const selectAllIds = useMailStore((s) => s.selectAllIds);
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
-  // Move targets are the backend's own folders.
   const { data: moveFolders = [] } = useFolders(selectedAccountId);
 
   const [isMoveOpen, setIsMoveOpen] = useState(false);

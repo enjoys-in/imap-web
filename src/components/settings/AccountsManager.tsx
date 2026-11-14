@@ -17,7 +17,6 @@ export function AccountsManager() {
   const addToast = useToastStore((s) => s.addToast);
   const queryClient = useQueryClient();
 
-  // Reads the shared accounts cache (already loaded by the session) instead of calling /accounts again.
   useEffect(() => {
     let cancelled = false;
     queryClient

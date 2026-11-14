@@ -9,10 +9,6 @@ export interface MailContact {
   email: string;
 }
 
-/**
- * Contacts are the people found in the signed-in user's own mail: every
- * distinct sender in the currently loaded messages, sorted by name.
- */
 export function useMailContacts(): MailContact[] {
   const localEmails = useMailStore((s) => s.localEmails);
 

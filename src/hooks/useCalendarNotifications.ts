@@ -14,8 +14,6 @@ export function useCalendarNotifications() {
     (s) => s.simulateUpcomingReminder
   );
 
-  // Periodically check appointments for upcoming meetings. A failing request
-  // (e.g. the server has no calendar endpoint) backs off instead of retrying every minute.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -45,7 +43,6 @@ export function useCalendarNotifications() {
           }
         }
       } catch {
-        // Reminders are best-effort
         succeeded = false;
       }
 
@@ -54,7 +51,6 @@ export function useCalendarNotifications() {
       timer = setTimeout(checkUpcomingMeetings, delay);
     };
 
-    // Check on mount, then on a schedule
     checkUpcomingMeetings();
 
     return () => {

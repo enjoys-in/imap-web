@@ -43,7 +43,6 @@ export const useAccountSettingsStore = create<AccountSettingsStoreState>((set, g
     const existing = get().settingsByAccount[accountId];
     if (existing) return existing;
     const def = getDefaultPerAccountSettings(accountId, email);
-    // Nothing to key the defaults on until the session has resolved an account.
     if (!accountId) return def;
     set((state) => {
       const next = { ...state.settingsByAccount, [accountId]: def };

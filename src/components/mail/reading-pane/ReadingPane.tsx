@@ -53,8 +53,6 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   const email = (emailInStore || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
   const hasEmailInStore = Boolean(emailInStore);
   const emailFolderId = email?.folderId;
-  // Primitives, not the email object: the store replaces that object on every read/flag
-  // change, which must not re-run the body effect and re-request the body.
   const inlineBodyHtml = email && 'bodyHtml' in email ? email.bodyHtml : undefined;
   const inlineBodyText = email && 'bodyText' in email ? email.bodyText : undefined;
   const initialBody = useMemo(
@@ -76,7 +74,6 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       .map((e) => e.id);
   }, [localEmails, selectedFolderId]);
 
-  // If the email is not in the local store, resolve it from the local cache
   useEffect(() => {
     if (!currentId) return;
     if (hasEmailInStore) {

@@ -82,7 +82,6 @@ export const useSyncStore = create<SyncState>((set, get) => {
         }
       }
 
-      // Runs every second: only write (and notify subscribers) when something changed.
       const sameTimestamp = stored ? state.lastManualSyncTime === stored : true;
       if (state.cooldownRemaining === cooldownRemaining && state.isBlocked === isBlocked && sameTimestamp) {
         return;

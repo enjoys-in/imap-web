@@ -6,6 +6,7 @@ import { useMailStore } from '@/stores/useMailStore';
 import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
+import { isServerMessageId } from '@/lib/messageKey';
 import { useSession } from '@/components/providers/SessionProvider';
 import { MailMessage } from '@/types';
 
@@ -47,7 +48,6 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     const accountId = useMailStore.getState().selectedAccountId;
     const draftMsg: MailMessage = {
       id: currentDraftId,
-      // The account's Drafts folder as classified by the backend.
       folderId: findRegisteredSpecialFolder('Drafts', accountId)?.id ?? '',
       accountId,
       uid: Math.floor(Math.random() * 10000),
@@ -89,9 +89,9 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     }
 
     // 2. Offline IDB cache
-    // The draft exists on the server with its own uid: have Drafts fetch again when it is opened.
     if (draftMsg.folderId) void invalidateFolderSync(draftMsg.folderId);
 
+    let savedId = currentDraftId;
     // 3. Backend IMAP/REST Sync
     try {
       const res = await emailsApi.saveDraft({
@@ -104,8 +104,10 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
         bodyHtml: `<p>${body.replace(/\n/g, '<br/>')}</p>`,
         attachments: attachments.map((a) => ({ name: a.name, size: a.size, type: a.type })),
       });
-      if (res?.id) {
-        updateFields({ draftId: res.id });
+      savedId = res?.id ?? currentDraftId;
+      const draftsFolderId = findRegisteredSpecialFolder('Drafts', accountId)?.id;
+      if (draftsFolderId && isServerMessageId(currentDraftId) && currentDraftId !== savedId) {
+        void emailsApi.deleteEmail(currentDraftId, draftsFolderId);
       }
     } catch (err) {
       console.warn('[Draft sync error, persisted locally]', err);
@@ -113,7 +115,7 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
 
     lastSavedHashRef.current = getHash();
     updateFields({
-      draftId: currentDraftId,
+      draftId: savedId,
       draftStatus: 'saved',
       lastSavedTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });

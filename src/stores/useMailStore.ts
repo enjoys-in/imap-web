@@ -7,8 +7,12 @@ import {
   patchCachedEmail,
   invalidateFolderSync,
   clearFolderCache,
+  shiftFolderSyncTotal,
 } from '@/lib/idb/mailCacheDb';
 import { loadFolderEmails, loadMoreFolderEmails, newestFirst, refreshFolderEmails } from '@/lib/mailSync';
+import type { MutationResult } from '@/lib/api/handlers/messageRequest';
+import { isServerMessageId, messageKey } from '@/lib/messageKey';
+import { setInboxQuota } from '@/lib/queryClientRef';
 import { holdRemoval, settleRemoval } from '@/lib/pendingRemovals';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
 import { getRegisteredFolder } from '@/lib/folders';
@@ -39,16 +43,9 @@ interface MailState {
   isLoadingMore: boolean;
   lastSnapshot: MailMessageMetadata[] | null;
 
-  /**
-   * Show a folder's messages. After the first fetch they come from the local
-   * copy with no request; `force` asks the backend again (manual sync).
-   */
   fetchEmails: (folderId?: string, accountId?: string, options?: { force?: boolean }) => Promise<void>;
-  /** Live update after a server event: merge the folder's newest page from the backend. */
   refreshFolder: (folderId: string) => Promise<void>;
-  /** A server event changed a message's flags (read / flagged). */
   applyMessageFlags: (folderId: string, emailId: string, patch: Partial<MailMessageMetadata>) => void;
-  /** A server event removed a message. */
   removeEmailFromFolder: (folderId: string, emailId: string) => void;
   loadMoreEmails: () => Promise<void>;
   setSortConfig: (field: MailSortField, direction: MailSortDirection) => void;
@@ -69,9 +66,7 @@ interface MailState {
   togglePin: (id: string) => void;
   markAsRead: (id: string, isRead?: boolean) => void;
   markFolderAsRead: (folderId: string) => void;
-  /** Resolves when the server has answered; the local copy is cleared only if it accepted. */
   emptyFolder: (folderId: string) => Promise<{ success: boolean; message: string }>;
-  /** `folderId` names the folder the message lives in when it is not on screen (e.g. a draft being discarded). */
   deleteEmail: (id: string, folderId?: string) => void;
   moveEmailToFolder: (emailId: string, folderId: string) => void;
   copyEmailToFolder: (emailId: string, folderId: string) => void;
@@ -85,7 +80,6 @@ interface MailState {
 }
 
 function getInitialState() {
-  // A folder id from the backend; validated against the folder list once it loads.
   let initialFolder = '';
   let initialMailId: string | null = null;
 
@@ -98,7 +92,6 @@ function getInitialState() {
   }
 
   return {
-    // Resolved from the signed-in session once it loads (see MailClientView).
     selectedAccountId: '',
     selectedAccountIndex: 0,
     selectedFolderId: initialFolder,
@@ -110,11 +103,8 @@ function getInitialState() {
 
 const initialState = getInitialState();
 
-// Identifies the newest list request so a slow, superseded response cannot overwrite a newer list.
 let latestFetchId = 0;
 
-// While true, changes to `localEmails` are not written back to IndexedDB: they
-// come from IndexedDB or the backend and are already stored.
 let suppressPersist = false;
 function quietly(update: () => void): void {
   suppressPersist = true;
@@ -150,15 +140,12 @@ export const useMailStore = create<MailState>((set, get) => ({
     const fId = folderId || get().selectedFolderId;
     const aId = accountId || get().selectedAccountId || '';
     const folder = getRegisteredFolder(fId);
-    // Folder ids come from the backend; nothing to load until its folder list has arrived.
     if (!fId || !folder) return;
 
     const requestId = ++latestFetchId;
     set({ isLoadingEmails: true });
     try {
-      // From the local copy when this folder was fetched before; the backend is asked the first time or when forced.
       const result = await loadFolderEmails(folder, aId || undefined, { force: options?.force });
-      // A newer request (e.g. the user switched folder) owns the list and the loading flag now.
       if (requestId !== latestFetchId) return;
       quietly(() =>
         set({
@@ -183,7 +170,6 @@ export const useMailStore = create<MailState>((set, get) => ({
     set({ isLoadingMore: true });
     try {
       const { fresh, hasMore } = await loadMoreFolderEmails(folder, aId || undefined, nextPage);
-      // The user moved to another folder/account while this page loaded: drop it.
       if (get().selectedFolderId !== fId || get().selectedAccountId !== aId) {
         set({ isLoadingMore: false });
         return;
@@ -210,7 +196,6 @@ export const useMailStore = create<MailState>((set, get) => ({
         );
       }
     } catch {
-      // Keep showing what we have; the next event or manual sync retries.
     }
   },
 
@@ -240,9 +225,7 @@ export const useMailStore = create<MailState>((set, get) => ({
   })),
   setSelectedAccount: (id) => set((s) => {
     if (s.selectedAccountId === id) return s;
-    // First resolution from the session: keep the restored folder/mail selection.
     if (!s.selectedAccountId) return { selectedAccountId: id };
-    // Mail lists are per-mailbox; clear the previous account's list until the new one loads.
     return {
       selectedAccountId: id,
       localEmails: [],
@@ -276,7 +259,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       localEmails: id ? s.localEmails.map((m) => (m.id === id ? { ...m, isRead: true } : m)) : s.localEmails,
     }));
     if (id && current && !current.isRead) {
-      emailsApi.markAsRead(id, true, current.folderId || get().selectedFolderId).catch(() => {});
+      settleFlags(emailsApi.markAsRead(id, true, current.folderId || get().selectedFolderId));
       useFolderStore.getState().bumpUnread(current.folderId, -1);
     }
   },
@@ -320,7 +303,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isFlagged: newFlag } : m)),
     }));
-    emailsApi.toggleFlag(id, newFlag, email?.folderId || get().selectedFolderId).catch(() => {});
+    settleFlags(emailsApi.toggleFlag(id, newFlag, email?.folderId || get().selectedFolderId));
   },
   togglePin: (id) => set((s) => ({
     lastSnapshot: s.localEmails,
@@ -334,7 +317,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isRead: nextRead } : m)),
     }));
-    emailsApi.markAsRead(id, nextRead, folder).catch(() => {});
+    settleFlags(emailsApi.markAsRead(id, nextRead, folder));
     if (email && email.isRead !== nextRead) {
       useFolderStore.getState().bumpUnread(email.folderId, nextRead ? -1 : 1);
     }
@@ -344,8 +327,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.folderId === folderId ? { ...m, isRead: true } : m)),
     }));
-    // Every message in the folder, not just the ones loaded on screen.
-    emailsApi.markAllAsRead(folderId).catch(() => {});
+    settleFlags(emailsApi.markAllAsRead(folderId));
     useFolderStore.getState().clearUnread(folderId);
   },
   emptyFolder: async (folderId) => {
@@ -356,14 +338,12 @@ export const useMailStore = create<MailState>((set, get) => ({
       selectedMailId: null,
       selectedIds: [],
     }));
-    const cleared = useFolderStore.getState().clearUnread(folderId);
+    const before = useFolderStore.getState().clearCounts(folderId);
 
     const result = await foldersApi.emptyFolder(folderId);
     if (result.success) {
-      // The server accepted it: now the local copy of the folder goes too.
       await clearFolderCache(folderId);
     } else {
-      // Refused: the messages are still on the server, so put them back.
       quietly(() =>
         set((s) => {
           const present = new Set(s.localEmails.map((m) => `${m.folderId}|${m.id}`));
@@ -371,7 +351,7 @@ export const useMailStore = create<MailState>((set, get) => ({
           return { localEmails: [...s.localEmails, ...missing].sort(newestFirst) };
         })
       );
-      useFolderStore.getState().bumpUnread(folderId, cleared);
+      useFolderStore.getState().adjustCounts(folderId, before);
     }
     return { success: result.success, message: result.message };
   },
@@ -398,8 +378,6 @@ export const useMailStore = create<MailState>((set, get) => ({
         selectedMailId: nextSelected,
       };
     });
-    if (email && !email.isRead) useFolderStore.getState().bumpUnread(folder, -1);
-    // The screen is already updated; the local copy follows when the server says OK (see runRemoval).
     void runRemoval({
       items: [{ folderId: folder, id }],
       rows: email ? [email] : [],
@@ -410,18 +388,11 @@ export const useMailStore = create<MailState>((set, get) => ({
   moveEmailToFolder: (emailId, folderId) => {
     const email = get().localEmails.find((m) => m.id === emailId);
     const sourceFolder = email?.folderId || get().selectedFolderId;
-    // Already there: nothing to ask the server, nothing to change locally.
     if (sourceFolder === folderId) return;
     set((s) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.id === emailId && m.folderId === sourceFolder ? { ...m, folderId } : m)),
     }));
-    if (email && !email.isRead) {
-      useFolderStore.getState().bumpUnread(sourceFolder, -1);
-      useFolderStore.getState().bumpUnread(folderId, 1);
-    }
-    // The server gives the message a new uid in the target folder, so the local copy forgets it
-    // (and the target fetches again when opened) once the server says OK.
     void runRemoval({
       items: [{ folderId: sourceFolder, id: emailId }],
       rows: email ? [email] : [],
@@ -442,13 +413,15 @@ export const useMailStore = create<MailState>((set, get) => ({
       lastSnapshot: s.localEmails,
       localEmails: [copied, ...s.localEmails],
     }));
-    void emailsApi.copyEmail(emailId, folderId, original.folderId).then((accepted) => {
-      if (accepted) {
-        // The copy only exists on the server (with its own uid): have the target fetch again when opened.
-        void invalidateFolderSync(folderId);
+    const gained = isServerMessageId(emailId) ? { total: 1, unread: original.isRead ? 0 : 1 } : null;
+    if (gained) useFolderStore.getState().adjustCounts(folderId, gained);
+    void emailsApi.copyEmail(emailId, folderId, original.folderId).then(async (result) => {
+      if (result) {
+        await invalidateFolderSync(folderId);
+        await applyMutationResult(result);
         return;
       }
-      // Refused: there is no copy, so take the placeholder off the screen.
+      if (gained) useFolderStore.getState().adjustCounts(folderId, { total: -gained.total, unread: -gained.unread });
       set((s) => ({ localEmails: s.localEmails.filter((m) => m.id !== copied.id) }));
       useToastStore.getState().addToast({
         title: 'Could not copy',
@@ -485,7 +458,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     }));
 
     if (addFlags || removeFlags) {
-      emailsApi.handleCustomFlags([emailId], addFlags, removeFlags).catch(() => {});
+      settleFlags(emailsApi.handleCustomFlags([emailId], addFlags, removeFlags, email?.folderId || get().selectedFolderId));
     }
   },
   snoozeEmail: (id, _until) => set((s) => ({
@@ -508,11 +481,6 @@ export const useMailStore = create<MailState>((set, get) => ({
         selectedMailId: null,
       };
     });
-    for (const [folderId, rows] of groupByFolder(removed)) {
-      const unread = rows.filter((m) => !m.isRead).length;
-      if (unread) useFolderStore.getState().bumpUnread(folderId, -unread);
-    }
-    // One request per folder the messages live in; the local copy follows when the server says OK.
     void runRemoval({
       items: ids.map((id) => ({ folderId: folderOf.get(id) || fallbackFolder, id })),
       rows: removed,
@@ -532,7 +500,7 @@ export const useMailStore = create<MailState>((set, get) => ({
         localEmails: s.localEmails.map((m) => (setIds.has(m.id) ? { ...m, isRead } : m)),
       };
     });
-    emailsApi.bulkMarkAsRead(ids, isRead, folder).catch(() => {});
+    settleFlags(emailsApi.bulkMarkAsRead(ids, isRead, folder));
     for (const [folderId, rows] of groupByFolder(changing)) {
       useFolderStore.getState().bumpUnread(folderId, isRead ? -rows.length : rows.length);
     }
@@ -542,12 +510,10 @@ export const useMailStore = create<MailState>((set, get) => ({
     if (ids.length === 0) return;
     const fallbackFolder = get().selectedFolderId;
     const selected = get().localEmails.filter((m) => ids.includes(m.id));
-    // Messages already in the target stay where they are.
     const moving = selected.filter((m) => m.folderId !== folderId);
     const movingIds = new Set(moving.map((m) => m.id));
     const alreadyThere = new Set(selected.filter((m) => m.folderId === folderId).map((m) => m.id));
     const folderOf = new Map(moving.map((m) => [m.id, m.folderId]));
-    // Selected rows that are not in the list (e.g. server search results) are still sent.
     const items = ids
       .filter((id) => !alreadyThere.has(id))
       .map((id) => ({ folderId: folderOf.get(id) || fallbackFolder, id }));
@@ -561,15 +527,6 @@ export const useMailStore = create<MailState>((set, get) => ({
       selectedIds: [],
       selectedMailId: null,
     }));
-    for (const [sourceFolder, rows] of groupByFolder(moving)) {
-      const unread = rows.filter((m) => !m.isRead).length;
-      if (unread) {
-        useFolderStore.getState().bumpUnread(sourceFolder, -unread);
-        useFolderStore.getState().bumpUnread(folderId, unread);
-      }
-    }
-    // The server gives moved messages new uids in the target folder, so the local copy forgets them
-    // (and the target fetches again when opened) once the server says OK.
     void runRemoval({
       items,
       rows: moving,
@@ -591,8 +548,7 @@ export const useMailStore = create<MailState>((set, get) => ({
         ),
       };
     });
-    // One request for the whole selection.
-    emailsApi.bulkToggleFlag(ids, targetFlag, get().selectedFolderId).catch(() => {});
+    settleFlags(emailsApi.bulkToggleFlag(ids, targetFlag, get().selectedFolderId));
   },
   undoLastAction: () => {
     const snap = get().lastSnapshot;
@@ -601,6 +557,27 @@ export const useMailStore = create<MailState>((set, get) => ({
     return true;
   },
 }));
+
+interface MessageRef {
+  folderId: string;
+  id: string;
+}
+
+interface RemovalOptions {
+  items: MessageRef[];
+  rows: MailMessageMetadata[];
+  target?: string;
+  send: (folderId: string, ids: string[]) => Promise<MutationResult | null>;
+  failureTitle: string;
+}
+
+interface RemovalOutcome {
+  folderId: string;
+  ids: string[];
+  result: MutationResult | null;
+}
+
+const EMPTY_RESULT: MutationResult = { folders: [], quota: null };
 
 function groupByFolder(rows: MailMessageMetadata[]): Map<string, MailMessageMetadata[]> {
   const groups = new Map<string, MailMessageMetadata[]>();
@@ -612,83 +589,67 @@ function groupByFolder(rows: MailMessageMetadata[]): Map<string, MailMessageMeta
   return groups;
 }
 
-/** Ids the server knows (`msg-<uid>`). A draft or sent copy made on this device has no uid yet. */
-const isServerMessage = (id: string) => /^(msg-)?\d+$/.test(id);
-
-interface RemovalOptions {
-  /** Each message and the folder it is being taken out of. */
-  items: Array<{ folderId: string; id: string }>;
-  /** The messages that were on screen, as they were before the change (to put back if the server refuses). */
-  rows: MailMessageMetadata[];
-  /** Set for a move: the folder the rows were relabelled into on screen. */
-  target?: string;
-  /** Asks the server, once per source folder. `true` only when it accepted. */
-  send: (folderId: string, ids: string[]) => Promise<boolean>;
-  failureTitle: string;
-}
-
-/**
- * Finishes a delete or move whose effect is already on screen. The local copy
- * (IndexedDB) changes only once the server has accepted the request:
- *
- * - accepted: the messages leave the local copy (a moved message gets a new uid in
- *   the target folder, so the target is marked to fetch again when opened);
- * - refused or unreachable: nothing was stored, the messages and unread counts are
- *   put back on screen, and the user is told.
- *
- * While the request is in flight the messages are held off every list that
- * arrives (see pendingRemovals), so a refresh cannot bring them back early.
- */
-async function runRemoval({ items, rows, target, send, failureTitle }: RemovalOptions): Promise<void> {
+function groupIds(items: MessageRef[]): Map<string, string[]> {
   const groups = new Map<string, string[]>();
   for (const { folderId, id } of items) {
     const ids = groups.get(folderId);
     if (ids) ids.push(id);
     else groups.set(folderId, [id]);
   }
-  for (const [folderId, ids] of groups) holdRemoval(folderId, ids);
+  return groups;
+}
 
-  const outcomes = await Promise.all(
-    [...groups].map(async ([folderId, ids]) => {
-      // Messages that only exist on this device have nothing to ask the server about.
-      const onServer = ids.filter(isServerMessage);
-      const accepted = onServer.length === 0 ? true : await send(folderId, onServer);
-      return { folderId, ids, accepted };
-    })
-  );
+async function applyMutationResult(result: MutationResult | null): Promise<void> {
+  if (!result) return;
+  await useFolderStore.getState().applyServerCounts(result.folders, useMailStore.getState().selectedFolderId);
+  setInboxQuota(result.quota);
+}
 
-  for (const { folderId, ids, accepted } of outcomes) {
-    settleRemoval(folderId, ids, accepted);
-    if (accepted) void deleteCachedEmails(folderId, ids);
-  }
-  if (target && outcomes.some((o) => o.accepted)) void invalidateFolderSync(target);
+function settleFlags(request: Promise<MutationResult | null>): void {
+  request.then(applyMutationResult).catch(() => undefined);
+}
 
-  const refused = outcomes.filter((o) => !o.accepted);
-  if (refused.length === 0) return;
+function shiftCounts(
+  rows: MailMessageMetadata[],
+  folderId: string,
+  ids: string[],
+  target: string | undefined,
+  direction: 1 | -1
+): void {
+  const onServer = new Set(ids.filter(isServerMessageId));
+  if (onServer.size === 0) return;
+  const unread = rows.filter((m) => m.folderId === folderId && onServer.has(m.id) && !m.isRead).length;
+  const folders = useFolderStore.getState();
+  folders.adjustCounts(folderId, { total: -onServer.size * direction, unread: -unread * direction });
+  if (target) folders.adjustCounts(target, { total: onServer.size * direction, unread: unread * direction });
+}
 
-  const refusedKeys = new Set(refused.flatMap(({ folderId, ids }) => ids.map((id) => `${folderId}|${id}`)));
-  const original = rows.filter((m) => refusedKeys.has(`${m.folderId}|${m.id}`));
-  const back = new Map(original.map((m) => [m.id, m]));
+function restoreRefused(
+  refused: RemovalOutcome[],
+  rows: MailMessageMetadata[],
+  target: string | undefined,
+  failureTitle: string
+): void {
+  const refusedKeys = new Set(refused.flatMap(({ folderId, ids }) => ids.map((id) => messageKey(folderId, id))));
+  const original = rows.filter((m) => refusedKeys.has(messageKey(m.folderId, m.id)));
+  const originalById = new Map(original.map((m) => [m.id, m]));
 
   quietly(() =>
-    useMailStore.setState((s) => {
+    useMailStore.setState((state) => {
       if (target) {
-        // Moved on screen only: relabel them with their own folder again.
-        return { localEmails: s.localEmails.map((m) => (m.folderId === target ? (back.get(m.id) ?? m) : m)) };
+        return {
+          localEmails: state.localEmails.map((m) =>
+            m.folderId === target ? (originalById.get(m.id) ?? m) : m
+          ),
+        };
       }
-      const present = new Set(s.localEmails.map((m) => `${m.folderId}|${m.id}`));
-      const missing = original.filter((m) => !present.has(`${m.folderId}|${m.id}`));
-      return { localEmails: [...s.localEmails, ...missing].sort(newestFirst) };
+      const present = new Set(state.localEmails.map((m) => messageKey(m.folderId, m.id)));
+      const missing = original.filter((m) => !present.has(messageKey(m.folderId, m.id)));
+      return { localEmails: [...state.localEmails, ...missing].sort(newestFirst) };
     })
   );
 
-  const folders = useFolderStore.getState();
-  for (const [folderId, group] of groupByFolder(original)) {
-    const unread = group.filter((m) => !m.isRead).length;
-    if (!unread) continue;
-    folders.bumpUnread(folderId, unread);
-    if (target) folders.bumpUnread(target, -unread);
-  }
+  for (const { folderId, ids } of refused) shiftCounts(rows, folderId, ids, target, -1);
 
   const count = refusedKeys.size;
   useToastStore.getState().addToast({
@@ -701,15 +662,42 @@ async function runRemoval({ items, rows, target, send, failureTitle }: RemovalOp
   });
 }
 
-// Keep the local copy in step with what the user changes on screen: a message
-// edited in place (read, flagged, pinned, categorized) is written back to
-// IndexedDB, so reopening the folder shows it as it was left. Added, moved and
-// removed messages are handled by the actions above, not here.
+async function runRemoval({ items, rows, target, send, failureTitle }: RemovalOptions): Promise<void> {
+  const groups = groupIds(items);
+  for (const [folderId, ids] of groups) {
+    holdRemoval(folderId, ids);
+    shiftCounts(rows, folderId, ids, target, 1);
+  }
+
+  const outcomes: RemovalOutcome[] = await Promise.all(
+    [...groups].map(async ([folderId, ids]) => {
+      const onServer = ids.filter(isServerMessageId);
+      const result = onServer.length === 0 ? EMPTY_RESULT : await send(folderId, onServer);
+      return { folderId, ids, result };
+    })
+  );
+  const accepted = outcomes.filter((o) => o.result !== null);
+  const refused = outcomes.filter((o) => o.result === null);
+
+  for (const { folderId, ids, result } of outcomes) settleRemoval(folderId, ids, result !== null);
+
+  await Promise.all(
+    accepted.flatMap(({ folderId, ids }) => [
+      deleteCachedEmails(folderId, ids),
+      shiftFolderSyncTotal(folderId, -ids.filter(isServerMessageId).length),
+    ])
+  );
+  if (target && accepted.length > 0) await invalidateFolderSync(target);
+  for (const { result } of accepted) await applyMutationResult(result);
+
+  if (refused.length > 0) restoreRefused(refused, rows, target, failureTitle);
+}
+
 useMailStore.subscribe((state, previous) => {
   if (suppressPersist || state.localEmails === previous.localEmails) return;
-  const before = new Map(previous.localEmails.map((m) => [`${m.folderId}|${m.id}`, m]));
+  const before = new Map(previous.localEmails.map((m) => [messageKey(m.folderId, m.id), m]));
   const edited = state.localEmails.filter((m) => {
-    const old = before.get(`${m.folderId}|${m.id}`);
+    const old = before.get(messageKey(m.folderId, m.id));
     return old !== undefined && old !== m;
   });
   if (edited.length > 0) void saveCachedEmails(edited);

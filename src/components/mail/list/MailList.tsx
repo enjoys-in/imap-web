@@ -32,7 +32,6 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
     generalReadingLayout === 'bottom' || (typeof width === 'number' && width >= 480)
   );
 
-  // Subscribe only to what this list renders, not to the whole store.
   const {
     selectedMailId, selectedIds, searchQuery, isSearchingServer,
     selectedAccountId, localEmails, hasMoreEmails, isLoadingMore,
@@ -53,7 +52,6 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
   const toggleSelectId = useMailStore((s) => s.toggleSelectId);
   const loadMoreEmails = useMailStore((s) => s.loadMoreEmails);
 
-  // A pure read: never writes defaults into the store while rendering.
   const cardsRows = useAccountSettingsStore(
     (s) => s.settingsByAccount[selectedAccountId]?.appearance.cardsViewRows ?? DEFAULT_CARDS_ROWS
   );

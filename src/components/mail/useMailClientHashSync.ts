@@ -17,22 +17,15 @@ export function parseMailHash(rawHash: string) {
   return { folderSlug: parts[0], mailId: null };
 }
 
-/**
- * Keeps the store in step with the URL hash (#inbox, #sent/msg-12, ...).
- * Folder slugs are resolved against the folder list the backend sent, so the
- * sync waits until that list is available.
- */
 export function useMailClientHashSync(parsedUserIndex: number, folders: MailFolder[] | undefined) {
   const setSelectedFolder = useMailStore((s) => s.setSelectedFolder);
   const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const addOrSelectEmail = useMailStore((s) => s.addOrSelectEmail);
 
-  // Latest folder list without re-running the sync each time the list is refreshed.
   const foldersRef = useRef(folders);
   useEffect(() => {
     foldersRef.current = folders;
   }, [folders]);
-  // Changes when folders first arrive or the account changes, not on every refresh.
   const folderSetKey = folders?.length ? folders[0].accountId : '';
 
   const syncFromHash = useCallback(async () => {

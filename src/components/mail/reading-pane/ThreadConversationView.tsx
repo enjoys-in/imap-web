@@ -39,7 +39,6 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace(/^#\/?/, '').trim();
-      // The hash is already a folder slug (see the reading pane's open-in-window link).
       const slug = hash.split('/')[0] || 'inbox';
       setBackPath(`/mail/u/0#${slug}`);
     }
@@ -90,8 +89,6 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
     });
   }, [targetEmail?.threadId]);
 
-  // Keyed by id: the store replaces the email object on read/flag changes,
-  // which must not trigger another body request.
   const targetEmailId = targetEmail?.id;
   const targetFolderId = targetEmail?.folderId;
   useEffect(() => {

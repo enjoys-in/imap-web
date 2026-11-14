@@ -18,7 +18,6 @@ export async function getFolders(accountId?: string): Promise<MailFolder[]> {
     : Array.isArray(data?.result?.mailboxes)
     ? data.result.mailboxes
     : data?.mailboxes;
-  // Same reduction as the folder list the session payloads carry, so stored rows all look alike.
   return normalizeMailboxes(list, accountId ?? '');
 }
 

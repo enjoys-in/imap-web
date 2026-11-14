@@ -16,7 +16,6 @@ export function StorageSettingsView() {
   const emptyFolder = useMailStore((s) => s.emptyFolder);
   const addToast = useToastStore((s) => s.addToast);
 
-  // `used` is legitimately 0 for an empty mailbox, so test for a number rather than truthiness.
   const totalUsedMb = typeof quota?.storage?.used === 'number' ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
   const totalQuotaMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
   const hasQuota = totalUsedMb !== undefined && totalQuotaMb !== undefined && totalQuotaMb > 0;
@@ -27,7 +26,6 @@ export function StorageSettingsView() {
     : 0;
 
   const handleEmpty = async (folderId: string, name: string) => {
-    // One request: the store sends it and keeps the local copy only if the server refuses.
     const res = await emptyFolder(folderId);
     if (res.success) void useFolderStore.getState().syncFolders(activeAccountId);
     addToast(
