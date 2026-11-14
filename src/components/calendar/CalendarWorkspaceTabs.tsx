@@ -40,10 +40,10 @@ export function CalendarWorkspaceTabs({
           onClick={onOpenWorkspaceMenu}
           className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer text-left group"
         >
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
             ✽
           </div>
-          <div className="flex flex-col text-left leading-tight">
+          <div className="hidden sm:flex flex-col text-left leading-tight">
             <div className="flex items-center gap-1">
               <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
                 Agus Ardhi
@@ -117,10 +117,10 @@ export function CalendarWorkspaceTabs({
 
         <button
           onClick={onOpenInvite}
-          className="h-8 px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-750 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          className="h-8 px-2 sm:px-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-750 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
         >
           <UserPlus className="w-3.5 h-3.5 text-neutral-500" />
-          <span>Invite</span>
+          <span className="hidden sm:inline">Invite</span>
         </button>
       </div>
     </header>
