@@ -22,8 +22,8 @@ export function MailCommandBar() {
 
   return (
     <div className="bg-[#f0f0f0] dark:bg-[#1b1b1b] border-b border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shrink-0 select-none transition-colors">
-      <div className="h-10 px-2 flex items-center gap-1 overflow-x-auto text-xs justify-between">
-        <div className="flex items-center gap-1 shrink-0">
+      <div className="h-10 px-2 flex items-center gap-1 text-xs justify-between w-full min-w-0">
+        <div className="flex items-center gap-1 min-w-0 flex-1">
           <button
             onClick={openNew}
             className="h-7 px-2.5 bg-[#0078d4] hover:bg-[#106ebe] text-white font-medium rounded flex items-center gap-1.5 transition-colors cursor-pointer mr-1 shrink-0 shadow-xs"
