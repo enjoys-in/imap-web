@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 interface MailListHeaderProps {
   totalEmailsCount: number;
   currentEmailIds: string[];
+  isWideLayout?: boolean;
 }
 
-export function MailListHeader({ totalEmailsCount, currentEmailIds }: MailListHeaderProps) {
+export function MailListHeader({ totalEmailsCount, currentEmailIds, isWideLayout = false }: MailListHeaderProps) {
   const selectedIds = useMailStore((s) => s.selectedIds);
   const selectedFolderId = useMailStore((s) => s.selectedFolderId);
   const filterTab = useMailStore((s) => s.filterTab);
@@ -90,6 +91,23 @@ export function MailListHeader({ totalEmailsCount, currentEmailIds }: MailListHe
           );
         })}
       </div>
+
+      {/* Tabular Column Header Bar (For Wide Layouts: Fill screen / Popout only) */}
+      {isWideLayout && (
+        <div className="h-7 px-3 bg-neutral-100/70 dark:bg-[#181818] border-t border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center select-none">
+          <div className="w-8 shrink-0" />
+          <div className="w-48 sm:w-64 shrink-0 font-medium text-neutral-600 dark:text-neutral-400">
+            From
+          </div>
+          <div className="flex-1 min-w-0 font-medium text-neutral-600 dark:text-neutral-400">
+            Subject
+          </div>
+          <div className="w-24 text-right font-medium text-neutral-600 dark:text-neutral-400 flex items-center justify-end gap-1">
+            <span>Received</span>
+            <ChevronDown className="w-3 h-3" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

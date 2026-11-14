@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function LeftNavigationRail() {
   const pathname = usePathname();
-  const [mailHref, setMailHref] = useState('/mail/u/0');
+  const [mailHref, setMailHref] = useState('/mail/u/0/#inbox');
 
   useEffect(() => {
     const route = getLastMailRoute();

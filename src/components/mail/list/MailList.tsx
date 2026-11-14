@@ -11,15 +11,20 @@ import { MOCK_THREAD_SUB_MESSAGES } from '@/lib/mock/emails';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { parseEmailSearchQuery, matchesEmailFilter } from '@/lib/searchParser';
+import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 
 interface MailListProps {
   activeFolderId?: string;
   activeMailId?: string;
   onSelectMail?: (mailId: string) => void;
   width?: number;
+  isWideLayout?: boolean;
 }
 
-export function MailList({ activeFolderId, activeMailId, onSelectMail, width }: MailListProps) {
+export function MailList({ activeFolderId, activeMailId, onSelectMail, width, isWideLayout }: MailListProps) {
+  const generalReadingLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
+  const effectiveIsWide = isWideLayout ?? (generalReadingLayout === 'fillScreen' || generalReadingLayout === 'popoutOnly');
   const localEmails = useMailStore((s) => s.localEmails);
   const serverSearchResults = useMailStore((s) => s.serverSearchResults);
   const isSearchingServer = useMailStore((s) => s.isSearchingServer);
@@ -31,10 +36,19 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width }: 
 
   const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const toggleSelectId = useMailStore((s) => s.toggleSelectId);
-  const toggleFlag = useMailStore((s) => s.toggleFlag);
-  const togglePin = useMailStore((s) => s.togglePin);
-  const markAsRead = useMailStore((s) => s.markAsRead);
-  const deleteEmail = useMailStore((s) => s.deleteEmail);
+
+  const handleToggleFlag = useCallback((id: string) => {
+    dispatchMailAction({ action: 'toggle-flag', targetEmailId: id });
+  }, []);
+  const handleTogglePin = useCallback((id: string) => {
+    dispatchMailAction({ action: 'toggle-pin', targetEmailId: id });
+  }, []);
+  const handleToggleRead = useCallback((id: string) => {
+    dispatchMailAction({ action: 'toggle-read', targetEmailId: id });
+  }, []);
+  const handleDelete = useCallback((id: string) => {
+    dispatchMailAction({ action: 'delete', targetEmailId: id });
+  }, []);
 
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
@@ -92,7 +106,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width }: 
       style={{ width: width ? `${width}px` : undefined }}
       className="w-full md:w-80 lg:w-96 flex flex-col h-full border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f] shrink-0 select-none transition-colors"
     >
-      <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} />
+      <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} isWideLayout={effectiveIsWide} />
 
       {searchQuery.trim() && (
         <div className="px-3 py-1.5 bg-blue-50/80 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/60 flex items-center justify-between text-xs text-blue-900 dark:text-blue-300">
@@ -111,9 +125,10 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width }: 
               <MailListItem
                 key={`pin-${email.id}`} email={email} isSelected={email.id === activeId}
                 isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
+                isWideLayout={effectiveIsWide}
                 cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
-                onToggleFlag={toggleFlag} onTogglePin={togglePin} onToggleRead={markAsRead}
-                onDelete={deleteEmail} onContextMenu={handleContextMenu}
+                onToggleFlag={handleToggleFlag} onTogglePin={handleTogglePin} onToggleRead={handleToggleRead}
+                onDelete={handleDelete} onContextMenu={handleContextMenu}
               />
             ))}
           </div>
@@ -139,9 +154,10 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width }: 
                     email={email} isSelected={email.id === activeId}
                     isChecked={selectedSet.has(email.id)} hasAnySelection={selectedIds.length > 0}
                     isThread={hasThread} isThreadExpanded={isExpanded} onToggleThreadExpand={handleToggleThreadExpand}
+                    isWideLayout={effectiveIsWide}
                     cardsRows={cardsRows} onSelect={handleSelect} onToggleCheck={toggleSelectId}
-                    onToggleFlag={toggleFlag} onTogglePin={togglePin} onToggleRead={markAsRead}
-                    onDelete={deleteEmail} onContextMenu={handleContextMenu}
+                    onToggleFlag={handleToggleFlag} onTogglePin={handleTogglePin} onToggleRead={handleToggleRead}
+                    onDelete={handleDelete} onContextMenu={handleContextMenu}
                   />
                   {subEmails.length > 0 && (
                     <MailThreadSubItems

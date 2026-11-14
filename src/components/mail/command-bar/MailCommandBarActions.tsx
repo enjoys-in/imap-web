@@ -29,6 +29,7 @@ const FOLDERS = [
   { id: 'fld-archive', name: 'Archive' },
   { id: 'fld-junk', name: 'Junk Email' },
   { id: 'fld-deleted', name: 'Deleted Items' },
+  { id: 'fld-personal', name: 'Personal folder' },
 ];
 
 const SNOOZE_PRESETS = [

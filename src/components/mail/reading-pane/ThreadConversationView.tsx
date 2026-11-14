@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CornerUpLeft, Send, Trash2, ChevronDown } from 'lucide-react';
 import { useMailStore, useComposeStore } from '@/stores';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { emailsApi } from '@/lib/api';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
@@ -47,7 +48,22 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   const localThreadMessages = localEmails.filter(
     (e) => e.threadId === targetEmail?.threadId || e.id === targetEmail?.id
   );
-  const activeThread = threadList.length > 0 ? threadList : localThreadMessages;
+
+  const messageOrder = useGeneralSettingsStore((s) => s.messageOrder);
+  const showDeletedItems = useGeneralSettingsStore((s) => s.showDeletedItems);
+
+  const activeThread = useMemo(() => {
+    const list = threadList.length > 0 ? threadList : localThreadMessages;
+    const filtered = list.filter((m) => {
+      if (!showDeletedItems && (m.folderId === 'fld-deleted' || (m as { isDeleted?: boolean }).isDeleted)) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      return messageOrder === 'newestOnTop' ? timeB - timeA : timeA - timeB;
+    });
+  }, [threadList, localThreadMessages, messageOrder, showDeletedItems]);
 
   useEffect(() => {
     if (!targetEmail && mailId) {

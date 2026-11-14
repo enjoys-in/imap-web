@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { Trash2, Flag, Mail, FolderInput, X, ChevronDown, Check } from 'lucide-react';
-import { useMailStore, useToastStore } from '@/stores';
-import { emailsApi } from '@/lib/api';
+import { useMailStore } from '@/stores';
+import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 
 interface MultiSelectReadingPaneProps {
   folderName?: string;
@@ -21,44 +21,27 @@ const MOVE_FOLDERS = [
 
 export function MultiSelectReadingPane({ folderName = 'Inbox', folderEmailIds }: MultiSelectReadingPaneProps) {
   const selectedIds = useMailStore((s) => s.selectedIds);
-  const bulkDelete = useMailStore((s) => s.bulkDelete);
-  const bulkMarkAsRead = useMailStore((s) => s.bulkMarkAsRead);
-  const bulkMoveToFolder = useMailStore((s) => s.bulkMoveToFolder);
-  const bulkToggleFlag = useMailStore((s) => s.bulkToggleFlag);
   const clearSelectedIds = useMailStore((s) => s.clearSelectedIds);
   const selectAllIds = useMailStore((s) => s.selectAllIds);
-  const addToast = useToastStore((s) => s.addToast);
 
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const count = selectedIds.length;
 
   const handleDelete = () => {
-    const ids = [...selectedIds];
-    bulkDelete();
-    emailsApi.bulkDeleteEmails(ids);
-    addToast({ title: 'Deleted', description: `${ids.length} conversations deleted`, type: 'info' });
+    dispatchMailAction({ action: 'delete' });
   };
 
   const handleFlag = () => {
-    const ids = [...selectedIds];
-    bulkToggleFlag(true);
-    emailsApi.bulkToggleFlag(ids, true);
-    addToast({ title: 'Flagged', description: `${ids.length} conversations flagged`, type: 'success' });
+    dispatchMailAction({ action: 'toggle-flag' });
   };
 
   const handleMarkAsUnread = () => {
-    const ids = [...selectedIds];
-    bulkMarkAsRead(false);
-    emailsApi.bulkMarkAsRead(ids, false);
-    addToast({ title: 'Marked as unread', description: `${ids.length} conversations marked unread`, type: 'info' });
+    dispatchMailAction({ action: 'mark-unread' });
   };
 
   const handleMove = (folderId: string, name: string) => {
-    const ids = [...selectedIds];
-    bulkMoveToFolder(folderId);
-    emailsApi.bulkMoveEmails(ids, folderId);
     setIsMoveOpen(false);
-    addToast({ title: 'Moved', description: `Moved ${ids.length} conversations to ${name}`, type: 'success' });
+    dispatchMailAction({ action: 'move-to', folderId, folderName: name });
   };
 
   return (

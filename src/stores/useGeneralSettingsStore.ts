@@ -4,6 +4,13 @@ import { create } from 'zustand';
 
 const STORAGE_KEY = 'airsend_general_settings';
 
+export type ReadingPaneLayout = 'right' | 'bottom' | 'fillScreen' | 'popoutOnly';
+export type MessageOrder = 'newestOnTop' | 'newestOnBottom';
+export type AfterMoveOrDelete = 'openNext' | 'openPrevious' | 'returnToList';
+export type QuickActionType = 'move' | 'read' | 'flag' | 'pin' | 'archive' | 'delete';
+export type SwipeActionType = 'delete' | 'read' | 'pin' | 'archive' | 'flag' | 'none';
+export type NotificationAudience = 'all' | 'direct' | 'vip' | 'high_priority';
+
 export interface GeneralSettingsState {
   timeZone: string;
   dateFormat: string;
@@ -16,6 +23,24 @@ export interface GeneralSettingsState {
   downloadInlineImages: boolean;
   undoSendDelaySeconds: number;
   emptyDeletedOnLogout: boolean;
+  readingPaneLayout: ReadingPaneLayout;
+  messageOrder: MessageOrder;
+  afterMoveOrDelete: AfterMoveOrDelete;
+  showDeletedItems: boolean;
+  // Customize actions
+  quickActions: QuickActionType[];
+  swipeRightAction: SwipeActionType;
+  swipeLeftAction: SwipeActionType;
+  // Notification rules
+  inAppNotificationsEnabled: boolean;
+  inAppNotificationAudience: NotificationAudience;
+  inAppMentionsOnly: boolean;
+  inAppSoundEnabled: boolean;
+  pushNotificationsEnabled: boolean;
+  pushNotificationAudience: NotificationAudience;
+  pushIncludePreview: boolean;
+  badgeCountEnabled: boolean;
+  calendarRemindersEnabled: boolean;
   updateSettings: (partial: Partial<Omit<GeneralSettingsState, 'updateSettings'>>) => void;
 }
 
@@ -31,6 +56,22 @@ const DEFAULT_SETTINGS = {
   downloadInlineImages: true,
   undoSendDelaySeconds: 5,
   emptyDeletedOnLogout: false,
+  readingPaneLayout: 'right' as ReadingPaneLayout,
+  messageOrder: 'newestOnBottom' as MessageOrder,
+  afterMoveOrDelete: 'openNext' as AfterMoveOrDelete,
+  showDeletedItems: true,
+  quickActions: ['flag', 'pin', 'delete'] as QuickActionType[],
+  swipeRightAction: 'read' as SwipeActionType,
+  swipeLeftAction: 'delete' as SwipeActionType,
+  inAppNotificationsEnabled: true,
+  inAppNotificationAudience: 'all' as NotificationAudience,
+  inAppMentionsOnly: false,
+  inAppSoundEnabled: true,
+  pushNotificationsEnabled: true,
+  pushNotificationAudience: 'direct' as NotificationAudience,
+  pushIncludePreview: true,
+  badgeCountEnabled: true,
+  calendarRemindersEnabled: true,
 };
 
 function loadSettings() {

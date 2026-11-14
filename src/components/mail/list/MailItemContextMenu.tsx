@@ -52,6 +52,21 @@ export function MailItemContextMenu({
         folderId,
         folderName,
       }),
+    onCopyTo: (id, folderId, folderName) =>
+      dispatchMailAction({
+        action: 'copy-to',
+        targetEmailId: id,
+        targetEmail: email,
+        folderId,
+        folderName,
+      }),
+    onCategorize: (id, category) =>
+      dispatchMailAction({
+        action: 'categorize',
+        targetEmailId: id,
+        targetEmail: email,
+        category,
+      }),
     onToggleRead: (id) =>
       dispatchMailAction({
         action: 'toggle-read',
@@ -70,6 +85,13 @@ export function MailItemContextMenu({
         targetEmailId: id,
         targetEmail: email,
       }),
+    onSetFlagDue: (id, label) =>
+      dispatchMailAction({
+        action: 'set-flag-due',
+        targetEmailId: id,
+        targetEmail: email,
+        dueDateLabel: label,
+      }),
     onSnooze: (id, label) =>
       dispatchMailAction({
         action: 'snooze',
@@ -77,13 +99,26 @@ export function MailItemContextMenu({
         targetEmail: email,
         snoozeUntil: label,
       }),
-    onBlock: (address) => {
+    onBlock: (address) =>
       dispatchMailAction({
-        action: 'report-junk',
+        action: 'block-sender',
         targetEmailId: email.id,
         targetEmail: email,
-      });
-    },
+        senderAddress: address,
+      }),
+    onAllowSender: (address) =>
+      dispatchMailAction({
+        action: 'allow-sender',
+        targetEmailId: email.id,
+        targetEmail: email,
+        senderAddress: address,
+      }),
+    onMute: (id) =>
+      dispatchMailAction({
+        action: 'mute-conversation',
+        targetEmailId: id,
+        targetEmail: email,
+      }),
     onReportJunk: (em) =>
       dispatchMailAction({
         action: 'report-junk',
@@ -93,6 +128,43 @@ export function MailItemContextMenu({
     onReportPhishing: (em) =>
       dispatchMailAction({
         action: 'report-phishing',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onReportConcern: (em) =>
+      dispatchMailAction({
+        action: 'report-concern',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onFindConversation: (em) =>
+      dispatchMailAction({
+        action: 'find-conversation',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onFindFromSender: (em) =>
+      dispatchMailAction({
+        action: 'find-from-sender',
+        targetEmailId: em.id,
+        targetEmail: em,
+        senderAddress: em.fromAddress,
+      }),
+    onCreateTask: (em) =>
+      dispatchMailAction({
+        action: 'create-task',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onAddContact: (em) =>
+      dispatchMailAction({
+        action: 'add-contact',
+        targetEmailId: em.id,
+        targetEmail: em,
+      }),
+    onViewSource: (em) =>
+      dispatchMailAction({
+        action: 'view-source',
         targetEmailId: em.id,
         targetEmail: em,
       }),

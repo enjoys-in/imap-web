@@ -11,6 +11,7 @@ interface CalendarWeekGridProps {
   onSlotClick: (dayIndex: number, hour: number) => void;
   onEventClick: (event: CalendarEvent) => void;
   onSelectDayHeader?: (dayIndex: number) => void;
+  pendingSlot?: { dayIndex: number; hour: number } | null;
 }
 
 const DAYS = [
@@ -34,6 +35,7 @@ export function CalendarWeekGrid({
   onSlotClick,
   onEventClick,
   onSelectDayHeader,
+  pendingSlot,
 }: CalendarWeekGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
@@ -94,8 +96,7 @@ export function CalendarWeekGrid({
           ))}
           {/* Current Time Floating Pill Badge */}
           <div className="absolute right-2 -translate-y-1/2 z-30 pointer-events-none" style={{ top: `${nowLineTop}px` }}>
-            <div className="px-1.5 py-0.5 rounded bg-red-600 text-white font-mono text-[10px] font-bold shadow-sm flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <div className="px-2 py-0.5 rounded-md bg-[#2563eb] text-white font-mono text-[11px] font-bold shadow-md flex items-center gap-1.5">
               <span>{timeInfo.formattedTime}</span>
             </div>
           </div>
@@ -103,23 +104,11 @@ export function CalendarWeekGrid({
 
         {/* 5 Day Columns Canvas */}
         <div className="flex-1 grid grid-cols-5 relative">
-          {/* Current Live Time Indicator Across the 5 Days */}
+          {/* Current Live Time Indicator Across the 5 Days (Blue dashed line) */}
           <div className="absolute left-0 right-0 z-20 pointer-events-none grid grid-cols-5" style={{ top: `${nowLineTop}px` }}>
             {DAYS.map((day) => (
               <div key={day.dayIndex} className="relative flex items-center h-0">
-                {day.isToday ? (
-                  <div className="w-full relative flex items-center">
-                    <div className="absolute -left-1.5 z-30 flex items-center justify-center">
-                      <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 ring-2 ring-white dark:ring-[#0e0e0e] shadow-sm" />
-                      </span>
-                    </div>
-                    <div className="w-full border-b-[3px] border-solid border-red-600 dark:border-red-500 shadow-sm" />
-                  </div>
-                ) : (
-                  <div className="w-full border-b-2 border-dotted border-red-500/40 dark:border-red-400/40" />
-                )}
+                <div className="w-full border-b-2 border-dashed border-[#2563eb]/90 dark:border-blue-400/90" />
               </div>
             ))}
           </div>
@@ -141,6 +130,21 @@ export function CalendarWeekGrid({
                 {dayEvents.map((evt) => (
                   <CalendarEventCard key={evt.id} event={evt} startHourOffset={0} onClick={onEventClick} />
                 ))}
+                {pendingSlot && pendingSlot.dayIndex === day.dayIndex && (
+                  <div
+                    className="absolute left-1 right-1 rounded-xl p-2.5 border-2 border-dashed border-blue-400 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 z-10 flex flex-col justify-between pointer-events-none shadow-xs"
+                    style={{
+                      top: `${pendingSlot.hour * 80 + 2}px`,
+                      height: '76px',
+                    }}
+                  >
+                    <div>
+                      <h4 className="text-xs font-bold leading-snug">No title</h4>
+                      <span className="text-[11px] font-medium opacity-75 block mt-0.5">No time</span>
+                    </div>
+                    <div className="text-[10px] opacity-75 font-medium">No Participant</div>
+                  </div>
+                )}
               </div>
             );
           })}

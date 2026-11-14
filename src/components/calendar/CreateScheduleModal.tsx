@@ -1,10 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, Plus, User } from 'lucide-react';
 import { CalendarColor, CalendarEvent } from './types';
 import { ScheduleModalHeader, ScheduleColorPicker } from './ScheduleColorPicker';
 import { ScheduleTimePicker } from './ScheduleTimePicker';
+
+const SAMPLE_PARTICIPANTS = [
+  { id: 'u1', name: 'Agus Ardhi', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces' },
+  { id: 'u2', name: 'Nadia Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=faces' },
+  { id: 'u3', name: 'Alex Rivera', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=64&h=64&fit=crop&crop=faces' },
+  { id: 'u4', name: 'Sarah Miller', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&h=64&fit=crop&crop=faces' },
+];
 
 interface CreateScheduleModalProps {
   open: boolean;
@@ -27,11 +34,20 @@ export function CreateScheduleModal({
   const [endTime, setEndTime] = useState('09:30 AM');
   const [dateStr, setDateStr] = useState('Wednesday, September 15');
   const [category, setCategory] = useState('Meeting');
+  const [participants, setParticipants] = useState(SAMPLE_PARTICIPANTS.slice(0, 2));
   const [description, setDescription] = useState(
     'Review wireframe progress and gather feedback from the design team'
   );
 
   if (!open) return null;
+
+  const handleAddParticipant = () => {
+    if (participants.length < SAMPLE_PARTICIPANTS.length) {
+      setParticipants(SAMPLE_PARTICIPANTS.slice(0, participants.length + 1));
+    } else {
+      setParticipants(SAMPLE_PARTICIPANTS.slice(0, 1));
+    }
+  };
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -47,10 +63,7 @@ export function CreateScheduleModal({
       category,
       meetUrl: 'https://8hj3-8hyf.google-meet.com',
       description,
-      participants: [
-        { id: 'u1', name: 'Agus Ardhi', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces' },
-        { id: 'u2', name: 'Nadia Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=faces' },
-      ],
+      participants,
     });
     onClose();
   };
@@ -98,23 +111,25 @@ export function CreateScheduleModal({
           <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-3 top-3 pointer-events-none" />
         </div>
 
-        {/* Attendees Stack */}
+        {/* Attendees Stack with User Icon & Dynamic Add */}
         <div className="flex items-center gap-2 h-9 px-3 bg-neutral-50 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 rounded-xl">
+          <User className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
           <div className="flex items-center -space-x-1.5">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=64&h=64&fit=crop&crop=faces"
-              className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 object-cover"
-              alt="avatar"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=faces"
-              className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 object-cover"
-              alt="avatar"
-            />
+            {participants.map((p) => (
+              <img
+                key={p.id}
+                src={p.avatar}
+                title={p.name}
+                className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 object-cover"
+                alt={p.name}
+              />
+            ))}
           </div>
           <button
             type="button"
-            className="w-5 h-5 rounded-full border border-dashed border-neutral-400 text-neutral-500 hover:border-neutral-600 flex items-center justify-center cursor-pointer"
+            onClick={handleAddParticipant}
+            title="Add or cycle attendee"
+            className="w-5 h-5 rounded-full border border-dashed border-neutral-400 text-neutral-500 hover:border-neutral-700 hover:text-neutral-800 dark:hover:text-neutral-200 flex items-center justify-center cursor-pointer transition-colors"
           >
             <Plus className="w-3 h-3" />
           </button>

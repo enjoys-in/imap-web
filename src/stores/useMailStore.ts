@@ -4,6 +4,7 @@ import { emailsApi, foldersApi } from '@/lib/api';
 import { MOCK_EMAILS_METADATA } from '@/lib/mock';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
+import { useGeneralSettingsStore } from './useGeneralSettingsStore';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
 
@@ -42,6 +43,8 @@ interface MailState {
   emptyFolder: (folderId: string) => void;
   deleteEmail: (id: string) => void;
   moveEmailToFolder: (emailId: string, folderId: string) => void;
+  copyEmailToFolder: (emailId: string, folderId: string) => void;
+  categorizeEmail: (emailId: string, category: string | null) => void;
   snoozeEmail: (id: string, untilText: string) => void;
   bulkDelete: () => void;
   bulkMarkAsRead: (isRead: boolean) => void;
@@ -240,11 +243,23 @@ export const useMailStore = create<MailState>((set, get) => ({
     const email = get().localEmails.find((m) => m.id === id);
     const folder = email?.folderId || get().selectedFolderId;
     set((s) => {
+      const idx = s.localEmails.findIndex((m) => m.id === id);
       const nextEmails = s.localEmails.filter((m) => m.id !== id);
+      let nextSelected: string | null = s.selectedMailId;
+      if (s.selectedMailId === id) {
+        const afterAction = useGeneralSettingsStore.getState().afterMoveOrDelete;
+        if (afterAction === 'openNext') {
+          nextSelected = nextEmails[idx]?.id || nextEmails[idx - 1]?.id || null;
+        } else if (afterAction === 'openPrevious') {
+          nextSelected = nextEmails[idx - 1]?.id || nextEmails[idx]?.id || null;
+        } else {
+          nextSelected = null;
+        }
+      }
       return {
         lastSnapshot: s.localEmails,
         localEmails: nextEmails,
-        selectedMailId: s.selectedMailId === id ? nextEmails[0]?.id || null : s.selectedMailId,
+        selectedMailId: nextSelected,
       };
     });
     emailsApi.deleteEmail(id, folder).catch(() => {});
@@ -256,6 +271,34 @@ export const useMailStore = create<MailState>((set, get) => ({
       localEmails: s.localEmails.map((m) => (m.id === emailId ? { ...m, folderId } : m)),
     }));
     emailsApi.moveEmail(emailId, folderId, currentFolder).catch(() => {});
+  },
+  copyEmailToFolder: (emailId, folderId) => {
+    const original = get().localEmails.find((m) => m.id === emailId);
+    if (!original) return;
+    const copied: MailMessageMetadata = {
+      ...original,
+      id: `msg-copy-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      folderId,
+    };
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: [copied, ...s.localEmails],
+    }));
+    emailsApi.copyEmail(emailId, folderId, original.folderId).catch(() => {});
+  },
+  categorizeEmail: (emailId, category) => {
+    set((s) => ({
+      lastSnapshot: s.localEmails,
+      localEmails: s.localEmails.map((m) => {
+        if (m.id !== emailId) return m;
+        if (!category) return { ...m, categoryKeywords: [] };
+        const existing = m.categoryKeywords || [];
+        const next = existing.includes(category)
+          ? existing.filter((c) => c !== category)
+          : [...existing, category];
+        return { ...m, categoryKeywords: next };
+      }),
+    }));
   },
   snoozeEmail: (id, _until) => set((s) => ({
     lastSnapshot: s.localEmails,

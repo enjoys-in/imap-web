@@ -120,6 +120,7 @@ export function CalendarView() {
               events={filteredEvents}
               onSlotClick={handleOpenSlot}
               onEventClick={handleOpenDetail}
+              pendingSlot={s.createModalOpen ? { dayIndex: s.slotDay, hour: s.slotHour } : null}
               onSelectDayHeader={(day) => {
                 s.setActiveDayIndex(day);
                 s.setViewMode('Day');

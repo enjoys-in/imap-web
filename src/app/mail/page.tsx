@@ -19,5 +19,5 @@ export default async function MailPage({ searchParams }: MailPageProps) {
     redirect(`/mail/u/0/#${slug}`);
   }
 
-  redirect('/mail/u/0');
+  redirect('/mail/u/0/#inbox');
 }

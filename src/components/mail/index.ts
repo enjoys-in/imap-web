@@ -3,3 +3,4 @@ export * from './folders';
 export * from './list';
 export * from './reading-pane';
 export * from './command-bar';
+export * from './MailActionController';

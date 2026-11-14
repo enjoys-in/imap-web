@@ -18,6 +18,8 @@ import { QuickReplyChips } from './QuickReplyChips';
 import { useSession } from '@/components/providers/SessionProvider';
 import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 import { cn } from '@/lib/utils';
+import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 
 interface ReadingPaneProps {
   activeMailId?: string;
@@ -132,10 +134,22 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     };
   }, [email?.threadId]);
 
+  const messageOrder = useGeneralSettingsStore((s) => s.messageOrder);
+  const showDeletedItems = useGeneralSettingsStore((s) => s.showDeletedItems);
+
   const historyMessages = useMemo(() => {
     if (!threadMessages.length) return [];
-    return threadMessages.filter((m) => m.id !== currentId);
-  }, [threadMessages, currentId]);
+    const filtered = threadMessages.filter((m) => {
+      if (m.id === currentId) return false;
+      if (!showDeletedItems && (m.folderId === 'fld-deleted' || (m as { isDeleted?: boolean }).isDeleted)) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      return messageOrder === 'newestOnTop' ? timeB - timeA : timeA - timeB;
+    });
+  }, [threadMessages, currentId, messageOrder, showDeletedItems]);
 
   const handleReply = useCallback(() => {
     if (email) openReply(email, false);
@@ -151,14 +165,16 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
 
   const handleDelete = useCallback(() => {
     if (email) {
-      deleteEmail(email.id);
+      dispatchMailAction({ action: 'delete', targetEmailId: email.id, targetEmail: email });
       if (onBack) onBack();
     }
-  }, [email, deleteEmail, onBack]);
+  }, [email, onBack]);
 
   const handleToggleFlag = useCallback(() => {
-    if (email) toggleFlag(email.id);
-  }, [email, toggleFlag]);
+    if (email) {
+      dispatchMailAction({ action: 'toggle-flag', targetEmailId: email.id, targetEmail: email });
+    }
+  }, [email]);
 
   if (selectedIds.length > 1) {
     return (

@@ -1,12 +1,14 @@
 'use client';
 
-import React, { Suspense, useEffect, useCallback } from 'react';
+import React, { Suspense, useEffect, useCallback, useState } from 'react';
 import { useMailStore, useUiStore } from '@/stores';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { usePaneResize } from '@/hooks/usePaneResize';
 import { ResizeHandle } from '@/components/ui/ResizeHandle';
 import { FolderSidebar } from './folders';
 import { MailList } from './list';
 import { ReadingPane, ReadingPaneSkeleton } from './reading-pane';
+import { PopoutReadingModal } from './reading-pane/PopoutReadingModal';
 import { MailCommandBar, ImapSyncStatusWidget } from './command-bar';
 import { RightAppsRail } from '@/components/right-apps/RightAppsRail';
 import { RightAppsPanel } from '@/components/right-apps/RightAppsPanel';
@@ -15,6 +17,7 @@ import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
 import { emailsApi, foldersApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { saveOpenMailSession, getOpenMailSession } from '@/lib/storage/mailSessionStorage';
+import { ArrowLeft } from 'lucide-react';
 
 interface MailClientViewProps {
   userIndex?: number | string;
@@ -47,6 +50,9 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   const isSidebarOpen = useUiStore((s) => s.isSidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const { sidebarWidth, mailListWidth, handleSidebarResize, handleMailListResize, resetSidebar, resetMailList } = usePaneResize();
+
+  const readingPaneLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
+  const [popoutMailId, setPopoutMailId] = useState<string | null>(null);
 
   const activeFolderId = currentFolderId || selectedFolderId || 'fld-inbox';
   const hasSelectedMail = Boolean(currentMailId || selectedMailId);
@@ -159,6 +165,10 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
   };
 
   const handleMailChange = (mailId: string) => {
+    if (readingPaneLayout === 'popoutOnly') {
+      setPopoutMailId(mailId);
+      return;
+    }
     const slug = folderIdToSlug(activeFolderId);
     setSelectedMail(mailId);
     saveOpenMailSession(parsedUserIndex, activeFolderId, slug, mailId);
@@ -183,17 +193,102 @@ export function MailClientView({ userIndex = 0, currentFolderId, currentMailId }
 
         <ResizeHandle onResize={handleSidebarResize} onDoubleClick={resetSidebar} title="Drag to resize folders (double-click to reset)" />
 
-        <div className={cn('flex-1 md:flex-initial h-full', hasSelectedMail ? 'hidden md:flex' : 'flex')}>
-          <MailList activeFolderId={activeFolderId} activeMailId={currentMailId || selectedMailId || undefined} onSelectMail={handleMailChange} width={mailListWidth} />
-        </div>
+        {/* 1. FILL SCREEN LAYOUT (Matching Image 2: Wide table list or Full-screen reading pane) */}
+        {readingPaneLayout === 'fillScreen' && (
+          <div className="flex-1 h-full overflow-hidden flex flex-col">
+            {hasSelectedMail ? (
+              <div className="flex-1 h-full flex flex-col overflow-hidden bg-white dark:bg-[#1f1f1f]">
+                {/* Return to list banner */}
+                <div className="h-9 px-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/80 dark:bg-[#181818] shrink-0">
+                  <button
+                    onClick={handleBackToList}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-[#0078d4] dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Return to message list</span>
+                  </button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <Suspense fallback={<ReadingPaneSkeleton />}>
+                    <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
+                  </Suspense>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 h-full overflow-hidden">
+                <MailList
+                  activeFolderId={activeFolderId}
+                  activeMailId={currentMailId || selectedMailId || undefined}
+                  onSelectMail={handleMailChange}
+                  isWideLayout={true}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
-        <ResizeHandle onResize={handleMailListResize} onDoubleClick={resetMailList} title="Drag to resize inbox list (double-click to reset)" />
+        {/* 2. POPOUT ONLY LAYOUT (Full-width table list + Floating Window on click) */}
+        {readingPaneLayout === 'popoutOnly' && (
+          <>
+            <div className="flex-1 h-full overflow-hidden">
+              <MailList
+                activeFolderId={activeFolderId}
+                activeMailId={popoutMailId || undefined}
+                onSelectMail={handleMailChange}
+                isWideLayout={true}
+              />
+            </div>
+            <PopoutReadingModal
+              mailId={popoutMailId}
+              onClose={() => setPopoutMailId(null)}
+            />
+          </>
+        )}
 
-        <div className={cn('flex-1 h-full overflow-hidden', !hasSelectedMail ? 'hidden md:flex' : 'flex')}>
-          <Suspense fallback={<ReadingPaneSkeleton />}>
-            <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
-          </Suspense>
-        </div>
+        {/* 3. BOTTOM LAYOUT (Vertical split with Top list & Bottom Reading Pane) */}
+        {readingPaneLayout === 'bottom' && (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="h-[45%] flex flex-col min-h-[160px] overflow-hidden">
+              <MailList
+                activeFolderId={activeFolderId}
+                activeMailId={currentMailId || selectedMailId || undefined}
+                onSelectMail={handleMailChange}
+                isWideLayout={true}
+              />
+            </div>
+
+            <div className="h-1 bg-neutral-200 dark:bg-neutral-800 hover:bg-[#0078d4] dark:hover:bg-[#0078d4] cursor-row-resize transition-colors" />
+
+            <div className="flex-1 min-h-[180px] overflow-hidden bg-white dark:bg-[#1f1f1f]">
+              <Suspense fallback={<ReadingPaneSkeleton />}>
+                <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
+              </Suspense>
+            </div>
+          </div>
+        )}
+
+        {/* 4. RIGHT LAYOUT (Default 3-column with draggable list resize) */}
+        {(!readingPaneLayout || readingPaneLayout === 'right') && (
+          <>
+            <div className={cn('flex-1 md:flex-initial h-full', hasSelectedMail ? 'hidden md:flex' : 'flex')}>
+              <MailList
+                activeFolderId={activeFolderId}
+                activeMailId={currentMailId || selectedMailId || undefined}
+                onSelectMail={handleMailChange}
+                width={mailListWidth}
+                isWideLayout={false}
+              />
+            </div>
+
+            <ResizeHandle onResize={handleMailListResize} onDoubleClick={resetMailList} title="Drag to resize inbox list (double-click to reset)" />
+
+            <div className={cn('flex-1 h-full overflow-hidden', !hasSelectedMail ? 'hidden md:flex' : 'flex')}>
+              <Suspense fallback={<ReadingPaneSkeleton />}>
+                <ReadingPane activeMailId={currentMailId || selectedMailId || undefined} onBack={handleBackToList} />
+              </Suspense>
+            </div>
+          </>
+        )}
 
         <RightAppsPanel />
         <RightAppsRail />
