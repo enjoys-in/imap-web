@@ -1,10 +1,5 @@
-import React from 'react';
-import { MailSettingsView } from '@/components/settings/MailSettingsView';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Mail Settings — AirSend',
-};
-
-export default function MailSettingsPage() {
-  return <MailSettingsView />;
+export default function MailSettingsIndexPage() {
+  redirect('/settings/mail/compose');
 }

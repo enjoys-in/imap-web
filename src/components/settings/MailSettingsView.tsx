@@ -13,7 +13,6 @@ export function MailSettingsView() {
   const [form, setForm] = useState({
     emailSignature: settings.emailSignature,
     emailThreading: settings.emailThreading,
-    soundAlerts: settings.soundAlerts,
     downloadInlineImages: settings.downloadInlineImages,
     undoSendDelaySeconds: settings.undoSendDelaySeconds,
     emptyDeletedOnLogout: settings.emptyDeletedOnLogout,

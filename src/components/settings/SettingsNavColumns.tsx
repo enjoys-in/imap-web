@@ -3,86 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Search, X } from 'lucide-react';
 import {
-  Search,
-  X,
-  Users,
-  Database,
-  Settings,
-  Mail,
-  Calendar,
-  UserCheck,
-  Sparkles,
-} from 'lucide-react';
-
-interface CategoryItem {
-  id: string;
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  subcategories: { id: string; label: string; href: string }[];
-}
-
-const CATEGORIES: CategoryItem[] = [
-  {
-    id: 'accounts', label: 'Accounts', href: '/settings/accounts', icon: Users,
-    subcategories: [
-      { id: 'your-accounts', label: 'Your accounts', href: '/settings/accounts' },
-      { id: 'general', label: 'General & server', href: '/settings/accounts/general' },
-      { id: 'signatures', label: 'Signatures', href: '/settings/accounts/signatures' },
-      { id: 'auto-replies', label: 'Automatic replies', href: '/settings/accounts/auto-replies' },
-      { id: 'categories', label: 'Categories', href: '/settings/accounts/categories' },
-      { id: 'storage', label: 'Storage', href: '/settings/accounts/storage' },
-    ],
-  },
-  {
-    id: 'general', label: 'General', href: '/settings/general/language', icon: Settings,
-    subcategories: [
-      { id: 'language', label: 'Language and time', href: '/settings/general/language' },
-      { id: 'appearance', label: 'Appearance', href: '/settings/general' },
-      { id: 'notifications', label: 'Notifications', href: '/settings/general/notifications' },
-      { id: 'accessibility', label: 'Accessibility', href: '/settings/general/accessibility' },
-      { id: 'privacy', label: 'Privacy and data', href: '/settings/general/privacy' },
-      { id: 'search', label: 'Search', href: '/settings/general/search' },
-      { id: 'offline', label: 'Offline', href: '/settings/general/offline' },
-      { id: 'startup', label: 'Start up', href: '/settings/general/startup' },
-      { id: 'about', label: 'About AirSend', href: '/settings/general/about' },
-    ],
-  },
-  {
-    id: 'mail', label: 'Mail', href: '/settings/mail', icon: Mail,
-    subcategories: [
-      { id: 'compose', label: 'Compose and reply', href: '/settings/mail' },
-      { id: 'reading-pane', label: 'Reading Pane', href: '/settings/mail/reading-pane' },
-      { id: 'customize-actions', label: 'Customize actions', href: '/settings/mail/customize-actions' },
-      { id: 'rules', label: 'Rules & filters', href: '/settings/mail/rules' },
-      { id: 'junk', label: 'Spam & Junk filter', href: '/settings/mail/junk' },
-    ],
-  },
-  {
-    id: 'data-files', label: 'Data files', href: '/settings/accounts/storage', icon: Database,
-    subcategories: [{ id: 'storage-info', label: 'Storage & files', href: '/settings/accounts/storage' }],
-  },
-  {
-    id: 'calendar', label: 'Calendar', href: '/settings/general/language', icon: Calendar,
-    subcategories: [{ id: 'time-prefs', label: 'Time & calendar', href: '/settings/general/language' }],
-  },
-  {
-    id: 'people', label: 'People', href: '/settings/mail/junk', icon: UserCheck,
-    subcategories: [{ id: 'safe-contacts', label: 'Spam & Safe lists', href: '/settings/mail/junk' }],
-  },
-];
+  SETTINGS_CATEGORIES,
+  findActiveCategory,
+  isActiveSubcategory,
+} from './settingsNav';
 
 export function SettingsNavColumns() {
   const pathname = usePathname();
   const [search, setSearch] = useState('');
 
-  const activeCategory =
-    CATEGORIES.find(
-      (cat) => pathname.startsWith(cat.href) || cat.subcategories.some((s) => s.href === pathname)
-    ) || CATEGORIES[0];
+  const activeCategory = findActiveCategory(pathname);
 
-  const filteredCategories = CATEGORIES.filter((cat) =>
+  const filteredCategories = SETTINGS_CATEGORIES.filter((cat) =>
     cat.label.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -144,10 +78,7 @@ export function SettingsNavColumns() {
         </div>
         <div className="flex sm:flex-col gap-0.5 overflow-x-auto sm:overflow-x-visible">
           {activeCategory.subcategories.map((sub) => {
-            const isSubActive =
-              pathname === sub.href ||
-              (sub.href === '/settings/general' && pathname === '/settings/general/appearance') ||
-              (sub.href === '/settings/mail' && pathname === '/settings/mail/compose');
+            const isSubActive = isActiveSubcategory(pathname, sub);
             return (
               <Link
                 key={sub.id}

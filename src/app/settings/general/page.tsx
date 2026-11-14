@@ -1,10 +1,5 @@
-import React from 'react';
-import { GeneralSettingsView } from '@/components/settings/GeneralSettingsView';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'General Settings — AirSend',
-};
-
-export default function GeneralSettingsPage() {
-  return <GeneralSettingsView />;
+export default function GeneralSettingsIndexPage() {
+  redirect('/settings/general/appearance');
 }

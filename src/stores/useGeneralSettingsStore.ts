@@ -10,14 +10,14 @@ export type AfterMoveOrDelete = 'openNext' | 'openPrevious' | 'returnToList';
 export type QuickActionType = 'move' | 'read' | 'flag' | 'pin' | 'archive' | 'delete';
 export type SwipeActionType = 'delete' | 'read' | 'pin' | 'archive' | 'flag' | 'none';
 export type NotificationAudience = 'all' | 'direct' | 'vip' | 'high_priority';
+export type TimeFormat = '12h' | '24h';
 
 export interface GeneralSettingsState {
   timeZone: string;
   dateFormat: string;
+  timeFormat: TimeFormat;
   language: string;
   firstDayOfWeek: 'Sunday' | 'Monday';
-  desktopNotifications: boolean;
-  soundAlerts: boolean;
   emailSignature: string;
   emailThreading: boolean;
   downloadInlineImages: boolean;
@@ -68,10 +68,9 @@ export interface GeneralSettingsState {
 const DEFAULT_SETTINGS = {
   timeZone: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi',
   dateFormat: 'M/d/yyyy',
+  timeFormat: '12h' as TimeFormat,
   language: 'English (United States)',
   firstDayOfWeek: 'Sunday' as const,
-  desktopNotifications: true,
-  soundAlerts: true,
   emailSignature: '',
   emailThreading: true,
   downloadInlineImages: true,

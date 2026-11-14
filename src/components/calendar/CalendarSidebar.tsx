@@ -118,11 +118,11 @@ export function CalendarSidebar({
         <div>
           <div className="flex items-center justify-between px-2 mb-1">
             <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-              Projects
+              Calendars
             </span>
             <button
               onClick={onAddProject}
-              title="Add new project"
+              title="Add new calendar"
               className="w-4 h-4 rounded flex items-center justify-center text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <Plus className="w-3 h-3" />
@@ -142,7 +142,10 @@ export function CalendarSidebar({
                       : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/30'
                   )}
                 >
-                  <span className={cn('w-4 h-4 rounded text-white flex items-center justify-center text-[10px] font-bold shrink-0', proj.color)}>
+                  <span
+                    style={{ backgroundColor: proj.color }}
+                    className="w-4 h-4 rounded text-white flex items-center justify-center text-[10px] font-bold shrink-0"
+                  >
                     {proj.icon}
                   </span>
                   <span className="truncate">{proj.name}</span>

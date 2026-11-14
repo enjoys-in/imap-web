@@ -1,11 +1,11 @@
 import React from 'react';
-import { GeneralSettingsView } from '@/components/settings/GeneralSettingsView';
+import { AppearanceSettingsView } from '@/components/settings/subviews/AppearanceSettingsView';
 
 export const metadata = {
   title: 'Appearance & Themes — AirSend Settings',
-  description: 'Customize application theme, colors, and layout appearance.',
+  description: 'Customize the application theme.',
 };
 
 export default function GeneralAppearancePage() {
-  return <GeneralSettingsView />;
+  return <AppearanceSettingsView />;
 }

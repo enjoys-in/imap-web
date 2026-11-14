@@ -110,7 +110,7 @@ export function buildMailContextMenuItems(
         { label: 'Manage rules...', onClick: () => window.location.assign('/settings/mail/rules') },
       ],
     },
-    { label: 'Set quick actions', icon: Settings, onClick: () => window.location.assign('/settings/mail') },
+    { label: 'Set quick actions', icon: Settings, onClick: () => window.location.assign('/settings/mail/customize-actions') },
     { divider: true, label: '' },
 
     // Sections 4 & 5: Security & Advanced

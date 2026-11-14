@@ -1,12 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { CalendarEvent, CalendarViewMode, WorkspaceTab, CalendarColor } from './types';
 import { WorkspaceItem } from './CalendarWorkspaceMenu';
 import { CalendarNotificationItem } from './CalendarNotificationsPopover';
 import { ProjectItem } from './CalendarSidebar';
-import { getAppointments, createAppointment, deleteAppointment, getCalendars, createCalendar } from '@/lib/api/handlers/calendar';
+import {
+  getAppointments,
+  createAppointment,
+  deleteAppointment,
+  subscribeCalendarEvents,
+  type NewCalendarInput,
+  type UserCalendar,
+} from '@/lib/api/handlers/calendar';
+import { DEFAULT_CALENDAR_COLOR } from '@/lib/calendarColors';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { Appointment } from '@/types';
+
+const PLACEHOLDER_PROJECT: ProjectItem = {
+  id: 'p-1',
+  name: 'General',
+  icon: '★',
+  color: DEFAULT_CALENDAR_COLOR,
+};
+
+const tabIdFor = (calendarId: string): string => `tab-${calendarId}`;
+
+const projectIcon = (calendar: UserCalendar): string =>
+  calendar.isDefault ? '★' : (Array.from(calendar.name.trim())[0] ?? '•').toUpperCase();
+
+const toProject = (calendar: UserCalendar): ProjectItem => ({
+  id: calendar.id,
+  name: calendar.name,
+  color: calendar.color,
+  icon: projectIcon(calendar),
+});
 
 function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
   const startDate = apt.startUtc ? new Date(apt.startUtc) : new Date();
@@ -65,55 +93,70 @@ export function useCalendarState() {
   const [activeDayIndex, setActiveDayIndex] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [projects, setProjects] = useState<ProjectItem[]>([
-    { id: 'p-1', name: 'General', icon: 'Hash', color: '#0078d4' },
-  ]);
+  const calendars = useCalendarsStore((s) => s.calendars);
+  const calendarsStatus = useCalendarsStore((s) => s.status);
+  const calendarsError = useCalendarsStore((s) => s.error);
+  const loadCalendars = useCalendarsStore((s) => s.load);
+  const createCalendarInStore = useCalendarsStore((s) => s.create);
+  const seenCalendarIds = useRef(new Set<string>());
+  const projects = useMemo<ProjectItem[]>(
+    () => (calendars.length > 0 ? calendars.map(toProject) : [PLACEHOLDER_PROJECT]),
+    [calendars]
+  );
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([
     { id: 'w-1', name: 'AirSend Workspace', role: 'Owner', active: true },
   ]);
   const [notifications, setNotifications] = useState<CalendarNotificationItem[]>([]);
 
-  // Fetch multiple calendars and appointments on mount
   useEffect(() => {
     let active = true;
-    async function load() {
-      try {
-        const [cals, apts] = await Promise.all([getCalendars(), getAppointments()]);
-        if (active) {
-          if (Array.isArray(cals) && cals.length > 0) {
-            const mappedProjects: ProjectItem[] = cals.map((c, i) => ({
-              id: c.id,
-              name: c.name,
-              color: c.color.startsWith('bg-') ? c.color : 'bg-blue-600',
-              icon: i === 0 ? '★' : 'Q',
-            }));
-            setProjects(mappedProjects);
-            setTabs(
-              mappedProjects.map((p, idx) => ({
-                id: `tab-${p.id}`,
-                name: p.name,
-                icon: p.icon,
-                active: idx === 0,
-              }))
-            );
-            setActiveTabId(`tab-${mappedProjects[0].id}`);
-            setSelectedProject(mappedProjects[0].name);
-          }
 
-          if (Array.isArray(apts) && apts.length > 0) {
-            const mapped = apts.map(appointmentToCalendarEvent);
-            setEvents(mapped);
-          }
-        }
-      } catch (err) {
-        console.warn('Calendar service unreachable; running in standalone local mode:', err);
+    const loadEvents = async () => {
+      const apts = await getAppointments();
+      if (active && apts.length > 0) {
+        setEvents(apts.map(appointmentToCalendarEvent));
       }
-    }
-    load();
+    };
+
+    void loadCalendars();
+    void loadEvents();
+
+    const unsubscribePush = subscribeCalendarEvents(() => {
+      void loadCalendars({ force: true });
+      void loadEvents();
+    });
+
     return () => {
       active = false;
+      unsubscribePush();
     };
-  }, []);
+  }, [loadCalendars]);
+
+  useEffect(() => {
+    const fresh = calendars.filter((c) => !seenCalendarIds.current.has(c.id));
+    if (fresh.length === 0) {
+      return;
+    }
+    const initial = seenCalendarIds.current.size === 0;
+    for (const calendar of fresh) {
+      seenCalendarIds.current.add(calendar.id);
+    }
+
+    const freshTabs: WorkspaceTab[] = fresh.map((calendar) => ({
+      id: tabIdFor(calendar.id),
+      name: calendar.name,
+      icon: projectIcon(calendar),
+      active: false,
+    }));
+    const focused = initial ? freshTabs[0] : freshTabs[freshTabs.length - 1];
+    focused.active = true;
+
+    setTabs((prev) =>
+      initial ? freshTabs : [...prev.map((tab) => ({ ...tab, active: false })), ...freshTabs]
+    );
+    setActiveTabId(focused.id);
+    setSelectedProject(focused.name);
+  }, [calendars]);
 
   // Modals & Popovers
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -141,31 +184,8 @@ export function useCalendarState() {
     if (activeTabId === id) handleSelectTab(remaining[0].id);
   };
 
-  const handleAddProject = async (p: { name: string; icon: string; color: string }) => {
-    const tempId = `cal-${Date.now()}`;
-    const newProj: ProjectItem = { id: tempId, ...p };
-    setProjects((prev) => [...prev, newProj]);
-    const newTab: WorkspaceTab = { id: `tab-${tempId}`, name: p.name, icon: p.icon, active: true };
-    setTabs((prev) => [...prev.map((t) => ({ ...t, active: false })), newTab]);
-    setActiveTabId(newTab.id);
-    setSelectedProject(p.name);
-
-    try {
-      const created = await createCalendar({ name: p.name, color: p.color });
-      if (created && created.id) {
-        setProjects((prev) =>
-          prev.map((proj) => (proj.id === tempId ? { ...proj, id: created.id } : proj))
-        );
-        setTabs((prev) =>
-          prev.map((tab) =>
-            tab.id === `tab-${tempId}` ? { ...tab, id: `tab-${created.id}` } : tab
-          )
-        );
-        setActiveTabId(`tab-${created.id}`);
-      }
-    } catch {
-      // Standalone local mode if unreachable
-    }
+  const handleAddProject = async (input: NewCalendarInput): Promise<void> => {
+    await createCalendarInStore(input);
   };
 
   const handleDeleteEvent = async (id: string) => {
@@ -200,8 +220,7 @@ export function useCalendarState() {
       const start = new Date(now);
       start.setHours(created.startHour, 0, 0, 0);
       const end = new Date(start.getTime() + (created.durationHours || 1) * 3600 * 1000);
-      const currentProj = projects.find((p) => p.name === selectedProject);
-      const calendarId = currentProj?.id && !currentProj.id.startsWith('cal-') ? currentProj.id : undefined;
+      const calendarId = calendars.find((c) => c.name === selectedProject)?.id;
 
       await createAppointment({
         accountId: '',
@@ -246,6 +265,8 @@ export function useCalendarState() {
     setSearchQuery,
     events,
     projects,
+    calendarsError: calendarsStatus === 'error' ? calendarsError : null,
+    reloadCalendars: () => loadCalendars({ force: true }),
     handleAddProject,
     workspaces,
     setWorkspaces,

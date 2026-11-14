@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { CalendarWorkspaceTabs } from './CalendarWorkspaceTabs';
 import { CalendarWorkspaceMenu } from './CalendarWorkspaceMenu';
 import { CalendarNotificationsPopover } from './CalendarNotificationsPopover';
@@ -18,6 +19,7 @@ import { useAlertStore } from '@/stores';
 
 export function CalendarView() {
   const s = useCalendarState();
+  const router = useRouter();
   const showAlert = useAlertStore((st) => st.showAlert);
 
   const filteredEvents = s.searchQuery.trim()
@@ -70,6 +72,22 @@ export function CalendarView() {
         onDismiss={(id) => s.setNotifications((prev) => prev.filter((n) => n.id !== id))}
       />
 
+      {s.calendarsError && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-b border-amber-200 dark:border-amber-900"
+        >
+          <span>{s.calendarsError}</span>
+          <button
+            type="button"
+            onClick={() => void s.reloadCalendars()}
+            className="shrink-0 px-2.5 h-6 rounded-md font-semibold bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         <CalendarSidebar
           open={s.sidebarOpen}
@@ -85,14 +103,7 @@ export function CalendarView() {
           }}
           projects={s.projects}
           onAddProject={() => s.setAddProjectModalOpen(true)}
-          onOpenSettings={() =>
-            showAlert({
-              title: 'Calendar & Workspace Settings',
-              description:
-                'Manage appointment notifications, calendar timezones, and workspace defaults.',
-              type: 'info',
-            })
-          }
+          onOpenSettings={() => router.push('/settings/calendar')}
           onOpenReleaseNotes={() =>
             showAlert({
               title: 'Studio Calendar v2.4 — Release Notes',

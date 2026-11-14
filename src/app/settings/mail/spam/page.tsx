@@ -1,10 +1,5 @@
-import React from 'react';
-import { JunkSettingsView } from '@/components/settings/subviews/JunkSettingsView';
+import { redirect } from 'next/navigation';
 
-export const metadata = {
-  title: 'Spam Filter & Junk Email — AirSend Settings',
-};
-
-export default function SpamPage() {
-  return <JunkSettingsView />;
+export default function SpamSettingsRedirectPage() {
+  redirect('/settings/mail/junk');
 }

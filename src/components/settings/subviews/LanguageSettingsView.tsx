@@ -1,18 +1,94 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Globe, Save } from 'lucide-react';
-import { useToastStore } from '@/stores';
+import { Save } from 'lucide-react';
+import { useGeneralSettingsStore, type TimeFormat } from '@/stores/useGeneralSettingsStore';
+import { useToastStore } from '@/stores/useToastStore';
+
+interface Option {
+  value: string;
+  label: string;
+}
+
+const LANGUAGES: readonly Option[] = [
+  { value: 'English (United States)', label: 'English (United States)' },
+  { value: 'English (United Kingdom)', label: 'English (United Kingdom)' },
+  { value: 'Hindi (India)', label: 'हिन्दी (Hindi)' },
+  { value: 'Spanish (Spain)', label: 'Español (Spanish)' },
+  { value: 'French (France)', label: 'Français (French)' },
+  { value: 'German (Germany)', label: 'Deutsch (German)' },
+];
+
+const TIME_ZONES: readonly Option[] = [
+  { value: '(UTC-08:00) Pacific Time (US & Canada)', label: '(UTC-08:00) Pacific Time (US & Canada)' },
+  { value: '(UTC-05:00) Eastern Time (US & Canada)', label: '(UTC-05:00) Eastern Time (US & Canada)' },
+  { value: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London', label: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London' },
+  { value: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi', label: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi' },
+  { value: '(UTC+09:00) Osaka, Sapporo, Tokyo', label: '(UTC+09:00) Osaka, Sapporo, Tokyo' },
+];
+
+const DATE_FORMATS: readonly Option[] = [
+  { value: 'M/d/yyyy', label: 'M/d/yyyy (e.g. 11/13/2026)' },
+  { value: 'd/M/yyyy', label: 'd/M/yyyy (e.g. 13/11/2026)' },
+  { value: 'yyyy-MM-dd', label: 'yyyy-MM-dd (e.g. 2026-11-13)' },
+];
+
+const TIME_FORMATS: ReadonlyArray<{ value: TimeFormat; label: string }> = [
+  { value: '12h', label: '12-hour (1:00 PM)' },
+  { value: '24h', label: '24-hour (13:00)' },
+];
+
+const selectClass =
+  'w-full sm:w-80 h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs';
+
+const withCurrent = (options: readonly Option[], current: string): readonly Option[] =>
+  options.some((option) => option.value === current)
+    ? options
+    : [...options, { value: current, label: current }];
+
+interface SelectFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  options: readonly Option[];
+  onChange: (value: string) => void;
+  divided?: boolean;
+}
+
+function SelectField({ id, label, value, options, onChange, divided }: SelectFieldProps) {
+  return (
+    <div className={divided ? 'border-t border-neutral-200 dark:border-neutral-800 pt-4' : undefined}>
+      <label htmlFor={id} className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-1">
+        {label}
+      </label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={selectClass}>
+        {withCurrent(options, value).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 export function LanguageSettingsView() {
-  const [language, setLanguage] = useState('en-US');
-  const [timezone, setTimezone] = useState('Asia/Kolkata');
-  const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
-  const [timeFormat, setTimeFormat] = useState('12h');
+  const settings = useGeneralSettingsStore();
+  const updateSettings = useGeneralSettingsStore((s) => s.updateSettings);
   const addToast = useToastStore((s) => s.addToast);
 
+  const [language, setLanguage] = useState(settings.language);
+  const [timeZone, setTimeZone] = useState(settings.timeZone);
+  const [dateFormat, setDateFormat] = useState(settings.dateFormat);
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(settings.timeFormat);
+
   const handleSave = () => {
-    addToast({ title: 'Language & time settings saved', type: 'success' });
+    updateSettings({ language, timeZone, dateFormat, timeFormat });
+    addToast({
+      title: 'Language & time settings saved',
+      description: 'Your language, time zone and date and time formats were updated.',
+      type: 'success',
+    });
   };
 
   return (
@@ -23,73 +99,25 @@ export function LanguageSettingsView() {
       </div>
 
       <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-[#1c1c1c]">
-        <div>
-          <label className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-1">Language</label>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="w-full sm:w-80 h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
-          >
-            <option value="en-US">English (United States)</option>
-            <option value="en-GB">English (United Kingdom)</option>
-            <option value="hi-IN">हिन्दी (Hindi)</option>
-            <option value="es-ES">Español (Spanish)</option>
-            <option value="fr-FR">Français (French)</option>
-            <option value="de-DE">Deutsch (German)</option>
-          </select>
-        </div>
+        <SelectField id="settings-language" label="Language" value={language} options={LANGUAGES} onChange={setLanguage} />
+        <SelectField id="settings-timezone" label="Current time zone" value={timeZone} options={TIME_ZONES} onChange={setTimeZone} divided />
+        <SelectField id="settings-date-format" label="Date format" value={dateFormat} options={DATE_FORMATS} onChange={setDateFormat} divided />
 
         <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4">
-          <label className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-1">Current time zone</label>
-          <select
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-            className="w-full sm:w-80 h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
-          >
-            <option value="Asia/Kolkata">(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi</option>
-            <option value="America/New_York">(UTC-05:00) Eastern Time (US & Canada)</option>
-            <option value="America/Los_Angeles">(UTC-08:00) Pacific Time (US & Canada)</option>
-            <option value="Europe/London">(UTC+00:00) Dublin, Edinburgh, Lisbon, London</option>
-            <option value="Asia/Tokyo">(UTC+09:00) Osaka, Sapporo, Tokyo</option>
-          </select>
-        </div>
-
-        <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4">
-          <label className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-1">Date format</label>
-          <select
-            value={dateFormat}
-            onChange={(e) => setDateFormat(e.target.value)}
-            className="w-full sm:w-80 h-8 px-2 bg-white dark:bg-[#252525] border border-neutral-300 dark:border-neutral-700 rounded text-xs"
-          >
-            <option value="MM/DD/YYYY">MM/DD/YYYY (e.g. 11/13/2026)</option>
-            <option value="DD/MM/YYYY">DD/MM/YYYY (e.g. 13/11/2026)</option>
-            <option value="YYYY-MM-DD">YYYY-MM-DD (e.g. 2026-11-13)</option>
-          </select>
-        </div>
-
-        <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4">
-          <label className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-2">Time format</label>
+          <span className="font-semibold text-neutral-900 dark:text-neutral-100 block mb-2">Time format</span>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="timeFormat"
-                checked={timeFormat === '12h'}
-                onChange={() => setTimeFormat('12h')}
-                className="accent-[#0078d4]"
-              />
-              <span>12-hour (1:00 PM)</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="timeFormat"
-                checked={timeFormat === '24h'}
-                onChange={() => setTimeFormat('24h')}
-                className="accent-[#0078d4]"
-              />
-              <span>24-hour (13:00)</span>
-            </label>
+            {TIME_FORMATS.map((option) => (
+              <label key={option.value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="timeFormat"
+                  checked={timeFormat === option.value}
+                  onChange={() => setTimeFormat(option.value)}
+                  className="accent-[#0078d4]"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
           </div>
         </div>
       </div>
