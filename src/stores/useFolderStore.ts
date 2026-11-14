@@ -6,6 +6,7 @@ import { foldersApi } from '@/lib/api';
 import {
   getCachedFolders,
   replaceCachedFolders,
+  updateCachedFolderCounts,
   getFolderSyncStates,
   invalidateFolderSync,
 } from '@/lib/idb/mailCacheDb';
@@ -39,10 +40,17 @@ interface FolderState {
   syncFolders: (accountId: string, openFolderId?: string) => Promise<MailFolder[]>;
   /** Like `syncFolders`, but waits briefly so a burst of events costs one request. */
   syncFoldersSoon: (accountId: string, openFolderId?: string) => void;
+  /**
+   * Take a folder list the backend already sent (with `/authenticate`, `/validate` or
+   * `/me`) instead of asking for it again. Nothing is written when it matches what is
+   * stored; when only counts differ just those folders' counts are updated; the list
+   * is rewritten only when folders were added, removed or changed identity.
+   */
+  applyServerFolders: (accountId: string, folders: MailFolder[], openFolderId?: string) => Promise<MailFolder[]>;
 
   bumpUnread: (folderId: string, delta: number) => void;
-  /** All messages in the folder were marked read. */
-  clearUnread: (folderId: string) => void;
+  /** All messages in the folder were marked read. Returns how many were showing as unread, so the change can be undone. */
+  clearUnread: (folderId: string) => number;
   reset: () => void;
 }
 
@@ -53,6 +61,35 @@ function withLabels(accountId: string, folders: MailFolder[]): MailFolder[] {
     accountId: f.accountId || accountId,
     displayName: folderLabel(f.displayName || f.fullName),
   }));
+}
+
+type FolderChange = 'same' | 'counts' | 'structure';
+
+const countOf = (value: unknown) => Number(value) || 0;
+
+/** How the backend's list differs from the one held: nothing, only message counts, or the folders themselves. */
+function diffFolders(held: MailFolder[], incoming: MailFolder[]): FolderChange {
+  if (held.length !== incoming.length) return 'structure';
+  const byId = new Map(held.map((f) => [f.id, f]));
+  let counts = false;
+  for (const f of incoming) {
+    const h = byId.get(f.id);
+    if (
+      !h ||
+      h.fullName !== f.fullName ||
+      h.displayName !== f.displayName ||
+      h.special !== f.special ||
+      (h.parentFullName ?? null) !== (f.parentFullName ?? null) ||
+      h.uidValidity !== f.uidValidity ||
+      h.sortRank !== f.sortRank
+    ) {
+      return 'structure';
+    }
+    if (countOf(h.unreadCount) !== countOf(f.unreadCount) || countOf(h.totalCount) !== countOf(f.totalCount)) {
+      counts = true;
+    }
+  }
+  return counts ? 'counts' : 'same';
 }
 
 // One request per account at a time, however many components ask.
@@ -119,9 +156,7 @@ export const useFolderStore = create<FolderState>((set, get) => {
       const request = (async () => {
         try {
           const fromBackend = await foldersApi.getFolders(accountId);
-          await replaceCachedFolders(accountId, fromBackend);
-          await markChangedFoldersStale(accountId, fromBackend, openFolderId);
-          return apply(accountId, fromBackend, true);
+          return await get().applyServerFolders(accountId, fromBackend, openFolderId);
         } catch {
           // Offline or server error: keep showing the last known copy.
           return get().byAccount[accountId] ?? [];
@@ -132,6 +167,41 @@ export const useFolderStore = create<FolderState>((set, get) => {
 
       inflightSync.set(accountId, request);
       return request;
+    },
+
+    applyServerFolders: async (accountId, incoming, openFolderId) => {
+      if (!accountId) return [];
+      const labelled = withLabels(accountId, incoming);
+      // What is held now: the in-memory list, else the stored copy.
+      const held = get().byAccount[accountId] ?? withLabels(accountId, await getCachedFolders(accountId));
+      const change = diffFolders(held, labelled);
+
+      if (change === 'structure') {
+        await replaceCachedFolders(accountId, incoming);
+      } else if (change === 'counts') {
+        const heldById = new Map(held.map((f) => [f.id, f]));
+        await updateCachedFolderCounts(
+          labelled.filter((f) => {
+            const h = heldById.get(f.id);
+            return !h || countOf(h.unreadCount) !== countOf(f.unreadCount) || countOf(h.totalCount) !== countOf(f.totalCount);
+          })
+        );
+      }
+      // A different message count means that folder changed on the server since its messages were fetched.
+      if (change !== 'same') await markChangedFoldersStale(accountId, incoming, openFolderId);
+
+      if (change === 'same') {
+        const current = get().byAccount[accountId];
+        // First list after a reload: register it. Otherwise nothing to store or re-render.
+        if (!current) return apply(accountId, incoming, true);
+        // The backend's counts are the base again: drop local unread adjustments, if there are any.
+        const ids = new Set(current.map((f) => f.id));
+        if (Object.keys(get().unreadDelta).some((id) => ids.has(id))) {
+          set((s) => ({ unreadDelta: Object.fromEntries(Object.entries(s.unreadDelta).filter(([id]) => !ids.has(id))) }));
+        }
+        return current;
+      }
+      return apply(accountId, incoming, true);
     },
 
     syncFoldersSoon: (accountId, openFolderId) => {
@@ -153,14 +223,16 @@ export const useFolderStore = create<FolderState>((set, get) => {
     },
 
     clearUnread: (folderId) => {
-      if (!folderId) return;
-      set((s) => {
-        const folder = Object.values(s.byAccount)
-          .flat()
-          .find((f) => f.id === folderId);
-        if (!folder) return s;
-        return { unreadDelta: { ...s.unreadDelta, [folderId]: -(Number(folder.unreadCount) || 0) } };
-      });
+      if (!folderId) return 0;
+      const state = get();
+      const folder = Object.values(state.byAccount)
+        .flat()
+        .find((f) => f.id === folderId);
+      if (!folder) return 0;
+      const base = Number(folder.unreadCount) || 0;
+      const shown = Math.max(0, base + (state.unreadDelta[folderId] ?? 0));
+      set((s) => ({ unreadDelta: { ...s.unreadDelta, [folderId]: -base } }));
+      return shown;
     },
 
     reset: () => {

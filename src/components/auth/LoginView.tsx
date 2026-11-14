@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
   Lock,
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { accountsApi, type AutodiscoverResult } from '@/lib/api';
+import { ingestSessionPayload } from '@/lib/ingestSession';
 import { useSession } from '@/components/providers/SessionProvider';
 import { AirSend3DRibbon } from './AirSend3DRibbon';
 import { FluentBloomBackground } from './FluentBloomBackground';
@@ -42,6 +44,7 @@ type AuthViewMode = 'welcome' | 'login' | 'setup';
 
 export function LoginView() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { refreshSession } = useSession();
 
   // Mode: 'welcome' matches the reference card with fluid animated transitions to 'login' and 'setup'
@@ -196,6 +199,8 @@ export function LoginView() {
       const res = await accountsApi.login(email.trim(), password);
 
       if (res && res.success) {
+        // `/authenticate` already sent the folders and the INBOX quota: store them now, no extra requests.
+        await ingestSessionPayload(res.result ?? res, { queryClient });
         await refreshSession();
         router.push('/mail/u/0#inbox');
         return;
@@ -305,6 +310,8 @@ export function LoginView() {
       if (res) {
         setSetupProgress(100);
         setCurrentStep('complete');
+        // Setup already returned the folders (and quota): store them now, no extra requests.
+        await ingestSessionPayload(res, { queryClient });
         await refreshSession();
         setTimeout(() => {
           router.push('/mail/u/0#inbox');

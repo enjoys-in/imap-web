@@ -274,10 +274,8 @@ export async function patchCachedEmail(
   id: string,
   patch: Partial<MailMessageMetadata>
 ): Promise<void> {
-  await withDb(
-    (db) => db.emails.where('[folderId+id]').equals([folderId, id]).modify(patch).then(() => undefined),
-    undefined
-  );
+  // Update by primary key ([folderId+id]): touches that one row, does nothing if it is not stored.
+  await withDb((db) => db.emails.update([folderId, id], patch).then(() => undefined), undefined);
 }
 
 /** Forgets that a folder was fetched, so the next open asks the backend again. */
@@ -294,6 +292,32 @@ export async function clearFolderCache(folderId: string): Promise<void> {
       db.transaction('rw', db.emails, db.folder_sync, async () => {
         await db.emails.where('folderId').equals(folderId).delete();
         await db.folder_sync.delete(folderId);
+      }),
+    undefined
+  );
+}
+
+/**
+ * Updates only the counts of folders that are already stored (an update by key per
+ * folder, in one transaction). Used when the backend reports different counts for
+ * the same set of folders, so the rest of the stored list is not rewritten.
+ */
+export async function updateCachedFolderCounts(
+  changes: Array<Pick<MailFolder, 'id' | 'unreadCount' | 'totalCount' | 'lastSyncedAt'>>
+): Promise<void> {
+  if (changes.length === 0) return;
+  const now = Date.now();
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.folders, async () => {
+        for (const { id, unreadCount, totalCount, lastSyncedAt } of changes) {
+          await db.folders.update(id, {
+            unreadCount,
+            totalCount,
+            ...(lastSyncedAt ? { lastSyncedAt } : {}),
+            cachedAt: now,
+          });
+        }
       }),
     undefined
   );

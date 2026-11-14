@@ -1,6 +1,7 @@
 import { apiClient } from '../client';
 import { MailFolder } from '@/types';
 import { toFolderPath } from '@/lib/folders';
+import { normalizeMailboxes } from '@/lib/mailboxPayload';
 
 export { getQuota, type StorageQuotaInfo } from './folderQuota';
 
@@ -17,7 +18,8 @@ export async function getFolders(accountId?: string): Promise<MailFolder[]> {
     : Array.isArray(data?.result?.mailboxes)
     ? data.result.mailboxes
     : data?.mailboxes;
-  return Array.isArray(list) ? list : [];
+  // Same reduction as the folder list the session payloads carry, so stored rows all look alike.
+  return normalizeMailboxes(list, accountId ?? '');
 }
 
 /**

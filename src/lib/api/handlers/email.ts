@@ -243,6 +243,7 @@ export async function appendMessage(
 
 /**
  * Move a single email message to target folder.
+ * Resolves `true` only when the server accepted the move.
  */
 export async function moveEmail(
   messageId: string,
@@ -258,7 +259,7 @@ export async function moveEmail(
     });
     return true;
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -279,7 +280,7 @@ export async function bulkMoveEmails(
     });
     return true;
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -300,12 +301,13 @@ export async function copyEmail(
     });
     return true;
   } catch {
-    return true;
+    return false;
   }
 }
 
 /**
  * Bulk delete messages.
+ * Resolves `true` only when the server accepted the delete.
  */
 export async function bulkDeleteEmails(messageIds: string[], folder?: string): Promise<boolean> {
   const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
@@ -317,7 +319,7 @@ export async function bulkDeleteEmails(messageIds: string[], folder?: string): P
     });
     return true;
   } catch {
-    return true;
+    return false;
   }
 }
 

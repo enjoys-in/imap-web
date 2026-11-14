@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
 import { accountsApi, clearAuthToken } from '@/lib/api';
 import { accountsQuery } from '@/hooks/useEmailsQuery';
+import { ingestSessionPayload } from '@/lib/ingestSession';
 import { useFolderStore } from '@/stores/useFolderStore';
 import { useMailStore } from '@/stores/useMailStore';
 import { Account } from '@/types';
@@ -71,6 +72,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           accountsApi.getAccounts({ refresh: options.force, forEmail: profile.email }),
         staleTime: options.force ? 0 : accountsQuery.staleTime,
       });
+      // `/me` carries the folder list: update the local copy from it (only what changed), no `/fetch-mailboxes` needed.
+      await ingestSessionPayload(profile, { queryClient, accountId: list[0]?.id });
       return { profile, list };
     },
     [queryClient]

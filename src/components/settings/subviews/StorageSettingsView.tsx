@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { HardDrive, Trash2 } from 'lucide-react';
 import { useAccounts, useFolders, useQuota } from '@/hooks/useEmailsQuery';
 import { useMailStore, useToastStore, useFolderStore } from '@/stores';
-import { foldersApi } from '@/lib/api';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
 
 export function StorageSettingsView() {
@@ -28,22 +27,14 @@ export function StorageSettingsView() {
     : 0;
 
   const handleEmpty = async (folderId: string, name: string) => {
-    emptyFolder(folderId);
-    try {
-      const res = await foldersApi.emptyFolder(folderId);
-      void useFolderStore.getState().syncFolders(activeAccountId);
-      addToast({
-        title: 'Folder emptied',
-        description: res?.message || `Emptied all items in ${name}`,
-        type: res?.success ? 'info' : 'warning',
-      });
-    } catch (err: any) {
-      addToast({
-        title: 'Error',
-        description: err?.message || `Failed to empty ${name}`,
-        type: 'error',
-      });
-    }
+    // One request: the store sends it and keeps the local copy only if the server refuses.
+    const res = await emptyFolder(folderId);
+    if (res.success) void useFolderStore.getState().syncFolders(activeAccountId);
+    addToast(
+      res.success
+        ? { title: 'Folder emptied', description: res.message || `Emptied all items in ${name}`, type: 'info' }
+        : { title: 'Error', description: res.message || `Failed to empty ${name}`, type: 'error' }
+    );
   };
 
   return (

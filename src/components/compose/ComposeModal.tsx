@@ -51,13 +51,14 @@ export function ComposeModal() {
     const isReplyOrForward = mode === 'reply' || mode === 'replyAll' || mode === 'forward';
     const resolvedThreadId = isReplyOrForward && threadId ? threadId : `thread-${Date.now()}`;
 
+    const accountId = useMailStore.getState().selectedAccountId;
+
     // Clean up draft if this compose had a saved draft
     if (draftId) {
-      // Removes the draft locally and asks the server to delete it from its own folder.
-      useMailStore.getState().deleteEmail(draftId);
+      // The draft lives in Drafts, whichever folder is open: delete it there.
+      useMailStore.getState().deleteEmail(draftId, findRegisteredSpecialFolder('Drafts', accountId)?.id);
     }
 
-    const accountId = useMailStore.getState().selectedAccountId;
     const newMsg: MailMessage = {
       id: `sent-${Date.now()}`,
       // The account's Sent folder as classified by the backend.

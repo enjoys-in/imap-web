@@ -1,5 +1,4 @@
 import { useMailStore, useToastStore } from '@/stores';
-import { emailsApi } from '@/lib/api';
 import { MailActionEventDetail } from '@/lib/events/mailActionEvents';
 
 export function handleMoveAction(
@@ -9,36 +8,29 @@ export function handleMoveAction(
   toastDesc: string,
   toastType: 'success' | 'warning' = 'success'
 ) {
-  const { selectedIds, localEmails, selectedFolderId, moveEmailToFolder, bulkMoveToFolder, selectedMailId } =
-    useMailStore.getState();
-  const folder = selectedFolderId || 'INBOX';
+  const { selectedIds, moveEmailToFolder, bulkMoveToFolder, selectedMailId } = useMailStore.getState();
   const targetId = detail.targetEmailId || (selectedIds.length === 0 ? selectedMailId : null);
 
+  // The store sends the request itself, once.
   if (targetId) {
     moveEmailToFolder(targetId, targetFolder);
-    emailsApi.moveEmail(targetId, targetFolder, folder).catch(() => {});
   } else if (selectedIds.length > 0) {
-    const ids = [...selectedIds];
     bulkMoveToFolder(targetFolder);
-    emailsApi.bulkMoveEmails(ids, targetFolder, folder).catch(() => {});
   }
   useToastStore.getState().addToast({ title: toastTitle, description: toastDesc, type: toastType });
 }
 
 export function handleDeleteAction(detail: MailActionEventDetail) {
-  const { selectedIds, selectedFolderId, deleteEmail, bulkDelete, selectedMailId } = useMailStore.getState();
-  const folder = selectedFolderId || 'INBOX';
+  const { selectedIds, deleteEmail, bulkDelete, selectedMailId } = useMailStore.getState();
   const targetId = detail.targetEmailId || (selectedIds.length === 0 ? selectedMailId : null);
 
+  // The store sends the request itself, once.
   if (targetId) {
     deleteEmail(targetId);
-    emailsApi.deleteEmail(targetId, folder).catch(() => {});
     useToastStore.getState().addToast({ title: 'Deleted', description: 'Conversation deleted', type: 'info' });
   } else if (selectedIds.length > 0) {
     const count = selectedIds.length;
-    const ids = [...selectedIds];
     bulkDelete();
-    emailsApi.bulkDeleteEmails(ids, folder).catch(() => {});
     useToastStore.getState().addToast({ title: 'Deleted', description: `${count} conversations deleted`, type: 'info' });
   }
 }

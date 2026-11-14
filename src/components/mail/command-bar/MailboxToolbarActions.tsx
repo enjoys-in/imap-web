@@ -3,7 +3,6 @@
 import React from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { useMailStore, useToastStore } from '@/stores';
-import { foldersApi } from '@/lib/api';
 import { getRegisteredFolder, isTrashOrJunkFolder } from '@/lib/folders';
 
 interface MailboxToolbarActionsProps {
@@ -18,13 +17,13 @@ export function MailboxToolbarActions({ folderId }: MailboxToolbarActionsProps) 
   const isTrashOrJunk = isTrashOrJunkFolder(getRegisteredFolder(folderId));
 
   const handleEmpty = async () => {
-    emptyFolder(folderId);
-    try {
-      const res = await foldersApi.emptyFolder(folderId);
-      addToast({ title: 'Folder Emptied', description: res?.message || 'All messages deleted.', type: 'info' });
-    } catch (err: any) {
-      addToast({ title: 'Notice', description: err?.message || 'Empty operation submitted.', type: 'info' });
-    }
+    // One request: the store sends it, updates the screen at once, and keeps the local copy only if the server refuses.
+    const res = await emptyFolder(folderId);
+    addToast(
+      res.success
+        ? { title: 'Folder emptied', description: res.message || 'All messages deleted.', type: 'info' }
+        : { title: 'Could not empty folder', description: res.message || 'The server did not accept the request.', type: 'error' }
+    );
   };
 
   if (!isTrashOrJunk) {

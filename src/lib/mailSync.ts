@@ -6,6 +6,7 @@ import {
   saveCachedEmails,
   saveFolderSyncState,
 } from '@/lib/idb/mailCacheDb';
+import { withoutHeld } from '@/lib/pendingRemovals';
 import type { MailFolder, MailMessageMetadata } from '@/types';
 
 /**
@@ -30,7 +31,7 @@ export interface FolderEmails {
   fromCache: boolean;
 }
 
-const newestFirst = (a: MailMessageMetadata, b: MailMessageMetadata) =>
+export const newestFirst = (a: MailMessageMetadata, b: MailMessageMetadata) =>
   new Date(b.date).getTime() - new Date(a.date).getTime();
 
 /**
@@ -48,7 +49,8 @@ export async function loadFolderEmails(
     if (state) {
       const cached = await getCachedEmails(folder.id, accountId);
       return {
-        emails: cached.sort(newestFirst),
+        // Messages the user is deleting/moving right now stay off the list until the server answers.
+        emails: withoutHeld(cached).sort(newestFirst),
         pagesLoaded: state.pagesLoaded,
         hasMore: state.hasMore,
         fromCache: true,
@@ -56,8 +58,9 @@ export async function loadFolderEmails(
     }
   }
 
-  const fresh = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE);
-  const hasMore = fresh.length >= PAGE_SIZE;
+  const page = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE);
+  const hasMore = page.length >= PAGE_SIZE;
+  const fresh = withoutHeld(page);
   await replaceFolderEmails(folder.id, fresh, {
     folderId: folder.id,
     accountId: folder.accountId,
@@ -75,8 +78,9 @@ export async function loadMoreFolderEmails(
   accountId: string | undefined,
   page: number
 ): Promise<{ fresh: MailMessageMetadata[]; hasMore: boolean }> {
-  const fresh = await emailsApi.getEmailsMetadata(folder, accountId, page, PAGE_SIZE);
-  const hasMore = fresh.length >= PAGE_SIZE;
+  const olderPage = await emailsApi.getEmailsMetadata(folder, accountId, page, PAGE_SIZE);
+  const hasMore = olderPage.length >= PAGE_SIZE;
+  const fresh = withoutHeld(olderPage);
   await saveCachedEmails(fresh);
 
   const state = await getFolderSyncState(folder.id);
@@ -102,15 +106,17 @@ export async function refreshFolderEmails(
   folder: Pick<MailFolder, 'id' | 'fullName' | 'accountId' | 'totalCount'>,
   accountId: string | undefined
 ): Promise<FolderEmails> {
-  const fresh = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE);
+  const page = await emailsApi.getEmailsMetadata(folder, accountId, 1, PAGE_SIZE);
   const state = await getFolderSyncState(folder.id);
   const cached = state ? await getCachedEmails(folder.id, accountId) : [];
 
+  // The page as the server sent it decides overlap and paging; what is stored/shown leaves out messages being deleted/moved.
   const storedIds = new Set(cached.map((e) => e.id));
-  const overlaps = cached.length === 0 || fresh.some((e) => storedIds.has(e.id));
+  const overlaps = cached.length === 0 || page.some((e) => storedIds.has(e.id));
+  const fresh = withoutHeld(page);
 
   if (!state || !overlaps) {
-    const hasMore = fresh.length >= PAGE_SIZE;
+    const hasMore = page.length >= PAGE_SIZE;
     await replaceFolderEmails(folder.id, fresh, {
       folderId: folder.id,
       accountId: folder.accountId,
@@ -125,5 +131,10 @@ export async function refreshFolderEmails(
   await saveCachedEmails(fresh);
   await saveFolderSyncState({ ...state, totalCount: Number(folder.totalCount) || 0, syncedAt: Date.now() });
   const merged = await getCachedEmails(folder.id, accountId);
-  return { emails: merged.sort(newestFirst), pagesLoaded: state.pagesLoaded, hasMore: state.hasMore, fromCache: false };
+  return {
+    emails: withoutHeld(merged).sort(newestFirst),
+    pagesLoaded: state.pagesLoaded,
+    hasMore: state.hasMore,
+    fromCache: false,
+  };
 }

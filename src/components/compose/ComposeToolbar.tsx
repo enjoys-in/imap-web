@@ -3,6 +3,7 @@
 import React from 'react';
 import { Send, Trash2 } from 'lucide-react';
 import { useComposeStore, useMailStore } from '@/stores';
+import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
 
@@ -17,8 +18,9 @@ export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
 
   const handleDiscard = () => {
     if (draftId) {
-      // Removes the draft locally and asks the server to delete it from its own folder.
-      deleteEmail(draftId);
+      // The draft lives in Drafts, whichever folder is open: delete it there.
+      const accountId = useMailStore.getState().selectedAccountId;
+      deleteEmail(draftId, findRegisteredSpecialFolder('Drafts', accountId)?.id);
     }
     close();
   };
