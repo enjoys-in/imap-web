@@ -9,6 +9,8 @@ import { AccountRowItem } from './AccountRowItem';
 import { AddAccountModal } from './AddAccountModal';
 import { ConfigureAccountModal } from './ConfigureAccountModal';
 import { useToastStore } from '@/stores/useToastStore';
+import { onboardCalendarUser } from '@/lib/api/handlers/calendar';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 export function AccountsManager() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -47,6 +49,24 @@ export function AccountsManager() {
       description: `Signed in successfully as ${acc.email}.`,
       type: 'success',
     });
+  };
+
+  const handleAddToCalendar = async (acc: Account) => {
+    try {
+      await onboardCalendarUser(acc.email, acc.displayName);
+      addToast({
+        title: 'Calendar Connected',
+        description: `Successfully added ${acc.email} to calendar service.`,
+        type: 'success',
+      });
+      void useCalendarsStore.getState().load({ force: true });
+    } catch (err: any) {
+      addToast({
+        title: 'Calendar Connection Failed',
+        description: err?.message || 'Could not connect account to calendar service.',
+        type: 'error',
+      });
+    }
   };
 
   const handleAddSubscription = () => {
@@ -88,6 +108,7 @@ export function AccountsManager() {
               account={acc}
               onManage={(account) => setEditingAccount(account)}
               onSignIn={handleSignIn}
+              onAddToCalendar={handleAddToCalendar}
             />
           ))}
         </div>

@@ -211,7 +211,7 @@ function CalendarFeatureSettingsCard({ calendar }: { calendar: UserCalendar }) {
           href="/calendar"
           className="h-8 px-3.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
         >
-          <span>Start Using Calendar</span>
+          <span>Open Calendar</span>
         </Link>
       </div>
 
@@ -419,6 +419,79 @@ function WeekStartCard() {
   );
 }
 
+function AddMeToCalendarSection() {
+  const onboard = useCalendarsStore((s) => s.onboard);
+  const calendars = useCalendarsStore((s) => s.calendars);
+  const isUserNotFound = useCalendarsStore((s) => s.isUserNotFound);
+  const status = useCalendarsStore((s) => s.status);
+  const addToast = useToastStore((s) => s.addToast);
+  const [loading, setLoading] = useState(false);
+
+  const handleOnboard = async () => {
+    setLoading(true);
+    try {
+      await onboard();
+      addToast({
+        title: 'Calendar Connected',
+        description: 'Successfully connected your IMAP account to the calendar service.',
+        type: 'success',
+      });
+    } catch (err) {
+      addToast({
+        title: 'Connection Failed',
+        description: err instanceof Error ? err.message : 'Could not connect to calendar service.',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="p-4 border border-blue-200 dark:border-blue-900 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+          <CalendarPlus className="w-4 h-4" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-blue-950 dark:text-blue-100 text-sm">
+              Add me to Calendar
+            </h3>
+            {calendars.length > 0 && !isUserNotFound && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                Connected
+              </span>
+            )}
+          </div>
+          <p className="text-blue-900/80 dark:text-blue-200/80 mt-0.5">
+            Connect your IMAP email account to the calendar service to automatically provision your calendar and sync events.
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          disabled={loading || status === 'loading'}
+          onClick={() => void handleOnboard()}
+          className="h-8 px-4 rounded-md font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+        >
+          <CalendarPlus className="w-3.5 h-3.5" />
+          <span>{loading ? 'Connecting...' : 'Add me to Calendar'}</span>
+        </button>
+        {calendars.length > 0 && (
+          <Link
+            href="/calendar"
+            className="h-8 px-3.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 flex items-center transition-colors font-medium"
+          >
+            Open Calendar
+          </Link>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function CalendarSettingsView() {
   const load = useCalendarsStore((s) => s.load);
   const calendars = useCalendarsStore((s) => s.calendars);
@@ -440,6 +513,7 @@ export function CalendarSettingsView() {
         </p>
       </div>
 
+      <AddMeToCalendarSection />
       <CalendarList />
       {hasCalendar ? (
         <CalendarFeatureSettingsCard calendar={calendars[0]} />

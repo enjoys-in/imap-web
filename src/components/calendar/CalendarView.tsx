@@ -231,10 +231,14 @@ export function CalendarView() {
 
       <CreateScheduleModal
         open={s.createModalOpen}
-        onClose={() => s.setCreateModalOpen(false)}
+        onClose={() => {
+          s.setCreateModalOpen(false);
+          s.setSelectedEvent(null);
+        }}
         onSave={s.handleSaveSchedule}
         initialDayIndex={s.slotDay}
         initialHour={s.slotHour}
+        initialEvent={s.selectedEvent}
       />
 
       <CalendarEventDetailModal
@@ -246,6 +250,7 @@ export function CalendarView() {
           if (s.isViewOnly) return;
           s.setSlotDay(evt.dayIndex);
           s.setSlotHour(evt.startHour);
+          s.setDetailModalOpen(false);
           s.setCreateModalOpen(true);
         }}
         isReadOnly={s.isViewOnly}

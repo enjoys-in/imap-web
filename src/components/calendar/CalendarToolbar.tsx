@@ -113,10 +113,10 @@ export function CalendarToolbar({
 
         <button
           onClick={onNewSchedule}
-          className="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+          className="h-8 px-3.5 bg-[#0078d4] hover:bg-[#106ebe] active:bg-[#005a9e] text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>New Schedule</span>
+          <span>New event</span>
         </button>
       </div>
     </div>
