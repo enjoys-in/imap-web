@@ -27,7 +27,8 @@ export function SidebarQuota({
 }: SidebarQuotaProps) {
   const { data: quota } = useQuota();
 
-  const realUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
+  // `used` is legitimately 0 for an empty mailbox, so test for a number rather than truthiness.
+  const realUsedMb = typeof quota?.storage?.used === 'number' ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
   const realTotalMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
 
   const usedMb = propUsedMb ?? realUsedMb;

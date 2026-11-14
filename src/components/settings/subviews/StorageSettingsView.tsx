@@ -19,7 +19,8 @@ export function StorageSettingsView() {
   const emptyFolder = useMailStore((s) => s.emptyFolder);
   const addToast = useToastStore((s) => s.addToast);
 
-  const totalUsedMb = quota?.storage?.used ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
+  // `used` is legitimately 0 for an empty mailbox, so test for a number rather than truthiness.
+  const totalUsedMb = typeof quota?.storage?.used === 'number' ? Math.round(quota.storage.used / (1024 * 1024)) : undefined;
   const totalQuotaMb = quota?.storage?.limit ? Math.round(quota.storage.limit / (1024 * 1024)) : undefined;
   const hasQuota = totalUsedMb !== undefined && totalQuotaMb !== undefined && totalQuotaMb > 0;
   const percentUsed = hasQuota
