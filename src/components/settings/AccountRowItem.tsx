@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertCircle, CalendarPlus } from 'lucide-react';
 import { Account } from '@/types';
 import { AccountProviderIcon } from './AccountProviderIcon';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 interface AccountRowItemProps {
   account: Account;
@@ -15,6 +16,8 @@ interface AccountRowItemProps {
 
 export function AccountRowItem({ account, onManage, onSignIn, onAddToCalendar }: AccountRowItemProps) {
   const isSignInRequired = account.requiresSignIn;
+  const isCalendarAddedForAccount = useCalendarsStore((s) => s.isCalendarAddedForAccount);
+  const isConnected = isCalendarAddedForAccount(account.email);
 
   return (
     <div className="py-3.5 px-3 rounded-lg hover:bg-neutral-100/70 dark:hover:bg-[#252525]/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-[#2b2b2b] last:border-b-0">
@@ -38,7 +41,7 @@ export function AccountRowItem({ account, onManage, onSignIn, onAddToCalendar }:
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-        {onAddToCalendar && (
+        {onAddToCalendar && !isConnected && (
           <button
             type="button"
             onClick={() => onAddToCalendar(account)}
@@ -70,4 +73,3 @@ export function AccountRowItem({ account, onManage, onSignIn, onAddToCalendar }:
     </div>
   );
 }
-
