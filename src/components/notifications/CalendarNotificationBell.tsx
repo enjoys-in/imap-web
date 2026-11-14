@@ -7,8 +7,8 @@ import {
   Video,
   X,
   BellRing,
-  Sparkles,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 import { useCalendarNotificationStore } from '@/stores';
 import { useCalendarNotifications } from '@/hooks/useCalendarNotifications';
@@ -16,11 +16,12 @@ import { useToastStore } from '@/stores/useToastStore';
 
 export function CalendarNotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const reminders = useCalendarNotificationStore((s) => s.reminders);
   const dismissReminder = useCalendarNotificationStore((s) => s.dismissReminder);
   const snoozeReminder = useCalendarNotificationStore((s) => s.snoozeReminder);
   const markAllRead = useCalendarNotificationStore((s) => s.markAllRead);
-  const { requestPermission, simulateUpcomingReminder } = useCalendarNotifications();
+  const { requestPermission, checkNow } = useCalendarNotifications();
   const addToast = useToastStore((s) => s.addToast);
 
   const unreadReminders = reminders.filter((r) => !r.isRead);
@@ -37,13 +38,18 @@ export function CalendarNotificationBell() {
     });
   };
 
-  const handleSimulate = () => {
-    simulateUpcomingReminder();
-    addToast({
-      title: 'Reminder Dispatched',
-      description: 'Switch tabs now to see Desktop Push, or stay to see In-App toast!',
-      type: 'info',
-    });
+  const handleManualCheck = async () => {
+    setIsRefreshing(true);
+    try {
+      await checkNow();
+      addToast({
+        title: 'Alerts Synced',
+        description: 'Checked calendar server for upcoming meeting reminders.',
+        type: 'info',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -92,7 +98,7 @@ export function CalendarNotificationBell() {
               </span>
               <button
                 onClick={handleEnablePush}
-                className="text-[10px] px-2 py-0.5 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium transition-colors flex items-center gap-1"
+                className="text-[10px] px-2 py-0.5 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <BellRing className="w-3 h-3" />
                 <span>Web Push</span>
@@ -103,7 +109,7 @@ export function CalendarNotificationBell() {
             <div className="max-h-72 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
               {reminders.length === 0 ? (
                 <div className="p-6 text-center text-xs text-neutral-400">
-                  No upcoming meeting reminders. All clear!
+                  No upcoming meeting reminders. Connected to live calendar SSE stream.
                 </div>
               ) : (
                 reminders.map((rem) => (
@@ -121,7 +127,7 @@ export function CalendarNotificationBell() {
                       </h4>
                       <button
                         onClick={() => dismissReminder(rem.id)}
-                        className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                        className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
                         title="Dismiss"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -143,13 +149,13 @@ export function CalendarNotificationBell() {
                     <div className="flex items-center gap-1.5 mt-2.5">
                       <button
                         onClick={() => snoozeReminder(rem.id, 5)}
-                        className="px-2 py-0.5 text-[11px] rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors"
+                        className="px-2 py-0.5 text-[11px] rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
                       >
                         Snooze 5m
                       </button>
                       <button
                         onClick={() => dismissReminder(rem.id)}
-                        className="px-2 py-0.5 text-[11px] rounded bg-[#0078d4] hover:bg-[#106ebe] text-white transition-colors"
+                        className="px-2 py-0.5 text-[11px] rounded bg-[#0078d4] hover:bg-[#106ebe] text-white transition-colors cursor-pointer"
                       >
                         Dismiss
                       </button>
@@ -159,14 +165,19 @@ export function CalendarNotificationBell() {
               )}
             </div>
 
-            {/* Test Trigger Button */}
-            <div className="p-2 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/50">
+            {/* Live SSE Stream Status Footer */}
+            <div className="p-2 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/50 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live SSE Stream</span>
+              </div>
               <button
-                onClick={handleSimulate}
-                className="w-full py-1 px-2.5 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                onClick={handleManualCheck}
+                disabled={isRefreshing}
+                className="px-2.5 py-1 rounded bg-[#0078d4] hover:bg-[#106ebe] text-white text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Simulate Upcoming Meeting Reminder</span>
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>Sync now</span>
               </button>
             </div>
           </div>

@@ -114,8 +114,8 @@ export function CalendarView() {
         open={s.notificationsOpen}
         onClose={() => s.setNotificationsOpen(false)}
         notifications={s.notifications}
-        onMarkAllRead={() => s.setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
-        onDismiss={(id) => s.setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onMarkAllRead={s.handleMarkAllReadNotifications}
+        onDismiss={s.handleDismissNotification}
       />
 
       {s.calendarsError && (

@@ -10,3 +10,4 @@ export * from './useRightAppsStore';
 export * from './useAlertStore';
 export * from './useSyncStore';
 export * from './useCalendarsStore';
+export * from './useNotificationCenterStore';

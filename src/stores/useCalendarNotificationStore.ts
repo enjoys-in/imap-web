@@ -22,7 +22,6 @@ interface CalendarNotificationState {
     timeStr: string;
     location?: string;
   }) => void;
-  simulateUpcomingReminder: () => void;
 }
 
 const INITIAL_REMINDERS: CalendarReminder[] = [];
@@ -50,7 +49,7 @@ export const useCalendarNotificationStore = create<CalendarNotificationState>((s
   },
 
   triggerReminder: ({ appointmentId, title, timeStr, location }) => {
-    const id = `rem-${Date.now()}`;
+    const id = `rem-${appointmentId}-${Date.now()}`;
     const newRem: CalendarReminder = {
       id,
       appointmentId,
@@ -60,28 +59,15 @@ export const useCalendarNotificationStore = create<CalendarNotificationState>((s
       isRead: false,
     };
 
-    set((s) => ({ reminders: [newRem, ...s.reminders] }));
+    set((s) => ({
+      // Deduplicate by appointmentId if already exists and not read
+      reminders: [newRem, ...s.reminders.filter((r) => r.appointmentId !== appointmentId)],
+    }));
 
     dispatchNotification({
       title: `Calendar Reminder: ${title}`,
       body: `${timeStr}${location ? ` • ${location}` : ''}`,
       type: 'info',
-    });
-  },
-
-  simulateUpcomingReminder: () => {
-    const titles = [
-      'Sprint Review & Retrospective',
-      '1:1 Sync with Engineering Lead',
-      'Frontend Team Standup',
-      'Client Presentation: AirSend Architecture',
-    ];
-    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-    get().triggerReminder({
-      appointmentId: `apt-${Date.now()}`,
-      title: randomTitle,
-      timeStr: 'Starts in 10 minutes',
-      location: 'Microsoft Teams Meeting',
     });
   },
 }));

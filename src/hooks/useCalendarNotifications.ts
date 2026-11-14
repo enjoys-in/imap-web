@@ -1,70 +1,112 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useCalendarNotificationStore } from '@/stores';
 import { calendarApi } from '@/lib/api';
+import { subscribeCalendarEvents } from '@/lib/api/handlers/calendar';
 import { requestWebPushPermission } from '@/lib/notificationDispatcher';
+import { useNotificationCenterStore } from '@/stores/useNotificationCenterStore';
 
 const REMINDER_POLL_MS = 60_000;
-const REMINDER_POLL_MAX_MS = 30 * 60_000;
+const REMINDER_POLL_MAX_MS = 15 * 60_000;
 
 export function useCalendarNotifications() {
   const triggerReminder = useCalendarNotificationStore((s) => s.triggerReminder);
-  const simulateUpcomingReminder = useCalendarNotificationStore(
-    (s) => s.simulateUpcomingReminder
-  );
+  const notifiedAptsRef = useRef<Map<string, number>>(new Map());
+
+  const checkUpcomingMeetings = useCallback(async () => {
+    try {
+      const appointments = await calendarApi.getAppointments();
+      if (!Array.isArray(appointments) || appointments.length === 0) return true;
+
+      const now = Date.now();
+      const thresholdAhead = 15 * 60 * 1000; // 15 minutes ahead
+      const thresholdPast = 5 * 60 * 1000;   // up to 5 minutes after start
+
+      for (const apt of appointments) {
+        if (!apt.startUtc) continue;
+        const startTime = new Date(apt.startUtc).getTime();
+        const diff = startTime - now;
+
+        // If starting within next 15 minutes or started up to 5 minutes ago
+        if (diff >= -thresholdPast && diff <= thresholdAhead) {
+          const lastNotified = notifiedAptsRef.current.get(apt.id);
+          // Don't re-trigger within 15 minutes for the same appointment
+          if (lastNotified && now - lastNotified < 15 * 60 * 1000) {
+            continue;
+          }
+
+          notifiedAptsRef.current.set(apt.id, now);
+
+          let timeStr = 'Starting now';
+          if (diff > 60_000) {
+            const minutesLeft = Math.ceil(diff / 60_000);
+            timeStr = `Starts in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}`;
+          } else if (diff > 0) {
+            timeStr = 'Starts in less than 1 minute';
+          }
+
+          const title = apt.title || 'Untitled Meeting';
+          triggerReminder({
+            appointmentId: apt.id,
+            title,
+            timeStr,
+            location: apt.location,
+          });
+
+          useNotificationCenterStore.getState().addNotification({
+            title: `Upcoming: ${title}`,
+            detail: `${timeStr}${apt.location ? ` • ${apt.location}` : ''}`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: 'calendar',
+          });
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [triggerReminder]);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let delay = REMINDER_POLL_MS;
 
-    const checkUpcomingMeetings = async () => {
-      let succeeded = true;
-      try {
-        const appointments = await calendarApi.getAppointments();
-        const now = Date.now();
-        const threshold = 15 * 60 * 1000; // 15 minutes
-
-        for (const apt of appointments) {
-          const startTime = new Date(apt.startUtc).getTime();
-          const diff = startTime - now;
-
-          // If starting within next 15 minutes and in the future
-          if (diff > 0 && diff <= threshold) {
-            const minutesLeft = Math.ceil(diff / 60000);
-            triggerReminder({
-              appointmentId: apt.id,
-              title: apt.title,
-              timeStr: `Starts in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}`,
-              location: apt.location,
-            });
-            break;
-          }
-        }
-      } catch {
-        succeeded = false;
-      }
-
+    const runCheck = async () => {
+      const succeeded = await checkUpcomingMeetings();
       if (cancelled) return;
       delay = succeeded ? REMINDER_POLL_MS : Math.min(delay * 2, REMINDER_POLL_MAX_MS);
-      timer = setTimeout(checkUpcomingMeetings, delay);
+      timer = setTimeout(runCheck, delay);
     };
 
-    checkUpcomingMeetings();
+    // Initial check on mount
+    void runCheck();
+
+    // Wire to Real Calendar SSE Stream: whenever CalDev pushes a change, immediately re-check!
+    const unsubscribeSSE = subscribeCalendarEvents(() => {
+      if (!cancelled) {
+        void checkUpcomingMeetings();
+      }
+    });
 
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      unsubscribeSSE();
     };
-  }, [triggerReminder]);
+  }, [checkUpcomingMeetings]);
 
   const requestPermission = useCallback(async () => {
     return await requestWebPushPermission();
   }, []);
 
+  const checkNow = useCallback(async () => {
+    await checkUpcomingMeetings();
+  }, [checkUpcomingMeetings]);
+
   return {
     requestPermission,
-    simulateUpcomingReminder,
+    checkNow,
   };
 }

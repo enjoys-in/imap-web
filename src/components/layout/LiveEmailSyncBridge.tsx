@@ -14,6 +14,7 @@ import {
 } from '@/lib/liveSync';
 import { alertNewMail } from '@/lib/newMailAlert';
 import { useToastStore } from '@/stores/useToastStore';
+import { useNotificationCenterStore } from '@/stores/useNotificationCenterStore';
 
 export function LiveEmailSyncBridge() {
   const { isAuthenticated } = useSession();
@@ -33,6 +34,14 @@ export function LiveEmailSyncBridge() {
           type: 'info',
         });
         void alertNewMail(data, newMessageCount(data));
+
+        const latestMsg = data.messages?.[data.messages.length - 1];
+        useNotificationCenterStore.getState().addNotification({
+          title: latestMsg?.from ? `Email from ${latestMsg.from}` : 'New Email Received',
+          detail: latestMsg?.subject || `Folder "${data.path}" updated with ${newMessageCount(data)} new message(s)`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'mail',
+        });
       }
     },
     onMailboxExpunge: (data) => {

@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/handlers/calendar';
 import { DEFAULT_CALENDAR_COLOR } from '@/lib/calendarColors';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
+import { useCalendarNotificationStore } from '@/stores/useCalendarNotificationStore';
 import { getAccounts } from '@/lib/api/handlers/account';
 import { getAuthToken } from '@/lib/api/client';
 import { Appointment } from '@/types';
@@ -145,7 +146,20 @@ export function useCalendarState() {
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([
     { id: 'w-1', name: 'AirSend Workspace', role: 'Owner', active: true },
   ]);
-  const [notifications, setNotifications] = useState<CalendarNotificationItem[]>([]);
+  const reminders = useCalendarNotificationStore((s) => s.reminders);
+  const dismissReminder = useCalendarNotificationStore((s) => s.dismissReminder);
+  const markAllReadReminders = useCalendarNotificationStore((s) => s.markAllRead);
+
+  const notifications = useMemo<CalendarNotificationItem[]>(
+    () =>
+      reminders.map((r) => ({
+        id: r.id,
+        title: r.title,
+        time: r.timeStr,
+        read: r.isRead,
+      })),
+    [reminders]
+  );
 
   useEffect(() => {
     let active = true;
@@ -323,7 +337,8 @@ export function useCalendarState() {
     workspaces,
     setWorkspaces,
     notifications,
-    setNotifications,
+    handleDismissNotification: dismissReminder,
+    handleMarkAllReadNotifications: markAllReadReminders,
     createModalOpen,
     setCreateModalOpen,
     detailModalOpen,
