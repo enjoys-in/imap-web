@@ -1,16 +1,18 @@
-import { AppConfig, env } from './env';
+import type { AppConfig } from './env';
 
-// In-memory runtime configuration store for client-side execution
-let memoryConfig: AppConfig = {
-  baseUrl: env.baseUrl,
-  apiUrl: env.apiUrl,
-  apiVersion: env.apiVersion,
-  appName: env.appName,
-  appVersion: env.appVersion,
-  nodeEnv: env.nodeEnv,
-  defaultTheme: env.defaultTheme,
-  enableWebPush: env.enableWebPush,
+// Default in-memory configuration store for client-side execution
+const DEFAULT_CLIENT_CONFIG: AppConfig = {
+  baseUrl: 'http://localhost:9503',
+  apiUrl: 'http://localhost:9503/api/v1/imap',
+  apiVersion: 'v1',
+  appName: 'AirSend',
+  appVersion: '1.0.0',
+  nodeEnv: 'production',
+  defaultTheme: 'dark',
+  enableWebPush: true,
 };
+
+let memoryConfig: AppConfig = { ...DEFAULT_CLIENT_CONFIG };
 
 export function setMemoryConfig(config: Partial<AppConfig>) {
   memoryConfig = {
@@ -19,6 +21,10 @@ export function setMemoryConfig(config: Partial<AppConfig>) {
   };
 }
 
+/**
+ * Returns active runtime configuration on the client side.
+ * Loaded strictly from window.__RUNTIME_CONFIG__ (injected via public/config.js).
+ */
 export function getClientConfig(): AppConfig {
   let active = { ...memoryConfig };
   if (typeof window !== 'undefined') {

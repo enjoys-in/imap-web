@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppConfig } from '@/config/env';
+import type { AppConfig } from '@/config/env';
 import { setMemoryConfig, getClientConfig } from '@/config/clientConfig';
 
 const ConfigContext = createContext<AppConfig>(getClientConfig());

@@ -1,4 +1,8 @@
-// Server-side environment configuration for SSR (Node.js runtime)
+/**
+ * Server-side environment configuration for SSR / Node.js runtime only.
+ * Client-side runtime configuration strictly comes from window.__RUNTIME_CONFIG__ (public/config.js).
+ * ZERO usage of NEXT_PUBLIC_* variables.
+ */
 export interface AppConfig {
   baseUrl?: string;
   apiUrl: string;
@@ -11,9 +15,9 @@ export interface AppConfig {
 }
 
 export const env: AppConfig = {
-  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9503',
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:9503/api/v1/imap',
-  apiVersion: process.env.NEXT_PUBLIC_API_VERSION || 'v1',
+  baseUrl: (process.env.BASE_URL || 'http://localhost:9503').replace(/\/+$/, ''),
+  apiUrl: (process.env.API_URL || 'http://localhost:9503/api/v1/imap').replace(/\/+$/, ''),
+  apiVersion: process.env.API_VERSION || 'v1',
   appName: process.env.APP_NAME || 'AirSend',
   appVersion: process.env.APP_VERSION || '1.0.0',
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -21,7 +25,7 @@ export const env: AppConfig = {
   enableWebPush: process.env.ENABLE_WEBPUSH !== 'false',
 };
 
-// Safe client-shareable subset (no secrets)
+// Safe server-to-client initial hydration configuration
 export function getClientSafeConfig(): AppConfig {
   return {
     baseUrl: env.baseUrl,
