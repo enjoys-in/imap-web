@@ -57,7 +57,6 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
     icon: Mail,
     subcategories: [
       { id: 'compose', label: 'Compose and reply', href: '/settings/mail/compose' },
-      { id: 'reading-pane', label: 'Reading Pane', href: '/settings/mail/reading-pane' },
       { id: 'customize-actions', label: 'Customize actions', href: '/settings/mail/customize-actions' },
       { id: 'rules', label: 'Rules & filters', href: '/settings/mail/rules' },
       { id: 'junk', label: 'Spam & Junk filter', href: '/settings/mail/junk' },

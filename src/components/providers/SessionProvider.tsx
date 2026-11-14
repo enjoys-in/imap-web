@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
@@ -10,32 +10,9 @@ import { ingestSessionPayload } from '@/lib/ingestSession';
 import { useFolderStore } from '@/stores/useFolderStore';
 import { useMailStore } from '@/stores/useMailStore';
 import { Account } from '@/types';
+import { SessionContext, SessionContextType, useSession } from './sessionContext';
 
-interface SessionContextType {
-  account: Account | null;
-  accounts: Account[];
-  user: any | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  statusText: string;
-  refreshSession: () => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const SessionContext = createContext<SessionContextType>({
-  account: null,
-  accounts: [],
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  statusText: '',
-  refreshSession: async () => {},
-  logout: async () => {},
-});
-
-export function useSession() {
-  return useContext(SessionContext);
-}
+export { useSession };
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -71,16 +48,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [queryClient]
   );
 
-  const applySession = useCallback(
-    (profile: any, list: Account[]) => {
-      sessionLoadedRef.current = true;
-      setUser(profile.user || profile);
-      setAccounts(list);
-      setAccount(list[0] || null);
-      setIsAuthenticated(true);
-    },
-    []
-  );
+  const applySession = useCallback((profile: any, list: Account[]) => {
+    sessionLoadedRef.current = true;
+    setUser(profile.user || profile);
+    setAccounts(list);
+    setAccount(list[0] || null);
+    setIsAuthenticated(true);
+  }, []);
 
   const clearSession = useCallback(() => {
     sessionLoadedRef.current = false;
@@ -104,7 +78,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       clearSession();
-
       if (!isLoginPage) {
         router.push('/login');
       }
@@ -192,14 +165,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [account, accounts, user, isAuthenticated, isLoading, statusText, refreshSession, logout]
   );
 
-  if (isLoading && !isLoginPage) {
-    return <AirSendSplashScreen statusMessage={statusText} />;
-  }
-
-  // Prevent flashing internal protected children if user is not authenticated
-  if (!isAuthenticated && !isLoginPage) {
-    return <AirSendSplashScreen statusMessage="Redirecting to sign in..." />;
-  }
-
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>
+      {children}
+      {isLoading && !isLoginPage && (
+        <div className="fixed inset-0 z-50">
+          <AirSendSplashScreen statusMessage={statusText} />
+        </div>
+      )}
+      {!isLoading && !isAuthenticated && !isLoginPage && (
+        <div className="fixed inset-0 z-50">
+          <AirSendSplashScreen statusMessage="Redirecting to sign in..." />
+        </div>
+      )}
+    </SessionContext.Provider>
+  );
 }

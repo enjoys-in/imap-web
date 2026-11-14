@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { X } from 'lucide-react';
 import { SettingsNavColumns } from '@/components/settings/SettingsNavColumns';
 
+export const instant = false;
+
 interface SettingsLayoutProps {
   children: React.ReactNode;
 }

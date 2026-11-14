@@ -1,8 +1,5 @@
-'use client';
-
-import React from 'react';
-import { ReadingPaneSettingsView } from '@/components/settings/subviews/ReadingPaneSettingsView';
+import { redirect } from 'next/navigation';
 
 export default function ReadingPaneSettingsPage() {
-  return <ReadingPaneSettingsView />;
+  redirect('/settings/general/appearance');
 }
