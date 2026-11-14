@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useMailStore, MailFilterTab } from '@/stores';
 import { cn } from '@/lib/utils';
+import { getRegisteredFolder } from '@/lib/folders';
 
 import { MailSortMenu } from './MailSortMenu';
 
@@ -31,11 +32,8 @@ export function MailListHeader({ totalEmailsCount, currentEmailIds, isWideLayout
     else selectAllIds(currentEmailIds);
   };
 
-  const folderTitle = selectedFolderId === 'fld-archive' ? 'Archive' :
-    selectedFolderId === 'fld-sent' ? 'Sent Items' :
-    selectedFolderId === 'fld-drafts' ? 'Drafts' :
-    selectedFolderId === 'fld-deleted' ? 'Deleted Items' :
-    selectedFolderId === 'fld-junk' ? 'Junk Email' : 'Inbox';
+  // The title is the backend folder's own name (normalized for display).
+  const folderTitle = getRegisteredFolder(selectedFolderId)?.displayName ?? '';
 
   const filterTabs: { id: MailFilterTab; label: string; icon?: React.ElementType }[] = [
     { id: 'all', label: 'All' },

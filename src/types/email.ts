@@ -5,7 +5,8 @@ export type SpecialFolder =
   | 'Sent'
   | 'Archive'
   | 'Junk'
-  | 'Trash';
+  | 'Trash'
+  | 'Custom';
 
 export type EmailConversationType = 'thread' | 'single';
 

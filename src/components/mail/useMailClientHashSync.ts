@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useMailStore } from '@/stores';
-import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
+import { findFolderBySlug, findSpecialFolder, folderSlug as toFolderSlug } from '@/lib/folders';
 import { emailsApi } from '@/lib/api';
 import { saveOpenMailSession } from '@/lib/storage/mailSessionStorage';
+import type { MailFolder } from '@/types';
 
 export function parseMailHash(rawHash: string) {
   const clean = rawHash.replace(/^#\/?/, '').trim();
@@ -16,59 +17,76 @@ export function parseMailHash(rawHash: string) {
   return { folderSlug: parts[0], mailId: null };
 }
 
-export function useMailClientHashSync(parsedUserIndex: number) {
+/**
+ * Keeps the store in step with the URL hash (#inbox, #sent/msg-12, ...).
+ * Folder slugs are resolved against the folder list the backend sent, so the
+ * sync waits until that list is available.
+ */
+export function useMailClientHashSync(parsedUserIndex: number, folders: MailFolder[] | undefined) {
   const setSelectedFolder = useMailStore((s) => s.setSelectedFolder);
   const setSelectedMail = useMailStore((s) => s.setSelectedMail);
   const addOrSelectEmail = useMailStore((s) => s.addOrSelectEmail);
 
+  // Latest folder list without re-running the sync each time the list is refreshed.
+  const foldersRef = useRef(folders);
+  useEffect(() => {
+    foldersRef.current = folders;
+  }, [folders]);
+  // Changes when folders first arrive or the account changes, not on every refresh.
+  const folderSetKey = folders?.length ? folders[0].accountId : '';
+
   const syncFromHash = useCallback(async () => {
-    if (typeof window === 'undefined') return;
+    const list = foldersRef.current;
+    if (typeof window === 'undefined' || !list?.length) return;
+
+    const inbox = findSpecialFolder(list, 'Inbox') ?? list[0];
     const clean = window.location.hash.replace(/^#\/?/, '').trim();
 
     if (!clean) {
-      const targetFolderId = 'fld-inbox';
-      const targetSlug = 'inbox';
-      setSelectedFolder(targetFolderId);
+      const slug = toFolderSlug(inbox);
+      setSelectedFolder(inbox.id);
       setSelectedMail(null);
-      saveOpenMailSession(parsedUserIndex, targetFolderId, targetSlug, null);
-      if (window.location.hash !== '#inbox') {
-        window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#inbox`);
+      saveOpenMailSession(parsedUserIndex, inbox.id, slug, null);
+      if (window.location.hash !== `#${slug}`) {
+        window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#${slug}`);
       }
       return;
     }
 
-    const { folderSlug, mailId } = parseMailHash(window.location.hash);
-    const targetFolderId = slugToFolderId(folderSlug);
-    setSelectedFolder(targetFolderId);
+    const { folderSlug: hashSlug, mailId } = parseMailHash(window.location.hash);
+    const folder = findFolderBySlug(list, hashSlug) ?? inbox;
+    const slug = toFolderSlug(folder);
+    setSelectedFolder(folder.id);
 
     if (mailId) {
       const exists = useMailStore.getState().localEmails.some((e) => e.id === mailId);
       if (exists) {
         setSelectedMail(mailId);
-        saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
+        saveOpenMailSession(parsedUserIndex, folder.id, slug, mailId);
       } else {
         const fetched = await emailsApi.getEmailById(mailId);
         if (fetched) {
           addOrSelectEmail(fetched);
-          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, mailId);
+          saveOpenMailSession(parsedUserIndex, folder.id, slug, mailId);
         } else {
-          window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#${folderSlug}`);
+          window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#${slug}`);
           setSelectedMail(null);
-          saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, null);
+          saveOpenMailSession(parsedUserIndex, folder.id, slug, null);
         }
       }
     } else {
       setSelectedMail(null);
-      saveOpenMailSession(parsedUserIndex, targetFolderId, folderSlug, null);
-      if (window.location.hash !== `#${folderSlug}`) {
-        window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#${folderSlug}`);
+      saveOpenMailSession(parsedUserIndex, folder.id, slug, null);
+      if (window.location.hash !== `#${slug}`) {
+        window.history.replaceState(null, '', `/mail/u/${parsedUserIndex}#${slug}`);
       }
     }
   }, [parsedUserIndex, setSelectedFolder, setSelectedMail, addOrSelectEmail]);
 
   useEffect(() => {
+    if (!folderSetKey) return;
     syncFromHash();
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [syncFromHash]);
+  }, [folderSetKey, syncFromHash]);
 }

@@ -3,6 +3,7 @@ import { MailMessageMetadata } from '@/types';
 import { emailsApi, foldersApi } from '@/lib/api';
 import { getCachedEmails, saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { getOpenMailSession } from '@/lib/storage/mailSessionStorage';
+import { getRegisteredFolder } from '@/lib/folders';
 import { useGeneralSettingsStore } from './useGeneralSettingsStore';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
@@ -62,7 +63,8 @@ interface MailState {
 }
 
 function getInitialState() {
-  let initialFolder = 'fld-inbox';
+  // A folder id from the backend; validated against the folder list once it loads.
+  let initialFolder = '';
   let initialMailId: string | null = null;
 
   if (typeof window !== 'undefined') {
@@ -111,18 +113,24 @@ export const useMailStore = create<MailState>((set, get) => ({
   setSortConfig: (field, direction) => set({ sortField: field, sortDirection: direction }),
 
   fetchEmails: async (folderId, accountId) => {
-    const fId = folderId || get().selectedFolderId || 'fld-inbox';
+    const fId = folderId || get().selectedFolderId;
     const aId = accountId || get().selectedAccountId || '';
+    const folder = getRegisteredFolder(fId);
+    // Folder ids come from the backend; nothing to request until its folder list has loaded.
+    if (!fId || !folder) return;
+
     const requestId = ++latestFetchId;
     set({ isLoadingEmails: true, emailPage: 1 });
     try {
+      // Local copy first, so the list paints before the backend answers.
       const cached = await getCachedEmails(fId, aId);
-      if (requestId === latestFetchId && cached.length > 0 && get().localEmails.length === 0) {
+      const alreadyShowing = get().localEmails.some((e) => e.folderId === fId);
+      if (requestId === latestFetchId && cached.length > 0 && !alreadyShowing) {
         set({ localEmails: cached, selectedFolderId: fId });
       }
     } catch {}
     try {
-      const list = await emailsApi.getEmailsMetadata(fId, aId || undefined, 1, 25);
+      const list = await emailsApi.getEmailsMetadata(folder, aId || undefined, 1, 25);
       saveCachedEmails(list);
       // A newer fetch (e.g. the user switched folder) owns the list and the loading flag now.
       if (requestId !== latestFetchId) return;
@@ -140,11 +148,13 @@ export const useMailStore = create<MailState>((set, get) => ({
   loadMoreEmails: async () => {
     if (get().isLoadingMore || !get().hasMoreEmails) return;
     const nextPage = get().emailPage + 1;
-    const fId = get().selectedFolderId || 'fld-inbox';
+    const fId = get().selectedFolderId;
     const aId = get().selectedAccountId || '';
+    const folder = getRegisteredFolder(fId);
+    if (!folder) return;
     set({ isLoadingMore: true });
     try {
-      const nextBatch = await emailsApi.getEmailsMetadata(fId, aId || undefined, nextPage, 25);
+      const nextBatch = await emailsApi.getEmailsMetadata(folder, aId || undefined, nextPage, 25);
       // The user moved to another folder/account while this page loaded: drop it.
       if (get().selectedFolderId !== fId || get().selectedAccountId !== aId) {
         set({ isLoadingMore: false });
@@ -182,19 +192,15 @@ export const useMailStore = create<MailState>((set, get) => ({
       emailPage: 1,
       hasMoreEmails: true,
       selectedMailId: null,
-      selectedFolderId: 'fld-inbox',
+      selectedFolderId: '',
       selectedIds: [],
     };
   }),
   setSelectedAccountIndex: (index) => set({ selectedAccountIndex: index }),
   setSelectedFolder: (id) => set((s) => {
     if (s.selectedFolderId === id) return s;
-    const inFolder = s.localEmails.some(
-      (e) => (id === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === id) && e.id === s.selectedMailId
-    );
-    const folderEmails = s.localEmails.filter((e) =>
-      id === 'fld-inbox' ? (!e.folderId || e.folderId === 'fld-inbox') : e.folderId === id
-    );
+    const inFolder = s.localEmails.some((e) => e.folderId === id && e.id === s.selectedMailId);
+    const folderEmails = s.localEmails.filter((e) => e.folderId === id);
     return {
       selectedFolderId: id,
       selectedMailId: inFolder ? s.selectedMailId : (folderEmails[0]?.id || null),
@@ -256,7 +262,7 @@ export const useMailStore = create<MailState>((set, get) => ({
       lastSnapshot: s.localEmails,
       localEmails: s.localEmails.map((m) => (m.id === id ? { ...m, isFlagged: newFlag } : m)),
     }));
-    emailsApi.toggleFlag(id, newFlag).catch(() => {});
+    emailsApi.toggleFlag(id, newFlag, email?.folderId || get().selectedFolderId).catch(() => {});
   },
   togglePin: (id) => set((s) => ({
     lastSnapshot: s.localEmails,
@@ -273,15 +279,11 @@ export const useMailStore = create<MailState>((set, get) => ({
     emailsApi.markAsRead(id, nextRead, folder).catch(() => {});
   },
   markFolderAsRead: (folderId) => {
-    const folderEmails = get().localEmails.filter((m) =>
-      m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox'))
-    );
+    const folderEmails = get().localEmails.filter((m) => m.folderId === folderId);
     const unreadIds = folderEmails.filter((m) => !m.isRead).map((m) => m.id);
     set((s) => ({
       lastSnapshot: s.localEmails,
-      localEmails: s.localEmails.map((m) =>
-        m.folderId === folderId || (folderId === 'fld-inbox' && (!m.folderId || m.folderId === 'fld-inbox')) ? { ...m, isRead: true } : m
-      ),
+      localEmails: s.localEmails.map((m) => (m.folderId === folderId ? { ...m, isRead: true } : m)),
     }));
     if (unreadIds.length > 0) {
       emailsApi.bulkMarkAsRead(unreadIds, true, folderId).catch(() => {});
@@ -290,7 +292,7 @@ export const useMailStore = create<MailState>((set, get) => ({
   emptyFolder: (folderId) => {
     set((s) => ({
       lastSnapshot: s.localEmails,
-      localEmails: s.localEmails.filter((m) => folderId === 'fld-inbox' ? m.folderId && m.folderId !== 'fld-inbox' : m.folderId !== folderId),
+      localEmails: s.localEmails.filter((m) => m.folderId !== folderId),
       selectedMailId: null,
       selectedIds: [],
     }));
@@ -435,9 +437,8 @@ export const useMailStore = create<MailState>((set, get) => ({
         ),
       };
     });
-    for (const id of ids) {
-      emailsApi.toggleFlag(id, targetFlag).catch(() => {});
-    }
+    // One request for the whole selection.
+    emailsApi.bulkToggleFlag(ids, targetFlag, get().selectedFolderId).catch(() => {});
   },
   undoLastAction: () => {
     const snap = get().lastSnapshot;

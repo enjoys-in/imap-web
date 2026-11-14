@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMailStore, useToastStore, useSyncStore, AUTO_SYNC_INTERVAL_MS } from '@/stores';
+import { useMailStore, useToastStore, useSyncStore, useFolderStore, AUTO_SYNC_INTERVAL_MS } from '@/stores';
 import { foldersApi } from '@/lib/api';
 
 /**
@@ -21,7 +21,6 @@ function useSyncCore() {
   const cooldownRemaining = useSyncStore((s) => s.cooldownRemaining);
   const lastManualSyncTime = useSyncStore((s) => s.lastManualSyncTime);
   const lastAutoSyncTime = useSyncStore((s) => s.lastAutoSyncTime);
-  const updateCooldown = useSyncStore((s) => s.updateCooldown);
   const setIsSyncing = useSyncStore((s) => s.setIsSyncing);
   const recordManualSync = useSyncStore((s) => s.recordManualSync);
   const recordAutoSync = useSyncStore((s) => s.recordAutoSync);
@@ -58,13 +57,13 @@ function useSyncCore() {
         await foldersApi.syncCompleteMailbox();
 
         // Invalidate React Query caches for immediate UI update
-        queryClient.invalidateQueries({ queryKey: ['folders'] });
+        void useFolderStore.getState().syncFolders(selectedAccountId);
         queryClient.invalidateQueries({ queryKey: ['emails'] });
         queryClient.invalidateQueries({ queryKey: ['quota'] });
         queryClient.invalidateQueries({ queryKey: ['connection-status'] });
 
         // Update current folder emails
-        await fetchEmails(selectedFolderId || 'fld-inbox', selectedAccountId || undefined);
+        await fetchEmails(selectedFolderId, selectedAccountId || undefined);
 
         if (notify) {
           addToast({

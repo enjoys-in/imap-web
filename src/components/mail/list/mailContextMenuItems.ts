@@ -6,6 +6,7 @@ import {
 import { ContextMenuItem } from '@/components/ui/ContextMenu';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { MailContextActions } from './mailContextMenuTypes';
+import { listRegisteredFolders, findRegisteredSpecialFolder } from '@/lib/folders';
 import { buildSecurityAndAdvancedItems } from './mailContextMenuAdvanced';
 
 export * from './mailContextMenuTypes';
@@ -14,6 +15,10 @@ export function buildMailContextMenuItems(
   email: MailMessageMetadata | MailMessage,
   actions: MailContextActions
 ): ContextMenuItem[] {
+  // Destinations are the backend's own folders for this message's account (not the one it is in).
+  const destinations = listRegisteredFolders(email.accountId).filter((f) => f.id !== email.folderId);
+  const archiveFolder = findRegisteredSpecialFolder('Archive', email.accountId);
+
   return [
     // Section 1: Communications
     { label: 'Reply', icon: CornerUpLeft, iconColor: 'text-purple-400', onClick: () => actions.onReply(email, false) },
@@ -28,22 +33,19 @@ export function buildMailContextMenuItems(
       label: 'Move',
       icon: FolderInput,
       iconColor: 'text-blue-500',
-      children: [
-        { label: 'Inbox', onClick: () => actions.onMoveTo(email.id, 'fld-inbox', 'Inbox') },
-        { label: 'Archive', onClick: () => actions.onMoveTo(email.id, 'fld-archive', 'Archive') },
-        { label: 'Junk Email', onClick: () => actions.onMoveTo(email.id, 'fld-junk', 'Junk Email') },
-        { label: 'Deleted Items', onClick: () => actions.onMoveTo(email.id, 'fld-deleted', 'Deleted Items') },
-      ],
+      children: destinations.map((f) => ({
+        label: f.displayName,
+        onClick: () => actions.onMoveTo(email.id, f.id, f.displayName),
+      })),
     },
     {
       label: 'Copy',
       icon: Copy,
       iconColor: 'text-blue-500',
-      children: [
-        { label: 'Inbox', onClick: () => actions.onCopyTo(email.id, 'fld-inbox', 'Inbox') },
-        { label: 'Archive', onClick: () => actions.onCopyTo(email.id, 'fld-archive', 'Archive') },
-        { label: 'Personal', onClick: () => actions.onCopyTo(email.id, 'fld-personal', 'Personal folder') },
-      ],
+      children: destinations.map((f) => ({
+        label: f.displayName,
+        onClick: () => actions.onCopyTo(email.id, f.id, f.displayName),
+      })),
     },
     { divider: true, label: '' },
 
@@ -101,7 +103,7 @@ export function buildMailContextMenuItems(
         {
           label: `Always move messages from ${email.fromAddress}`,
           onClick: () => {
-            actions.onMoveTo(email.id, 'fld-archive', 'Archive');
+            if (archiveFolder) actions.onMoveTo(email.id, archiveFolder.id, archiveFolder.displayName);
             actions.onToast('Rule Created', `Messages from ${email.fromAddress} will be auto-archived`, 'success');
           },
         },

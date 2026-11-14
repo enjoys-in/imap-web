@@ -11,7 +11,7 @@ import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { format } from 'date-fns';
 import { MailMessage, MailMessageMetadata } from '@/types';
-import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
+import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { useSession } from '@/components/providers/SessionProvider';
 import { formatRecipientsWithYou, getUserEmails } from '@/lib/recipientUtils';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,8 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace(/^#\/?/, '').trim();
-      const slug = hash ? folderIdToSlug(slugToFolderId(hash)) : 'inbox';
+      // The hash is already a folder slug (see the reading pane's open-in-window link).
+      const slug = hash.split('/')[0] || 'inbox';
       setBackPath(`/mail/u/0#${slug}`);
     }
   }, []);
@@ -55,7 +56,8 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   const activeThread = useMemo(() => {
     const list = threadList.length > 0 ? threadList : localThreadMessages;
     const filtered = list.filter((m) => {
-      if (!showDeletedItems && (m.folderId === 'fld-deleted' || (m as { isDeleted?: boolean }).isDeleted)) return false;
+      const trashId = findRegisteredSpecialFolder('Trash', m.accountId)?.id;
+      if (!showDeletedItems && ((trashId && m.folderId === trashId) || (m as { isDeleted?: boolean }).isDeleted)) return false;
       return true;
     });
     return filtered.sort((a, b) => {
@@ -91,15 +93,16 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
   // Keyed by id: the store replaces the email object on read/flag changes,
   // which must not trigger another body request.
   const targetEmailId = targetEmail?.id;
+  const targetFolderId = targetEmail?.folderId;
   useEffect(() => {
     if (!targetEmailId) return;
     emailsApi
-      .getEmailBody(targetEmailId)
+      .getEmailBody(targetEmailId, targetFolderId)
       .then((b) => {
         if (b.bodyHtml) setThreadBodies((prev) => ({ ...prev, [targetEmailId]: b.bodyHtml || '' }));
       })
       .catch(() => {});
-  }, [targetEmailId]);
+  }, [targetEmailId, targetFolderId]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));

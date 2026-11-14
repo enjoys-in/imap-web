@@ -26,7 +26,6 @@ export function CommandPaletteModal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const setSelectedFolder = useMailStore((s) => s.setSelectedFolder);
   const fetchEmails = useMailStore((s) => s.fetchEmails);
   const openNew = useComposeStore((s) => s.openNew);
   const addToast = useToastStore((s) => s.addToast);
@@ -56,7 +55,7 @@ export function CommandPaletteModal() {
     { id: 'new-mail', category: 'Actions', title: 'New Message', subtitle: 'Compose a new email', icon: Mail, action: () => openNew() },
     { id: 'sync-mail', category: 'Actions', title: 'Sync Mailbox', subtitle: 'Fetch latest messages from IMAP', icon: RefreshCw, action: () => { fetchEmails(); addToast({ title: 'Synced', description: 'Folder refreshed', type: 'success' }); } },
     { id: 'toggle-theme', category: 'Actions', title: 'Toggle Theme', subtitle: 'Switch light / dark mode', icon: Sun, action: () => document.documentElement.classList.toggle('dark') },
-    { id: 'nav-inbox', category: 'Navigation', title: 'Inbox', subtitle: 'Go to Inbox', icon: Inbox, action: () => { setSelectedFolder('fld-inbox'); router.push('/mail/u/0#inbox'); } },
+    { id: 'nav-inbox', category: 'Navigation', title: 'Inbox', subtitle: 'Go to Inbox', icon: Inbox, action: () => { router.push('/mail/u/0#inbox'); } },
     { id: 'nav-chat', category: 'Navigation', title: 'Team Chat', subtitle: 'Channels & Direct Messages', icon: MessageSquare, action: () => router.push('/chat') },
     { id: 'nav-files', category: 'Navigation', title: 'Cloud Files', subtitle: 'Mail attachments & storage hub', icon: HardDrive, action: () => router.push('/files') },
     { id: 'nav-activity', category: 'Navigation', title: 'Activity Feed', subtitle: 'Timeline of mentions & updates', icon: Bell, action: () => router.push('/activity') },

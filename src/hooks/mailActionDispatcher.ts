@@ -14,8 +14,7 @@ export function dispatchMailAction(detail: MailActionEventDetail) {
   const composeStore = useComposeStore.getState();
   const toastStore = useToastStore.getState();
 
-  const { selectedIds, selectedMailId, localEmails, selectedFolderId, undoLastAction, setSelectedMail, clearSelectedIds } = mailStore;
-  const folder = selectedFolderId || 'INBOX';
+  const { selectedIds, selectedMailId, localEmails, undoLastAction, setSelectedMail, clearSelectedIds } = mailStore;
 
   let explicitEmail = detail.targetEmail || null;
   if (!explicitEmail && detail.targetEmailId) {
@@ -27,11 +26,11 @@ export function dispatchMailAction(detail: MailActionEventDetail) {
   const hasTarget = hasExplicitTarget || hasBulkSelection || Boolean(activeEmail);
 
   // 1. Try Core Actions (delete, archive, move, copy, categorize, snooze, flag, pin, read)
-  const handledCore = handleCoreMailAction(detail, activeEmail, explicitEmail as any, hasTarget, hasExplicitTarget, hasBulkSelection, folder);
+  const handledCore = handleCoreMailAction(detail, activeEmail, explicitEmail as any, hasTarget, hasExplicitTarget, hasBulkSelection);
   if (handledCore) return;
 
   // 2. Try Advanced & Security Actions (junk, phishing, concern, block, allow, mute, search, task, contact, eml, source)
-  const handledAdv = handleAdvancedMailAction(detail, activeEmail, hasTarget, hasExplicitTarget, hasBulkSelection, folder);
+  const handledAdv = handleAdvancedMailAction(detail, activeEmail, hasTarget, hasExplicitTarget, hasBulkSelection);
   if (handledAdv) return;
 
   // 3. Communications & UI Actions

@@ -1,4 +1,5 @@
 'use client';
+import { getRegisteredFolder, findRegisteredSpecialFolder } from '@/lib/folders';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Mail, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
@@ -51,6 +52,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
 
   const email = (emailInStore || fallbackEmail) as (MailMessage | MailMessageMetadata | undefined);
   const hasEmailInStore = Boolean(emailInStore);
+  const emailFolderId = email?.folderId;
   // Primitives, not the email object: the store replaces that object on every read/flag
   // change, which must not re-run the body effect and re-request the body.
   const inlineBodyHtml = email && 'bodyHtml' in email ? email.bodyHtml : undefined;
@@ -70,7 +72,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
 
   const folderEmailIds = useMemo(() => {
     return localEmails
-      .filter((m) => (!selectedFolderId || selectedFolderId === 'fld-inbox' ? !m.folderId || m.folderId === 'fld-inbox' : m.folderId === selectedFolderId))
+      .filter((m) => m.folderId === selectedFolderId)
       .map((e) => e.id);
   }, [localEmails, selectedFolderId]);
 
@@ -103,7 +105,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     let isCancelled = false;
     setIsBodyLoading(true);
     emailsApi
-      .getEmailBody(currentId)
+      .getEmailBody(currentId, emailFolderId)
       .then((body) => {
         if (!isCancelled) {
           setFetchedBody(body);
@@ -119,7 +121,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     return () => {
       isCancelled = true;
     };
-  }, [currentId, initialBody]);
+  }, [currentId, emailFolderId, initialBody]);
 
   // Fetch full thread messages whenever threadId is active
   useEffect(() => {
@@ -146,7 +148,8 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
     if (!threadMessages.length) return [];
     const filtered = threadMessages.filter((m) => {
       if (m.id === currentId) return false;
-      if (!showDeletedItems && (m.folderId === 'fld-deleted' || (m as { isDeleted?: boolean }).isDeleted)) return false;
+      const trashId = findRegisteredSpecialFolder('Trash', m.accountId)?.id;
+      if (!showDeletedItems && ((trashId && m.folderId === trashId) || (m as { isDeleted?: boolean }).isDeleted)) return false;
       return true;
     });
     return filtered.sort((a, b) => {
@@ -184,7 +187,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
   if (selectedIds.length > 1) {
     return (
       <MultiSelectReadingPane
-        folderName={selectedFolderId === 'fld-inbox' ? 'Inbox' : 'current'}
+        folderName={getRegisteredFolder(selectedFolderId)?.displayName ?? 'current'}
         folderEmailIds={folderEmailIds}
       />
     );

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Plus, FolderPlus } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useFolderStore } from '@/stores/useFolderStore';
 import { foldersApi } from '@/lib/api';
 import { useToastStore } from '@/stores/useToastStore';
 import { PromptDialog } from '@/components/ui/PromptDialog';
@@ -14,13 +14,12 @@ interface SidebarFolderActionsProps {
 
 export function SidebarFolderActions({ activeAccId }: SidebarFolderActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
 
   const handleConfirm = async (name: string) => {
     try {
       const res = await foldersApi.createFolder(activeAccId, name.trim());
-      queryClient.invalidateQueries({ queryKey: ['folders', activeAccId] });
+      void useFolderStore.getState().syncFolders(activeAccId);
       addToast({ title: 'Folder Created', description: (res as any)?.message || `Created folder "${name.trim()}".`, type: 'success' });
       setIsOpen(false);
     } catch (err: any) {

@@ -5,6 +5,7 @@ import { useComposeStore, useMailStore, useToastStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
+import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
@@ -52,14 +53,16 @@ export function ComposeModal() {
 
     // Clean up draft if this compose had a saved draft
     if (draftId) {
+      // Removes the draft locally and asks the server to delete it from its own folder.
       useMailStore.getState().deleteEmail(draftId);
-      emailsApi.deleteEmail(draftId, 'fld-drafts').catch(() => {});
     }
 
+    const accountId = useMailStore.getState().selectedAccountId;
     const newMsg: MailMessage = {
       id: `sent-${Date.now()}`,
-      folderId: 'fld-sent',
-      accountId: useMailStore.getState().selectedAccountId,
+      // The account's Sent folder as classified by the backend.
+      folderId: findRegisteredSpecialFolder('Sent', accountId)?.id ?? '',
+      accountId,
       uid: Math.floor(Math.random() * 10000),
       threadId: resolvedThreadId,
       inReplyTo: isReplyOrForward ? originalMessageId : undefined,

@@ -5,6 +5,8 @@ import { useSession } from '@/components/providers/SessionProvider';
 import { useEmailStream } from '@/hooks/useEmailStream';
 import { useSyncScheduler } from '@/hooks/useSyncManager';
 import { useMailStore } from '@/stores/useMailStore';
+import { useFolderStore } from '@/stores/useFolderStore';
+import { getRegisteredFolder } from '@/lib/folders';
 import { useToastStore } from '@/stores/useToastStore';
 
 /**
@@ -26,11 +28,17 @@ export function LiveEmailSyncBridge() {
     },
     onMailboxChange: (data) => {
       if (!isAuthenticated) return;
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      const { selectedAccountId, selectedFolderId } = useMailStore.getState();
+      // Counts for every folder come from one folder sync.
+      void useFolderStore.getState().syncFolders(selectedAccountId);
       queryClient.invalidateQueries({ queryKey: ['emails'] });
       queryClient.invalidateQueries({ queryKey: ['quota'] });
 
-      fetchEmails();
+      // Reload the open list only when the changed mailbox is the one being shown.
+      const openFolder = getRegisteredFolder(selectedFolderId);
+      if (!openFolder || openFolder.fullName === data.path) {
+        fetchEmails();
+      }
 
       if (data.count > data.prevCount) {
         addToast({
@@ -42,7 +50,7 @@ export function LiveEmailSyncBridge() {
     },
     onMailboxExpunge: (data) => {
       if (!isAuthenticated) return;
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      void useFolderStore.getState().syncFolders(useMailStore.getState().selectedAccountId);
       queryClient.invalidateQueries({ queryKey: ['emails'] });
 
       if (data.uid) {

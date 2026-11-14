@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AirSendSplashScreen } from '@/components/layout/AirSendSplashScreen';
 import { accountsApi, clearAuthToken } from '@/lib/api';
 import { accountsQuery } from '@/hooks/useEmailsQuery';
+import { useFolderStore } from '@/stores/useFolderStore';
+import { useMailStore } from '@/stores/useMailStore';
 import { Account } from '@/types';
 
 interface SessionContextType {
@@ -163,6 +165,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
       // Cached server data belongs to the signed-out mailbox.
       queryClient.clear();
+      useFolderStore.getState().reset();
+      useMailStore.setState({
+        localEmails: [],
+        selectedAccountId: '',
+        selectedFolderId: '',
+        selectedMailId: null,
+        selectedIds: [],
+        searchQuery: '',
+        serverSearchResults: null,
+        lastSnapshot: null,
+      });
       clearSession();
       router.push('/login');
     }

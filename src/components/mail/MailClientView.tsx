@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMailStore } from '@/stores';
 import { useUiStore } from '@/stores/useUiStore';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 import { usePaneResize } from '@/hooks/usePaneResize';
 import { getAccountByUserIndex } from '@/lib/accountRouter';
 import { useSession } from '@/components/providers/SessionProvider';
-import { folderIdToSlug, slugToFolderId } from '@/lib/folderSlugUtils';
+import { findFolderBySlug, findSpecialFolder, folderSlug } from '@/lib/folders';
+import { useFolders } from '@/hooks/useEmailsQuery';
 import { MailCommandBar } from './command-bar/MailCommandBar';
 import { FolderSidebar } from './folders/FolderSidebar';
 import { RightAppsRail } from '@/components/right-apps/RightAppsRail';
@@ -53,20 +54,32 @@ export function MailClientView({
   const readingPaneLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
   const [popoutMailId, setPopoutMailId] = useState<string | null>(null);
 
-  const activeFolderId = currentFolderId
-    ? currentFolderId.startsWith('fld-')
-      ? currentFolderId
-      : slugToFolderId(currentFolderId)
-    : selectedFolderId || 'fld-inbox';
+  // The backend owns folder identity: local copy first, backend list replaces it.
+  const { data: folders } = useFolders(activeAccountId);
+
+  // Always one of the backend's folders: the one in the URL, else the selected one, else its Inbox.
+  const activeFolder = useMemo(() => {
+    if (!folders?.length) return undefined;
+    const fromUrl = currentFolderId ? findFolderBySlug(folders, currentFolderId) : undefined;
+    return (
+      fromUrl ??
+      folders.find((f) => f.id === selectedFolderId) ??
+      findSpecialFolder(folders, 'Inbox') ??
+      folders[0]
+    );
+  }, [folders, currentFolderId, selectedFolderId]);
+  const activeFolderId = activeFolder?.id ?? '';
 
   useEffect(() => {
-    if (!activeAccountId) return;
+    // Nothing to load until the account and its folder list are known.
+    if (!activeAccountId || !activeFolderId) return;
     setSelectedAccount(activeAccountId);
     setSelectedAccountIndex(parsedUserIndex);
+    setSelectedFolder(activeFolderId);
     fetchEmails(activeFolderId, activeAccountId);
-  }, [activeAccountId, parsedUserIndex, fetchEmails, setSelectedAccount, setSelectedAccountIndex, activeFolderId]);
+  }, [activeAccountId, parsedUserIndex, fetchEmails, setSelectedAccount, setSelectedAccountIndex, setSelectedFolder, activeFolderId]);
 
-  useMailClientHashSync(parsedUserIndex);
+  useMailClientHashSync(parsedUserIndex, folders);
 
   useEffect(() => {
     const handleOpenPopout = (e: CustomEvent<{ mailId: string }>) => {
@@ -80,8 +93,7 @@ export function MailClientView({
 
   const handleBackToList = () => {
     setSelectedMail(null);
-    const slug = folderIdToSlug(activeFolderId);
-    if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
+    if (activeFolder && typeof window !== 'undefined') window.location.hash = `#${folderSlug(activeFolder)}`;
   };
 
   const handleMailChange = (mailId: string) => {
@@ -92,8 +104,8 @@ export function MailClientView({
   const handleFolderChange = (folderId: string) => {
     setSelectedFolder(folderId);
     setSelectedMail(null);
-    const slug = folderIdToSlug(folderId);
-    if (typeof window !== 'undefined') window.location.hash = `#${slug}`;
+    const target = folders?.find((f) => f.id === folderId);
+    if (target && typeof window !== 'undefined') window.location.hash = `#${folderSlug(target)}`;
   };
 
   return (

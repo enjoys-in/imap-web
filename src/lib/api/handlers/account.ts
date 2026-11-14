@@ -1,6 +1,6 @@
 import { apiClient, clearAuthToken, setAuthToken } from '../client';
 import { Account } from '@/types';
-import { clearCachedEmails } from '@/lib/idb/mailCacheDb';
+import { clearCachedEmails, getCachedAccounts, replaceCachedAccounts } from '@/lib/idb/mailCacheDb';
 import { getClientConfig } from '@/config/clientConfig';
 
 export { autodiscover, type AutodiscoverResult } from './autodiscover';
@@ -342,8 +342,11 @@ function accountFromProfile(profile: any): Account {
 }
 
 /**
- * Fetch all configured email accounts. Backends without a multi-account
- * endpoint expose the signed-in mailbox through the session profile instead.
+ * Fetch all configured email accounts. The backend is the source of truth:
+ * what it returns replaces the copy kept in IndexedDB, and that copy is only
+ * used when the backend cannot be reached at all. Backends without a
+ * multi-account endpoint expose the signed-in mailbox through the session
+ * profile instead.
  */
 export async function getAccounts(): Promise<Account[]> {
   try {
@@ -353,13 +356,26 @@ export async function getAccounts(): Promise<Account[]> {
       : Array.isArray(data)
       ? data
       : data?.result?.accounts || data?.accounts;
-    if (Array.isArray(list) && list.length > 0) return list;
+    if (Array.isArray(list) && list.length > 0) {
+      await replaceCachedAccounts(list);
+      return list;
+    }
   } catch {
     // `/accounts` is optional; fall through to the session profile.
   }
 
-  const profile = await getProfile();
-  return profile ? [accountFromProfile(profile)] : [];
+  try {
+    const profile = await getProfile();
+    if (!profile) return [];
+    const derived = [accountFromProfile(profile)];
+    await replaceCachedAccounts(derived);
+    return derived;
+  } catch (err) {
+    // Backend unreachable: the last synced copy keeps the app usable offline.
+    const cached = await getCachedAccounts();
+    if (cached.length > 0) return cached;
+    throw err;
+  }
 }
 
 /**

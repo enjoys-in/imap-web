@@ -53,9 +53,9 @@ export function FolderSidebar({
   const foldersWithCounts = useMemo(() => {
     if (!folders) return [];
     return folders.map((f) => {
-      const isInbox = f.id === 'fld-inbox' || f.special === 'Inbox';
+      const isInbox = f.special === 'Inbox';
       const fEmails = localEmails.filter((e) => {
-        const matchesFolder = e.folderId === f.id || (isInbox && (!e.folderId || e.folderId === 'fld-inbox'));
+        const matchesFolder = e.folderId === f.id;
         const matchesAcc = !e.accountId || e.accountId === activeAccId;
         return matchesFolder && matchesAcc;
       });

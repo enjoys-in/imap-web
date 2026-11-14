@@ -18,7 +18,7 @@ export function useMailListFilterSort(activeFolderId?: string) {
     const filter = parseEmailSearchQuery(searchQuery);
 
     const filtered = list.filter((e) => {
-      if (!serverSearchResults && activeFolderId && activeFolderId !== 'fld-inbox' && e.folderId !== activeFolderId) {
+      if (!serverSearchResults && activeFolderId && e.folderId !== activeFolderId) {
         return false;
       }
       if (filterTab === 'unread' && e.isRead) return false;

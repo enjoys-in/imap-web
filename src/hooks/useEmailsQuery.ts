@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFolderStore } from '@/stores/useFolderStore';
+import { getRegisteredFolder } from '@/lib/folders';
 import {
   accountsApi,
   foldersApi,
@@ -29,19 +32,28 @@ export function useAccounts() {
   return useQuery<Account[]>(accountsQuery);
 }
 
-export function useFolders(accountId: string) {
-  return useQuery<MailFolder[]>({
-    queryKey: ['folders', accountId],
-    queryFn: () => foldersApi.getFolders(accountId),
-    enabled: Boolean(accountId),
-    staleTime: 30000,
-  });
+/**
+ * Folders for an account, from the folder store: the local IndexedDB copy shows
+ * at once and the backend list replaces it. Requesting is shared and throttled
+ * by the store, so any number of components can call this safely.
+ */
+export function useFolders(accountId: string): { data: MailFolder[] | undefined; isLoading: boolean } {
+  const folders = useFolderStore((s) => s.byAccount[accountId]);
+
+  useEffect(() => {
+    if (accountId) void useFolderStore.getState().ensureFolders(accountId);
+  }, [accountId]);
+
+  return { data: folders, isLoading: folders === undefined };
 }
 
 export function useEmails(folderId: string) {
   return useQuery<MailMessageMetadata[]>({
     queryKey: ['emails', folderId],
-    queryFn: () => emailsApi.getEmailsMetadata(folderId),
+    queryFn: () => {
+      const folder = getRegisteredFolder(folderId);
+      return folder ? emailsApi.getEmailsMetadata(folder) : Promise.resolve([]);
+    },
     enabled: Boolean(folderId),
     staleTime: 15000,
   });

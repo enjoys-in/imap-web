@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { HardDrive, Trash2 } from 'lucide-react';
 import { useAccounts, useFolders, useQuota } from '@/hooks/useEmailsQuery';
-import { useMailStore, useToastStore } from '@/stores';
+import { useMailStore, useToastStore, useFolderStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
 import { QUOTA_FULL_GRADIENT } from '@/components/mail/folders/SidebarQuota';
 
 export function StorageSettingsView() {
-  const queryClient = useQueryClient();
   const { data: accountsData } = useAccounts();
   const { data: quota } = useQuota();
   const accounts = accountsData ?? [];
@@ -33,7 +31,7 @@ export function StorageSettingsView() {
     emptyFolder(folderId);
     try {
       const res = await foldersApi.emptyFolder(folderId);
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      void useFolderStore.getState().syncFolders(activeAccountId);
       addToast({
         title: 'Folder emptied',
         description: res?.message || `Emptied all items in ${name}`,

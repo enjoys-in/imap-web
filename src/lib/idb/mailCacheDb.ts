@@ -1,31 +1,52 @@
-import { IDB, type TableSchema } from '@enjoys/react-api/idb';
-import { type EntityTable } from 'dexie';
-import { MailMessageMetadata } from '@/types';
+import { IDB } from '@enjoys/react-api/idb';
+import type { Table } from 'dexie';
+import type { Account, MailFolder, MailMessageMetadata } from '@/types';
+
+/**
+ * Local copy of server data. The backend is the source of truth: every sync
+ * replaces what is stored here, and this copy only provides instant first paint
+ * and offline reading.
+ *
+ * - emails: message METADATA only (never a body), keyed by folder + id because
+ *   an IMAP uid ("msg-1") is only unique within one folder.
+ * - email_bodies: bodies, stored only after the user opened the message.
+ * - folders / accounts: the lists the backend returned.
+ */
 
 export interface CachedEmailMetadata extends MailMessageMetadata {
   cachedAt: number;
 }
 
 export interface CachedEmailBody {
+  key: string; // `${folderId}::${id}`
   id: string;
+  folderId: string;
   bodyHtml?: string;
   bodyText?: string;
+  attachments?: any[];
   cachedAt: number;
 }
 
+type CachedFolder = MailFolder & { cachedAt: number };
+type CachedAccount = Account & { cachedAt: number };
+
 export type MailDbTables = {
-  emails: EntityTable<CachedEmailMetadata, 'id'>;
-  email_bodies: EntityTable<CachedEmailBody, 'id'>;
+  emails: Table<CachedEmailMetadata, [string, string]>;
+  email_bodies: Table<CachedEmailBody, string>;
+  folders: Table<CachedFolder, string>;
+  accounts: Table<CachedAccount, string>;
 };
 
 const schema: any = {
-  emails: 'id,folderId,accountId,cachedAt',
-  email_bodies: 'id,cachedAt',
+  emails: '[folderId+id],id,folderId,accountId,threadId,cachedAt',
+  email_bodies: 'key,cachedAt',
+  folders: 'id,accountId',
+  accounts: 'id',
 };
 
-const DB_NAME = 'airsend-mail-cache-v2';
-// Earlier builds seeded this database with mock mail; drop it so none of it can resurface.
-const LEGACY_DB_NAMES = ['airsend-mail-cache'];
+const DB_NAME = 'airsend-mail-cache-v3';
+// Earlier builds used these databases (one was seeded with mock mail); drop them.
+const LEGACY_DB_NAMES = ['airsend-mail-cache', 'airsend-mail-cache-v2'];
 
 let idbInstance: IDB<MailDbTables> | null = null;
 
@@ -47,106 +68,149 @@ function getIdb(): IDB<MailDbTables> | null {
   return idbInstance;
 }
 
-export async function saveCachedEmails(emails: MailMessageMetadata[]): Promise<void> {
+/** Runs `run` against the database; any failure (or no IndexedDB) yields `fallback`. */
+async function withDb<T>(
+  run: (db: ReturnType<IDB<MailDbTables>['getRawDb']>) => Promise<T>,
+  fallback: T
+): Promise<T> {
   const idb = getIdb();
-  if (!idb || emails.length === 0) return;
+  if (!idb) return fallback;
   try {
-    const now = Date.now();
-    const records: CachedEmailMetadata[] = emails.map((e) => ({ ...e, cachedAt: now }));
-    await idb.bulkPutItems('emails', records);
+    return await run(idb.getRawDb());
   } catch (err) {
-    console.warn('[IndexedDB] Failed to save emails:', err);
+    console.warn('[IndexedDB] Operation failed:', err);
+    return fallback;
   }
+}
+
+function stripCachedAt<T extends { cachedAt: number }>(record: T): Omit<T, 'cachedAt'> {
+  const copy: Partial<T> = { ...record };
+  delete copy.cachedAt;
+  return copy as Omit<T, 'cachedAt'>;
+}
+
+const bodyKey = (folderId: string, id: string) => `${folderId}::${id}`;
+
+// ── Message metadata ─────────────────────────────────────────────────────────
+
+export async function saveCachedEmails(emails: MailMessageMetadata[]): Promise<void> {
+  const now = Date.now();
+  const records: CachedEmailMetadata[] = emails
+    .filter((e) => e.id && e.folderId)
+    .map((e) => {
+      // Metadata only: a list never stores (or sends) a body.
+      const meta: Partial<MailMessageMetadata> & { bodyHtml?: string; bodyText?: string } = { ...e };
+      delete meta.bodyHtml;
+      delete meta.bodyText;
+      return { ...(meta as MailMessageMetadata), cachedAt: now };
+    });
+  if (records.length === 0) return;
+  await withDb((db) => db.emails.bulkPut(records).then(() => undefined), undefined);
 }
 
 export async function getCachedEmails(folderId?: string, accountId?: string): Promise<MailMessageMetadata[]> {
-  const idb = getIdb();
-  if (!idb) return [];
-  try {
-    const all = await idb.getAllItems('emails');
-    return (all as unknown as CachedEmailMetadata[]).filter((e) => {
-      const matchFolder = !folderId || folderId === 'fld-inbox' ? !e.folderId || e.folderId === 'fld-inbox' : e.folderId === folderId;
-      const matchAccount = !accountId || !e.accountId || e.accountId === accountId;
-      return matchFolder && matchAccount;
-    });
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to retrieve cached emails:', err);
-    return [];
-  }
-}
-
-function stripCachedAt(record: CachedEmailMetadata): MailMessageMetadata {
-  const meta: Partial<CachedEmailMetadata> = { ...record };
-  delete meta.cachedAt;
-  return meta as MailMessageMetadata;
+  return withDb(async (db) => {
+    const rows = folderId
+      ? await db.emails.where('folderId').equals(folderId).toArray()
+      : await db.emails.toArray();
+    return rows
+      .filter((e) => !accountId || !e.accountId || e.accountId === accountId)
+      .map(stripCachedAt) as MailMessageMetadata[];
+  }, []);
 }
 
 export async function getCachedEmailById(id: string): Promise<MailMessageMetadata | null> {
-  const idb = getIdb();
-  if (!idb) return null;
-  try {
-    const record = (await idb.getItemByKey('emails', id)) as unknown as CachedEmailMetadata | undefined;
-    if (!record) return null;
-    return stripCachedAt(record);
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to get cached email:', err);
-    return null;
-  }
+  return withDb(async (db) => {
+    const record = await db.emails.where('id').equals(id).first();
+    return record ? (stripCachedAt(record) as MailMessageMetadata) : null;
+  }, null);
 }
 
 export async function getCachedThread(threadId: string): Promise<MailMessageMetadata[]> {
-  const idb = getIdb();
-  if (!idb || !threadId) return [];
-  try {
-    const all = (await idb.getAllItems('emails')) as unknown as CachedEmailMetadata[];
-    return all.filter((e) => e.threadId === threadId).map(stripCachedAt);
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to get cached thread:', err);
-    return [];
-  }
+  if (!threadId) return [];
+  return withDb(async (db) => {
+    const rows = await db.emails.where('threadId').equals(threadId).toArray();
+    return rows.map(stripCachedAt) as MailMessageMetadata[];
+  }, []);
 }
 
-export async function saveCachedEmailBody(id: string, body: { bodyHtml?: string; bodyText?: string }): Promise<void> {
-  const idb = getIdb();
-  if (!idb) return;
-  try {
-    await idb.putItem('email_bodies', { id, ...body, cachedAt: Date.now() });
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to save email body:', err);
-  }
+// ── Message bodies (only after the user requested them) ──────────────────────
+
+export async function saveCachedEmailBody(
+  folderId: string,
+  id: string,
+  body: { bodyHtml?: string; bodyText?: string; attachments?: any[] }
+): Promise<void> {
+  await withDb(
+    (db) =>
+      db.email_bodies
+        .put({ key: bodyKey(folderId, id), id, folderId, ...body, cachedAt: Date.now() })
+        .then(() => undefined),
+    undefined
+  );
 }
 
-export async function getCachedEmailBody(id: string): Promise<{ bodyHtml?: string; bodyText?: string } | null> {
-  const idb = getIdb();
-  if (!idb) return null;
-  try {
-    const record = await idb.getItemByKey('email_bodies', id);
+export async function getCachedEmailBody(
+  folderId: string,
+  id: string
+): Promise<{ bodyHtml?: string; bodyText?: string; attachments?: any[] } | null> {
+  return withDb(async (db) => {
+    const record = await db.email_bodies.get(bodyKey(folderId, id));
     if (!record) return null;
-    return { bodyHtml: record.bodyHtml, bodyText: record.bodyText };
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to get cached email body:', err);
-    return null;
-  }
+    return { bodyHtml: record.bodyHtml, bodyText: record.bodyText, attachments: record.attachments };
+  }, null);
 }
+
+// ── Folders & accounts (backend list replaces the stored copy) ───────────────
+
+export async function getCachedFolders(accountId: string): Promise<MailFolder[]> {
+  return withDb(async (db) => {
+    const rows = await db.folders.where('accountId').equals(accountId).toArray();
+    return rows.map(stripCachedAt) as MailFolder[];
+  }, []);
+}
+
+export async function replaceCachedFolders(accountId: string, folders: MailFolder[]): Promise<void> {
+  const now = Date.now();
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.folders, async () => {
+        await db.folders.where('accountId').equals(accountId).delete();
+        await db.folders.bulkPut(folders.map((f) => ({ ...f, cachedAt: now })));
+      }),
+    undefined
+  );
+}
+
+export async function getCachedAccounts(): Promise<Account[]> {
+  return withDb(async (db) => (await db.accounts.toArray()).map(stripCachedAt) as Account[], []);
+}
+
+export async function replaceCachedAccounts(accounts: Account[]): Promise<void> {
+  const now = Date.now();
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.accounts, async () => {
+        await db.accounts.clear();
+        await db.accounts.bulkPut(accounts.map((a) => ({ ...a, cachedAt: now })));
+      }),
+    undefined
+  );
+}
+
+// ── Housekeeping ─────────────────────────────────────────────────────────────
 
 export async function getCachedCount(): Promise<number> {
-  const idb = getIdb();
-  if (!idb) return 0;
-  try {
-    return await idb.countItems('emails');
-  } catch {
-    return 0;
-  }
+  return withDb((db) => db.emails.count(), 0);
 }
 
+/** Clears the whole local copy (used on logout and from the offline settings). */
 export async function clearCachedEmails(): Promise<void> {
-  const idb = getIdb();
-  if (!idb) return;
-  try {
-    await idb.clearTable('emails');
-    await idb.clearTable('email_bodies');
-  } catch (err) {
-    console.warn('[IndexedDB] Failed to clear cached emails:', err);
-  }
+  await withDb(
+    (db) =>
+      db.transaction('rw', db.emails, db.email_bodies, db.folders, db.accounts, async () => {
+        await Promise.all([db.emails.clear(), db.email_bodies.clear(), db.folders.clear(), db.accounts.clear()]);
+      }),
+    undefined
+  );
 }
-

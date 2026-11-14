@@ -1,6 +1,7 @@
 import { apiClient } from '../client';
-import { MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
+import { MailFolder, MailMessage, MailMessageMetadata, ThreadConversation } from '@/types';
 import { getClientConfig } from '@/config/clientConfig';
+import { toFolderPath, getRegisteredFolder, findRegisteredSpecialFolder } from '@/lib/folders';
 import {
   getCachedEmailBody,
   saveCachedEmailBody,
@@ -43,15 +44,20 @@ export interface EmailSearchQuery {
 }
 
 /**
- * Fetch email metadata for a specific folder and account.
+ * Fetch email METADATA for a folder (never bodies; a body is requested only
+ * when the user opens a message, see `getEmailBody`).
+ *
+ * The request uses the folder's IMAP path from the backend's own folder list,
+ * and every returned message is tagged with that folder's backend id, so list,
+ * sidebar and cache all agree on one id.
  */
 export async function getEmailsMetadata(
-  folderId: string,
+  folder: Pick<MailFolder, 'id' | 'fullName'>,
   accountId?: string,
   page = 1,
   limit = 25
 ): Promise<MailMessageMetadata[]> {
-  const url = `/fetch-emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}${
+  const url = `/fetch-emails?folder=${encodeURIComponent(folder.fullName)}&page=${page}&limit=${limit}${
     accountId ? `&accountId=${encodeURIComponent(accountId)}` : ''
   }`;
   const data = await apiClient.get<any>(url);
@@ -61,7 +67,10 @@ export async function getEmailsMetadata(
     ? data
     : data?.result?.emails || data?.emails || [];
 
-  const list = rawList.map(({ bodyHtml, bodyText, ...meta }) => meta);
+  const list: MailMessageMetadata[] = rawList.map(({ bodyHtml, bodyText, ...meta }) => ({
+    ...meta,
+    folderId: folder.id,
+  }));
   return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
@@ -73,7 +82,8 @@ export async function getEmails(
   page = 1,
   limit = 50
 ): Promise<MailMessage[]> {
-  const url = `/emails?folderId=${encodeURIComponent(folderId)}&page=${page}&limit=${limit}`;
+  const folder = encodeURIComponent(toFolderPath(folderId) ?? folderId);
+  const url = `/emails?folder=${folder}&page=${page}&limit=${limit}`;
   const data = await apiClient.get<any>(url);
   const rawList: MailMessage[] = Array.isArray(data?.result)
     ? data.result
@@ -91,7 +101,7 @@ export async function getEmails(
 export async function getEmailById(messageId: string): Promise<MailMessage | null> {
   const meta = await getCachedEmailById(messageId);
   if (!meta) return null;
-  const body = await getCachedEmailBody(messageId);
+  const body = await getCachedEmailBody(meta.folderId, messageId);
   return { ...meta, bodyHtml: body?.bodyHtml, bodyText: body?.bodyText };
 }
 
@@ -127,20 +137,23 @@ export async function getEmailConversation(
 }
 
 /**
- * Fetch email body (HTML & plaintext), utilizing IndexedDB cache first.
+ * Fetch the body (HTML & plaintext) of ONE message, only when the user asks for it.
+ * Checks the local IndexedDB copy first; the cache and the request are both
+ * scoped to the message's folder, because an IMAP uid repeats across folders.
  */
 export async function getEmailBody(
   messageId: string,
-  folder?: string
+  folderId?: string
 ): Promise<{ bodyHtml?: string; bodyText?: string; attachments?: any[] }> {
-  // Check IndexedDB client cache first
-  const cached = await getCachedEmailBody(messageId);
+  const cacheFolder = folderId ?? '';
+  const cached = await getCachedEmailBody(cacheFolder, messageId);
   if (cached && (cached.bodyHtml || cached.bodyText)) {
     return cached;
   }
 
   const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
-  const folderParam = folder ? `&folder=${encodeURIComponent(folder)}` : '';
+  const path = toFolderPath(folderId);
+  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
   const data = await apiClient.get<any>(`/fetch-email-body?uid=${uid}${folderParam}`);
   const body = data?.result || data;
 
@@ -150,7 +163,7 @@ export async function getEmailBody(
     attachments: body?.attachments || [],
   };
 
-  saveCachedEmailBody(messageId, result);
+  saveCachedEmailBody(cacheFolder, messageId, result);
   return result;
 }
 
@@ -207,7 +220,7 @@ export async function saveDraft(payload: DraftPayload): Promise<{ id: string }> 
 
     const raw = `${headers}\r\n\r\n${payload.bodyText || payload.bodyHtml || ''}`;
     const res = await apiClient.post<any>('/append-message', {
-      mailbox: 'Drafts',
+      mailbox: findRegisteredSpecialFolder('Drafts')?.fullName ?? 'Drafts',
       rawMessage: raw,
       flags: ['\\Draft'],
     });
@@ -240,8 +253,8 @@ export async function moveEmail(
   try {
     await apiClient.patch('/move-email', {
       uids: [uid],
-      current: currentFolder,
-      target: targetFolderId,
+      current: toFolderPath(currentFolder),
+      target: toFolderPath(targetFolderId),
     });
     return true;
   } catch {
@@ -261,8 +274,8 @@ export async function bulkMoveEmails(
   try {
     await apiClient.patch('/move-email', {
       uids,
-      current: currentFolder,
-      target: targetFolderId,
+      current: toFolderPath(currentFolder),
+      target: toFolderPath(targetFolderId),
     });
     return true;
   } catch {
@@ -282,8 +295,8 @@ export async function copyEmail(
   try {
     await apiClient.patch('/copy-email', {
       uids: [uid],
-      current: currentFolder,
-      target: targetFolderId,
+      current: toFolderPath(currentFolder),
+      target: toFolderPath(targetFolderId),
     });
     return true;
   } catch {
@@ -297,7 +310,8 @@ export async function copyEmail(
 export async function bulkDeleteEmails(messageIds: string[], folder?: string): Promise<boolean> {
   const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
   try {
-    const query = folder ? `?folder=${encodeURIComponent(folder)}` : '';
+    const path = toFolderPath(folder);
+    const query = path ? `?folder=${encodeURIComponent(path)}` : '';
     await apiClient.delete(`/delete-email${query}`, {
       body: JSON.stringify({ uids }),
     });
@@ -324,7 +338,8 @@ export async function markAsRead(
 ): Promise<boolean> {
   const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
   const flag = isRead ? 'mark_as_read' : 'mark_as_unread';
-  const folderParam = folder ? `&folder=${encodeURIComponent(folder)}` : '';
+  const path = toFolderPath(folder);
+  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
   try {
     await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
       uids: [uid],
@@ -345,7 +360,8 @@ export async function bulkMarkAsRead(
 ): Promise<boolean> {
   const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
   const flag = isRead ? 'mark_as_read' : 'mark_as_unread';
-  const folderParam = folder ? `&folder=${encodeURIComponent(folder)}` : '';
+  const path = toFolderPath(folder);
+  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
   try {
     await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
       uids,
@@ -359,11 +375,13 @@ export async function bulkMarkAsRead(
 /**
  * Toggle starred/flagged status on email.
  */
-export async function toggleFlag(messageId: string, isFlagged: boolean): Promise<boolean> {
+export async function toggleFlag(messageId: string, isFlagged: boolean, folder?: string): Promise<boolean> {
   const uid = messageId.startsWith('msg-') ? messageId.replace('msg-', '') : messageId;
   const flag = isFlagged ? 'flag' : 'unflag';
+  const path = toFolderPath(folder);
+  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
   try {
-    await apiClient.patch(`/handle-flags?flag=${flag}`, {
+    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
       uids: [uid],
     });
     return true;
@@ -375,11 +393,13 @@ export async function toggleFlag(messageId: string, isFlagged: boolean): Promise
 /**
  * Bulk toggle flagged status.
  */
-export async function bulkToggleFlag(messageIds: string[], isFlagged: boolean): Promise<boolean> {
+export async function bulkToggleFlag(messageIds: string[], isFlagged: boolean, folder?: string): Promise<boolean> {
   const uids = messageIds.map((id) => (id.startsWith('msg-') ? id.replace('msg-', '') : id));
   const flag = isFlagged ? 'flag' : 'unflag';
+  const path = toFolderPath(folder);
+  const folderParam = path ? `&folder=${encodeURIComponent(path)}` : '';
   try {
-    await apiClient.patch(`/handle-flags?flag=${flag}`, {
+    await apiClient.patch(`/handle-flags?flag=${flag}${folderParam}`, {
       uids,
     });
     return true;
@@ -418,7 +438,8 @@ export async function searchEmails(
   folder = 'INBOX'
 ): Promise<{ emails: MailMessageMetadata[]; totalCount: number }> {
   try {
-    const payload = typeof query === 'string' ? { q: query, folder } : { query, folder };
+    const folderPath = toFolderPath(folder) ?? folder;
+    const payload = typeof query === 'string' ? { q: query, folder: folderPath } : { query, folder: folderPath };
     const data = await apiClient.post<any>('/search-emails', payload);
     const result = data?.result || data;
     const emails: MailMessageMetadata[] = Array.isArray(result)
@@ -429,7 +450,12 @@ export async function searchEmails(
       ? data.emails
       : [];
     const totalCount = result?.totalCount ?? data?.totalCount ?? emails.length;
-    return { emails, totalCount };
+    // Tag results with the folder that was searched, so they agree with the sidebar and list.
+    const searched = getRegisteredFolder(folder);
+    return {
+      emails: searched ? emails.map((e) => ({ ...e, folderId: searched.id })) : emails,
+      totalCount,
+    };
   } catch {
     return { emails: [], totalCount: 0 };
   }
@@ -445,7 +471,7 @@ export async function fetchHeaders(
 ): Promise<any> {
   const cleanUid = typeof uid === 'string' && uid.startsWith('msg-') ? uid.replace('msg-', '') : uid;
   const keysParam = keys ? `&keys=${encodeURIComponent(keys.join(','))}` : '';
-  const url = `/fetch-headers?folder=${encodeURIComponent(folder)}&uid=${cleanUid}${keysParam}`;
+  const url = `/fetch-headers?folder=${encodeURIComponent(toFolderPath(folder) ?? folder)}&uid=${cleanUid}${keysParam}`;
   const data = await apiClient.get<any>(url);
   return data?.result || data;
 }
@@ -459,7 +485,7 @@ export async function downloadAttachment(
   part: string
 ): Promise<Blob> {
   const cleanUid = typeof uid === 'string' && uid.startsWith('msg-') ? uid.replace('msg-', '') : uid;
-  const url = `/download-attachment?folder=${encodeURIComponent(folder)}&uid=${cleanUid}&part=${encodeURIComponent(part)}`;
+  const url = `/download-attachment?folder=${encodeURIComponent(toFolderPath(folder) ?? folder)}&uid=${cleanUid}&part=${encodeURIComponent(part)}`;
   const { apiUrl } = getClientConfig();
   const cleanApiUrl = apiUrl.replace(/\/+$/, '');
   const res = await fetch(`${cleanApiUrl}${url}`, { credentials: 'include' });

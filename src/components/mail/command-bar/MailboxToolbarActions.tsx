@@ -4,6 +4,7 @@ import React from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { useMailStore, useToastStore } from '@/stores';
 import { foldersApi } from '@/lib/api';
+import { getRegisteredFolder, isTrashOrJunkFolder } from '@/lib/folders';
 
 interface MailboxToolbarActionsProps {
   folderId: string;
@@ -14,7 +15,7 @@ export function MailboxToolbarActions({ folderId }: MailboxToolbarActionsProps) 
   const emptyFolder = useMailStore((s) => s.emptyFolder);
   const addToast = useToastStore((s) => s.addToast);
 
-  const isTrashOrJunk = folderId === 'fld-deleted' || folderId === 'fld-junk';
+  const isTrashOrJunk = isTrashOrJunkFolder(getRegisteredFolder(folderId));
 
   const handleEmpty = async () => {
     emptyFolder(folderId);

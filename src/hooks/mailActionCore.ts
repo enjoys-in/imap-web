@@ -1,5 +1,5 @@
 import { useMailStore, useToastStore } from '@/stores';
-import { emailsApi } from '@/lib/api';
+import { requireSpecialFolder } from './mailActionFolders';
 import { MailActionEventDetail } from '@/lib/events/mailActionEvents';
 import { MailMessage } from '@/types';
 
@@ -9,8 +9,7 @@ export function handleCoreMailAction(
   explicitEmail: MailMessage | null,
   hasTarget: boolean,
   hasExplicitTarget: boolean,
-  hasBulkSelection: boolean,
-  folder: string
+  hasBulkSelection: boolean
 ): boolean {
   const mailStore = useMailStore.getState();
   const toastStore = useToastStore.getState();
@@ -21,34 +20,28 @@ export function handleCoreMailAction(
       if (!hasTarget) return true;
       if (hasExplicitTarget && detail.targetEmailId) {
         deleteEmail(detail.targetEmailId);
-        emailsApi.deleteEmail(detail.targetEmailId, folder).catch(() => {});
         toastStore.addToast({ title: 'Deleted', description: 'Conversation deleted', type: 'info' });
       } else if (hasBulkSelection) {
         const count = selectedIds.length;
-        const ids = [...selectedIds];
         bulkDelete();
-        emailsApi.bulkDeleteEmails(ids, folder).catch(() => {});
         toastStore.addToast({ title: 'Deleted', description: `${count} conversations deleted`, type: 'info' });
       } else if (activeEmail) {
         deleteEmail(activeEmail.id);
-        emailsApi.deleteEmail(activeEmail.id, folder).catch(() => {});
         toastStore.addToast({ title: 'Deleted', description: 'Conversation deleted', type: 'info' });
       }
       return true;
 
     case 'archive': {
       if (!hasTarget) return true;
-      const archiveFolder = 'fld-archive';
+      const archive = requireSpecialFolder('Archive', 'Archive');
+      if (!archive) return true;
+      const archiveFolder = archive.id;
       if (hasExplicitTarget && detail.targetEmailId) {
         moveEmailToFolder(detail.targetEmailId, archiveFolder);
-        emailsApi.moveEmail(detail.targetEmailId, archiveFolder, folder).catch(() => {});
       } else if (hasBulkSelection) {
-        const ids = [...selectedIds];
         bulkMoveToFolder(archiveFolder);
-        emailsApi.bulkMoveEmails(ids, archiveFolder, folder).catch(() => {});
       } else if (activeEmail) {
         moveEmailToFolder(activeEmail.id, archiveFolder);
-        emailsApi.moveEmail(activeEmail.id, archiveFolder, folder).catch(() => {});
       }
       toastStore.addToast({ title: 'Archived', description: 'Moved to Archive', type: 'success' });
       return true;
@@ -56,18 +49,15 @@ export function handleCoreMailAction(
 
     case 'move-to': {
       if (!hasTarget) return true;
-      const targetFolder = detail.folderId || 'fld-archive';
+      const targetFolder = detail.folderId;
+      if (!targetFolder) return true;
       const targetName = detail.folderName || 'Selected Folder';
       if (hasExplicitTarget && detail.targetEmailId) {
         moveEmailToFolder(detail.targetEmailId, targetFolder);
-        emailsApi.moveEmail(detail.targetEmailId, targetFolder, folder).catch(() => {});
       } else if (hasBulkSelection) {
-        const ids = [...selectedIds];
         bulkMoveToFolder(targetFolder);
-        emailsApi.bulkMoveEmails(ids, targetFolder, folder).catch(() => {});
       } else if (activeEmail) {
         moveEmailToFolder(activeEmail.id, targetFolder);
-        emailsApi.moveEmail(activeEmail.id, targetFolder, folder).catch(() => {});
       }
       toastStore.addToast({ title: 'Moved', description: `Moved to ${targetName}`, type: 'success' });
       return true;
@@ -75,8 +65,9 @@ export function handleCoreMailAction(
 
     case 'copy-to': {
       if (!hasTarget) return true;
-      const targetFolder = detail.folderId || 'fld-inbox';
-      const targetName = detail.folderName || 'Inbox';
+      const targetFolder = detail.folderId;
+      if (!targetFolder) return true;
+      const targetName = detail.folderName || 'Selected Folder';
       if (hasExplicitTarget && detail.targetEmailId) {
         copyEmailToFolder(detail.targetEmailId, targetFolder);
       } else if (hasBulkSelection) {
@@ -128,13 +119,10 @@ export function handleCoreMailAction(
       const nextRead = detail.action === 'mark-read' ? true : detail.action === 'mark-unread' ? false : activeEmail ? !activeEmail.isRead : true;
       if (hasExplicitTarget && detail.targetEmailId) {
         markAsRead(detail.targetEmailId, nextRead);
-        emailsApi.markAsRead(detail.targetEmailId, nextRead, folder).catch(() => {});
       } else if (hasBulkSelection) {
         bulkMarkAsRead(nextRead);
-        emailsApi.bulkMarkAsRead([...selectedIds], nextRead, folder).catch(() => {});
       } else if (activeEmail) {
         markAsRead(activeEmail.id, nextRead);
-        emailsApi.markAsRead(activeEmail.id, nextRead, folder).catch(() => {});
       }
       toastStore.addToast({ title: nextRead ? 'Marked as read' : 'Marked as unread', description: activeEmail?.subject || '', type: 'info' });
       return true;
@@ -143,16 +131,11 @@ export function handleCoreMailAction(
     case 'toggle-flag': {
       if (!hasTarget) return true;
       if (hasExplicitTarget && detail.targetEmailId) {
-        const nextFlag = explicitEmail ? !explicitEmail.isFlagged : true;
         toggleFlag(detail.targetEmailId);
-        emailsApi.toggleFlag(detail.targetEmailId, nextFlag).catch(() => {});
       } else if (hasBulkSelection) {
         bulkToggleFlag(true);
-        emailsApi.bulkToggleFlag([...selectedIds], true).catch(() => {});
       } else if (activeEmail) {
-        const nextFlag = !activeEmail.isFlagged;
         toggleFlag(activeEmail.id);
-        emailsApi.toggleFlag(activeEmail.id, nextFlag).catch(() => {});
       }
       toastStore.addToast({ title: 'Flag Updated', description: activeEmail?.subject || '', type: 'info' });
       return true;

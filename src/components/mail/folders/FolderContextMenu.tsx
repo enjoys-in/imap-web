@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { ContextMenu, ContextMenuItem } from '@/components/ui/ContextMenu';
 import { MailFolder } from '@/types';
-import { folderIdToSlug } from '@/lib/folderSlugUtils';
+import { folderSlug, isCustomFolder as isCustomFolderKind } from '@/lib/folders';
+import { useFolderStore } from '@/stores/useFolderStore';
 import {
   ExternalLink,
   MailCheck,
@@ -35,14 +35,13 @@ export function FolderContextMenu({
   isFavorite = false,
   onToggleFavorite,
 }: FolderContextMenuProps) {
-  const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const markFolderAsRead = useMailStore((s) => s.markFolderAsRead);
   const emptyFolder = useMailStore((s) => s.emptyFolder);
 
   if (!folder || !position) return null;
 
-  const isCustomFolder = folder.special === 'None';
+  const isCustomFolder = isCustomFolderKind(folder);
   const isTrashOrJunk = folder.special === 'Trash' || folder.special === 'Junk';
 
   const items: ContextMenuItem[] = [
@@ -50,7 +49,7 @@ export function FolderContextMenu({
       label: 'Open in new window',
       icon: ExternalLink,
       onClick: () => {
-        const slug = folderIdToSlug(folder.id);
+        const slug = folderSlug(folder);
         window.open(`/mail/u/0/#${slug}`, '_blank');
       },
     },
@@ -80,7 +79,7 @@ export function FolderContextMenu({
         if (!subName?.trim()) return;
         try {
           const res = await foldersApi.createFolder(folder.accountId, subName.trim(), folder.fullName || folder.displayName);
-          queryClient.invalidateQueries({ queryKey: ['folders'] });
+          void useFolderStore.getState().syncFolders(folder.accountId);
           addToast({ title: 'Subfolder Created', description: (res as any)?.message || `Created "${subName.trim()}" inside ${folder.displayName}.`, type: 'success' });
         } catch (err: any) {
           addToast({ title: 'Failed to create subfolder', description: err?.message || 'Could not create subfolder on the server.', type: 'error' });
@@ -114,7 +113,7 @@ export function FolderContextMenu({
         if (!newName?.trim() || newName.trim() === folder.displayName) return;
         try {
           const res = await foldersApi.renameFolder(folder.id, newName.trim(), folder.fullName || folder.displayName);
-          queryClient.invalidateQueries({ queryKey: ['folders'] });
+          void useFolderStore.getState().syncFolders(folder.accountId);
           addToast({ title: 'Folder Renamed', description: (res as any)?.message || `Renamed to ${newName.trim()}.`, type: 'success' });
         } catch (err: any) {
           addToast({ title: 'Rename Failed', description: err?.message || 'Could not rename folder on the server.', type: 'error' });
@@ -137,7 +136,7 @@ export function FolderContextMenu({
         if (!confirm) return;
         try {
           const res = await foldersApi.deleteFolder(folder.id, folder.fullName || folder.displayName);
-          queryClient.invalidateQueries({ queryKey: ['folders'] });
+          void useFolderStore.getState().syncFolders(folder.accountId);
           addToast({ title: 'Folder Deleted', description: (res as any)?.message || `Removed folder ${folder.displayName}.`, type: 'success' });
         } catch (err: any) {
           addToast({ title: 'Delete Failed', description: err?.message || 'Could not delete folder from the server.', type: 'error' });

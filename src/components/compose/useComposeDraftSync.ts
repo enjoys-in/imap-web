@@ -5,6 +5,7 @@ import { useComposeStore } from '@/stores/useComposeStore';
 import { useMailStore } from '@/stores/useMailStore';
 import { saveCachedEmails } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
+import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { useSession } from '@/components/providers/SessionProvider';
 import { MailMessage } from '@/types';
 
@@ -43,10 +44,12 @@ export function useComposeDraftSync(containerRef: React.RefObject<HTMLDivElement
     const isReplyOrForward = mode === 'reply' || mode === 'replyAll' || mode === 'forward';
     const currentDraftId = draftId || `draft-${Date.now()}`;
 
+    const accountId = useMailStore.getState().selectedAccountId;
     const draftMsg: MailMessage = {
       id: currentDraftId,
-      folderId: 'fld-drafts',
-      accountId: useMailStore.getState().selectedAccountId,
+      // The account's Drafts folder as classified by the backend.
+      folderId: findRegisteredSpecialFolder('Drafts', accountId)?.id ?? '',
+      accountId,
       uid: Math.floor(Math.random() * 10000),
       threadId: isReplyOrForward && threadId ? threadId : `draft-thread-${Date.now()}`,
       inReplyTo: isReplyOrForward ? originalMessageId : undefined,

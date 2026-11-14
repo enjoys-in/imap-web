@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Trash2, Flag, Mail, FolderInput, X, ChevronDown, Check } from 'lucide-react';
 import { useMailStore } from '@/stores';
+import { useFolders } from '@/hooks/useEmailsQuery';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
 
 interface MultiSelectReadingPaneProps {
@@ -10,19 +11,13 @@ interface MultiSelectReadingPaneProps {
   folderEmailIds: string[];
 }
 
-const MOVE_FOLDERS = [
-  { id: 'fld-inbox', name: 'Inbox' },
-  { id: 'fld-junk', name: 'Junk Email' },
-  { id: 'fld-drafts', name: 'Drafts' },
-  { id: 'fld-sent', name: 'Sent Items' },
-  { id: 'fld-deleted', name: 'Deleted Items' },
-  { id: 'fld-archive', name: 'Archive' },
-];
-
 export function MultiSelectReadingPane({ folderName = 'Inbox', folderEmailIds }: MultiSelectReadingPaneProps) {
   const selectedIds = useMailStore((s) => s.selectedIds);
   const clearSelectedIds = useMailStore((s) => s.clearSelectedIds);
   const selectAllIds = useMailStore((s) => s.selectAllIds);
+  const selectedAccountId = useMailStore((s) => s.selectedAccountId);
+  // Move targets are the backend's own folders.
+  const { data: moveFolders = [] } = useFolders(selectedAccountId);
 
   const [isMoveOpen, setIsMoveOpen] = useState(false);
   const count = selectedIds.length;
@@ -116,13 +111,13 @@ export function MultiSelectReadingPane({ folderName = 'Inbox', folderEmailIds }:
 
           {isMoveOpen && (
             <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-neutral-700 rounded shadow-lg py-1 z-30">
-              {MOVE_FOLDERS.map((f) => (
+              {moveFolders.map((f) => (
                 <button
                   key={f.id}
-                  onClick={() => handleMove(f.id, f.name)}
+                  onClick={() => handleMove(f.id, f.displayName)}
                   className="w-full text-left px-3 py-1.5 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
                 >
-                  {f.name}
+                  {f.displayName}
                 </button>
               ))}
             </div>

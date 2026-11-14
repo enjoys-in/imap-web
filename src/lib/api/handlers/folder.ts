@@ -1,5 +1,6 @@
 import { apiClient } from '../client';
 import { MailFolder } from '@/types';
+import { toFolderPath } from '@/lib/folders';
 
 export { getQuota, type StorageQuotaInfo } from './folderQuota';
 
@@ -86,7 +87,7 @@ export async function emptyFolder(
   folderId: string
 ): Promise<{ deletedCount?: number; jobId?: string; message: string; success: boolean }> {
   try {
-    const res = await apiClient.post<any>(`/folders/${encodeURIComponent(folderId)}/empty`);
+    const res = await apiClient.post<any>(`/folders/${encodeURIComponent(toFolderPath(folderId) ?? folderId)}/empty`);
     return {
       success: res?.success ?? true,
       message: res?.message || 'Folder emptied successfully',
@@ -131,7 +132,7 @@ export async function syncCompleteMailbox(): Promise<any> {
  */
 export async function syncSingleFolder(folder: string): Promise<any> {
   try {
-    const data = await apiClient.get<any>(`/fetch-mailbox?folder=${encodeURIComponent(folder)}`);
+    const data = await apiClient.get<any>(`/fetch-mailbox?folder=${encodeURIComponent(toFolderPath(folder) ?? folder)}`);
     return data?.result || data;
   } catch {
     return null;

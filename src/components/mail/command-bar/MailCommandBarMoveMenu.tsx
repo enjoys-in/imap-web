@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FolderInput, ChevronDown } from 'lucide-react';
 import { dispatchMailAction } from '@/lib/events/mailActionEvents';
-import { DEFAULT_COMMAND_BAR_FOLDERS } from './commandBarTypes';
 import { useFolders } from '@/hooks/useEmailsQuery';
 import { useMailStore } from '@/stores';
 import { cn } from '@/lib/utils';
@@ -26,9 +25,8 @@ export function MailCommandBarMoveMenu({
   const selectedAccountId = useMailStore((s) => s.selectedAccountId);
   const { data: serverFolders } = useFolders(selectedAccountId);
 
-  const targetFolders = serverFolders && serverFolders.length > 0
-    ? serverFolders.map((f: any) => ({ id: f.id, name: f.displayName || f.name }))
-    : DEFAULT_COMMAND_BAR_FOLDERS;
+  // Only the backend's folders; there is no built-in fallback list.
+  const targetFolders = (serverFolders ?? []).map((f) => ({ id: f.id, name: f.displayName }));
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

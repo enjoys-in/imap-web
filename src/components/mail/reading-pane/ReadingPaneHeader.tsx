@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
+import { getRegisteredFolder, folderSlug } from '@/lib/folders';
 import { ProfileCardModal, ProfileContactData } from '@/components/profile/ProfileCardModal';
 import { ReadingPaneHeaderDetails } from './ReadingPaneHeaderDetails';
 import { exportEmailToEml } from '@/lib/emlExport';
@@ -39,6 +40,10 @@ export function ReadingPaneHeader({
 
   const formattedDate = format(new Date(email.date), 'EEE M/d/yyyy h:mm a');
   const senderName = email.fromName || email.fromAddress;
+
+  // Slug of the folder this message is in, from the backend's folder list.
+  const messageFolder = getRegisteredFolder(email.folderId);
+  const openInWindowSlug = messageFolder ? folderSlug(messageFolder) : 'inbox';
 
   const myEmails = getUserEmails(account?.email, accounts);
   const formattedTo = formatRecipientsWithYou(email.to, myEmails);
@@ -91,7 +96,7 @@ export function ReadingPaneHeader({
             <button onClick={onReply} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-purple-400 dark:text-purple-300" title="Reply"><CornerUpLeft className="w-4 h-4" /></button>
             <button onClick={onReplyAll} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-purple-400 dark:text-purple-300 hidden sm:inline-flex" title="Reply all"><ReplyAll className="w-4 h-4" /></button>
             <button onClick={onForward} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-cyan-400 dark:text-cyan-300" title="Forward"><CornerUpRight className="w-4 h-4" /></button>
-            <Link href={`/mail/view/${email.id}#${email.folderId || 'fld-inbox'}`} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-blue-500 dark:text-blue-400" title="Open in new window"><LayoutGrid className="w-4 h-4" /></Link>
+            <Link href={`/mail/view/${email.id}#${openInWindowSlug}`} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-blue-500 dark:text-blue-400" title="Open in new window"><LayoutGrid className="w-4 h-4" /></Link>
 
             <div className="relative">
               <button onClick={() => setIsMoreOpen((v) => !v)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer" title="More actions"><MoreHorizontal className="w-4 h-4" /></button>

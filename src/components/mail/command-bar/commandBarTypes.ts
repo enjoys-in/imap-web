@@ -43,11 +43,3 @@ export const ACTION_WIDTHS: Record<CommandBarActionId, number> = {
 };
 
 export const OVERFLOW_BUTTON_WIDTH = 40;
-
-export const DEFAULT_COMMAND_BAR_FOLDERS = [
-  { id: 'fld-inbox', name: 'Inbox' },
-  { id: 'fld-archive', name: 'Archive' },
-  { id: 'fld-junk', name: 'Junk Email' },
-  { id: 'fld-deleted', name: 'Deleted Items' },
-  { id: 'fld-personal', name: 'Personal folder' },
-];

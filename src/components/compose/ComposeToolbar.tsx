@@ -3,7 +3,6 @@
 import React from 'react';
 import { Send, Trash2 } from 'lucide-react';
 import { useComposeStore, useMailStore } from '@/stores';
-import { emailsApi } from '@/lib/api';
 import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
 
@@ -18,8 +17,8 @@ export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
 
   const handleDiscard = () => {
     if (draftId) {
+      // Removes the draft locally and asks the server to delete it from its own folder.
       deleteEmail(draftId);
-      emailsApi.deleteEmail(draftId, 'fld-drafts').catch(() => {});
     }
     close();
   };

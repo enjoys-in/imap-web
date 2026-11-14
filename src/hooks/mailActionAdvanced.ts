@@ -1,5 +1,5 @@
 import { useMailStore, useToastStore, useRightAppsStore } from '@/stores';
-import { emailsApi } from '@/lib/api';
+import { requireSpecialFolder } from './mailActionFolders';
 import { exportEmailToEml } from '@/lib/emlExport';
 import { MailActionEventDetail } from '@/lib/events/mailActionEvents';
 import { MailMessage } from '@/types';
@@ -9,46 +9,32 @@ export function handleAdvancedMailAction(
   activeEmail: MailMessage | null,
   hasTarget: boolean,
   hasExplicitTarget: boolean,
-  hasBulkSelection: boolean,
-  folder: string
+  hasBulkSelection: boolean
 ): boolean {
   const mailStore = useMailStore.getState();
   const toastStore = useToastStore.getState();
   const rightAppsStore = useRightAppsStore.getState();
-  const { selectedIds, moveEmailToFolder, bulkMoveToFolder, setSearchQuery } = mailStore;
+  const { moveEmailToFolder, bulkMoveToFolder, setSearchQuery } = mailStore;
 
   switch (detail.action) {
-    case 'report-junk': {
-      if (!hasTarget) return true;
-      const junkFolder = 'fld-junk';
-      if (hasExplicitTarget && detail.targetEmailId) {
-        moveEmailToFolder(detail.targetEmailId, junkFolder);
-        emailsApi.moveEmail(detail.targetEmailId, junkFolder, folder).catch(() => {});
-      } else if (hasBulkSelection) {
-        bulkMoveToFolder(junkFolder);
-        emailsApi.bulkMoveEmails([...selectedIds], junkFolder, folder).catch(() => {});
-      } else if (activeEmail) {
-        moveEmailToFolder(activeEmail.id, junkFolder);
-        emailsApi.moveEmail(activeEmail.id, junkFolder, folder).catch(() => {});
-      }
-      toastStore.addToast({ title: 'Reported Junk', description: 'Moved to Junk Email and trained spam filter', type: 'warning' });
-      return true;
-    }
-
+    case 'report-junk':
     case 'report-phishing': {
       if (!hasTarget) return true;
-      const junkFolder = 'fld-junk';
+      const junk = requireSpecialFolder('Junk', 'Junk');
+      if (!junk) return true;
+      // moveEmailToFolder / bulkMoveToFolder also send the move request.
       if (hasExplicitTarget && detail.targetEmailId) {
-        moveEmailToFolder(detail.targetEmailId, junkFolder);
-        emailsApi.moveEmail(detail.targetEmailId, junkFolder, folder).catch(() => {});
+        moveEmailToFolder(detail.targetEmailId, junk.id);
       } else if (hasBulkSelection) {
-        bulkMoveToFolder(junkFolder);
-        emailsApi.bulkMoveEmails([...selectedIds], junkFolder, folder).catch(() => {});
+        bulkMoveToFolder(junk.id);
       } else if (activeEmail) {
-        moveEmailToFolder(activeEmail.id, junkFolder);
-        emailsApi.moveEmail(activeEmail.id, junkFolder, folder).catch(() => {});
+        moveEmailToFolder(activeEmail.id, junk.id);
       }
-      toastStore.addToast({ title: 'Reported Phishing', description: 'Sender blocked, phishing alert logged & moved to Junk', type: 'warning' });
+      if (detail.action === 'report-junk') {
+        toastStore.addToast({ title: 'Reported Junk', description: `Moved to ${junk.displayName} and trained spam filter`, type: 'warning' });
+      } else {
+        toastStore.addToast({ title: 'Reported Phishing', description: `Sender blocked, phishing alert logged & moved to ${junk.displayName}`, type: 'warning' });
+      }
       return true;
     }
 
@@ -58,11 +44,11 @@ export function handleAdvancedMailAction(
 
     case 'block-sender': {
       const sender = detail.senderAddress || activeEmail?.fromAddress;
-      if (activeEmail) {
-        moveEmailToFolder(activeEmail.id, 'fld-junk');
-        emailsApi.moveEmail(activeEmail.id, 'fld-junk', folder).catch(() => {});
+      const junk = requireSpecialFolder('Junk', 'Junk');
+      if (activeEmail && junk) {
+        moveEmailToFolder(activeEmail.id, junk.id);
       }
-      toastStore.addToast({ title: 'Sender Blocked', description: `${sender || 'Sender'} added to Blocked Senders and moved to Junk`, type: 'warning' });
+      toastStore.addToast({ title: 'Sender Blocked', description: `${sender || 'Sender'} added to Blocked Senders${junk ? ` and moved to ${junk.displayName}` : ''}`, type: 'warning' });
       return true;
     }
 
@@ -73,7 +59,10 @@ export function handleAdvancedMailAction(
     }
 
     case 'mute-conversation':
-      if (activeEmail) moveEmailToFolder(activeEmail.id, 'fld-archive');
+      if (activeEmail) {
+        const archive = requireSpecialFolder('Archive', 'Archive');
+        if (archive) moveEmailToFolder(activeEmail.id, archive.id);
+      }
       toastStore.addToast({ title: 'Conversation Muted', description: 'Future replies in this thread will be ignored', type: 'info' });
       return true;
 

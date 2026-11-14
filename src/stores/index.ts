@@ -1,4 +1,5 @@
 export * from './useMailStore';
+export * from './useFolderStore';
 export * from './useComposeStore';
 export * from './useUiStore';
 export * from './useToastStore';
