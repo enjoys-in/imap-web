@@ -4,6 +4,8 @@ import type { AppConfig } from './env';
 const DEFAULT_CLIENT_CONFIG: AppConfig = {
   baseUrl: 'http://localhost:9503',
   apiUrl: 'http://localhost:9503/api/v1/imap',
+  calendarApiUrl: 'http://localhost:8443',
+  calendarUrl: 'http://localhost:8443',
   apiVersion: 'v1',
   appName: 'AirSend',
   appVersion: '1.0.0',
@@ -46,9 +48,14 @@ export function getClientConfig(): AppConfig {
     'http://localhost:9503'
   ).replace(/\/+$/, '');
 
+  const calendarApiUrl = (active.calendarApiUrl || active.calendarUrl || 'http://localhost:8443').replace(/\/+$/, '');
+  const calendarUrl = (active.calendarUrl || active.calendarApiUrl || 'http://localhost:8443').replace(/\/+$/, '');
+
   return {
     ...active,
     baseUrl,
     apiUrl,
+    calendarApiUrl,
+    calendarUrl,
   };
 }

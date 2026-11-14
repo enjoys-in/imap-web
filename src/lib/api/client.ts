@@ -65,6 +65,14 @@ async function performRequest<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Set App identification headers
+  if (config.appName) {
+    headers['X-App-Name'] = config.appName;
+  }
+  if (config.appVersion) {
+    headers['X-App-Version'] = config.appVersion;
+  }
+
   if (options.headers) {
     if (options.headers instanceof Headers) {
       options.headers.forEach((val, key) => {

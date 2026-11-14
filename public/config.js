@@ -3,6 +3,8 @@
 window.__RUNTIME_CONFIG__ = {
   baseUrl: 'http://localhost:9503',
   apiUrl: 'http://localhost:9503/api/v1/imap',
+  calendarApiUrl: 'http://localhost:8443',
+  calendarUrl: 'http://localhost:8443',
   apiVersion: 'v1',
   appName: 'AirSend',
   appVersion: '1.0.0',
