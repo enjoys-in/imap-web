@@ -6,10 +6,12 @@ import {
   calendarApi,
   capabilitiesApi,
   jobsApi,
+  settingsApi,
   type StorageQuotaInfo,
   type ServerCapabilityReport,
   type ConnectionStatusResponse,
   type ImapJobInfo,
+  type AutoReplySettings,
 } from '@/lib/api';
 import { MailFolder, MailMessageMetadata, Account, Appointment } from '@/types';
 
@@ -89,4 +91,13 @@ export function useJobList(limit = 20) {
     staleTime: 3000,
   });
 }
+
+export function useAutoReplies(accountId?: string) {
+  return useQuery<AutoReplySettings>({
+    queryKey: ['autoReplies', accountId],
+    queryFn: () => settingsApi.getAutoReplies(accountId),
+    staleTime: 30000,
+  });
+}
+
 

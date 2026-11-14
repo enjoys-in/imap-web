@@ -3,9 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'airsend_pane_widths';
-const DEFAULT_SIDEBAR = 240;
-const DEFAULT_MAILLIST = 340;
-const DEFAULT_MAILLIST_HEIGHT = 320;
+
+export const MIN_SIDEBAR_WIDTH = 180;
+export const MAX_SIDEBAR_WIDTH = 300;
+export const DEFAULT_SIDEBAR = 240;
+
+export const MIN_MAILLIST_WIDTH = 260;
+export const MAX_MAILLIST_WIDTH = 460;
+export const DEFAULT_MAILLIST = 340;
+
+export const MIN_MAILLIST_HEIGHT = 160;
+export const MAX_MAILLIST_HEIGHT = 460;
+export const DEFAULT_MAILLIST_HEIGHT = 300;
 
 export function usePaneResize() {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
@@ -13,40 +22,49 @@ export function usePaneResize() {
   const [mailListHeight, setMailListHeight] = useState(DEFAULT_MAILLIST_HEIGHT);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Restore persisted widths from localStorage
+  // Restore persisted widths from localStorage, capping against strict maximums
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const { sidebar, mailList, mailListH } = JSON.parse(saved);
-        if (sidebar >= 180 && sidebar <= 400) setSidebarWidth(sidebar);
-        if (mailList >= 260 && mailList <= 800) setMailListWidth(mailList);
-        if (mailListH >= 160 && mailListH <= 700) setMailListHeight(mailListH);
+        if (typeof sidebar === 'number' && sidebar >= MIN_SIDEBAR_WIDTH) {
+          setSidebarWidth(Math.min(MAX_SIDEBAR_WIDTH, sidebar));
+        }
+        if (typeof mailList === 'number' && mailList >= MIN_MAILLIST_WIDTH) {
+          setMailListWidth(Math.min(MAX_MAILLIST_WIDTH, mailList));
+        }
+        if (typeof mailListH === 'number' && mailListH >= MIN_MAILLIST_HEIGHT) {
+          setMailListHeight(Math.min(MAX_MAILLIST_HEIGHT, mailListH));
+        }
       }
     } catch {
       // Ignore JSON error
     }
   }, []);
 
-  const persist = useCallback((sWidth: number, mWidth: number, mHeight?: number) => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          sidebar: sWidth,
-          mailList: mWidth,
-          mailListH: mHeight ?? mailListHeight,
-        })
-      );
-    } catch {
-      // Ignore storage quota error
-    }
-  }, [mailListHeight]);
+  const persist = useCallback(
+    (sWidth: number, mWidth: number, mHeight?: number) => {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            sidebar: Math.min(MAX_SIDEBAR_WIDTH, sWidth),
+            mailList: Math.min(MAX_MAILLIST_WIDTH, mWidth),
+            mailListH: Math.min(MAX_MAILLIST_HEIGHT, mHeight ?? mailListHeight),
+          })
+        );
+      } catch {
+        // Ignore storage quota error
+      }
+    },
+    [mailListHeight]
+  );
 
   const handleSidebarResize = useCallback(
     (deltaX: number) => {
       setSidebarWidth((prev) => {
-        const next = Math.max(180, Math.min(400, prev + deltaX));
+        const next = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, prev + deltaX));
         persist(next, mailListWidth);
         return next;
       });
@@ -57,10 +75,11 @@ export function usePaneResize() {
   const handleMailListResize = useCallback(
     (deltaX: number) => {
       setMailListWidth((prev) => {
-        const maxAllowed = typeof window !== 'undefined'
-          ? Math.max(320, window.innerWidth - sidebarWidth - 340)
-          : 750;
-        const next = Math.max(260, Math.min(maxAllowed, prev + deltaX));
+        const viewportLimit = typeof window !== 'undefined'
+          ? Math.max(MIN_MAILLIST_WIDTH, window.innerWidth - sidebarWidth - 360)
+          : MAX_MAILLIST_WIDTH;
+        const maxAllowed = Math.min(MAX_MAILLIST_WIDTH, viewportLimit);
+        const next = Math.max(MIN_MAILLIST_WIDTH, Math.min(maxAllowed, prev + deltaX));
         persist(sidebarWidth, next);
         return next;
       });
@@ -71,10 +90,11 @@ export function usePaneResize() {
   const handleMailListVerticalResize = useCallback(
     (deltaY: number) => {
       setMailListHeight((prev) => {
-        const maxAllowed = typeof window !== 'undefined'
-          ? Math.max(200, window.innerHeight - 300)
-          : 600;
-        const next = Math.max(160, Math.min(maxAllowed, prev + deltaY));
+        const viewportLimit = typeof window !== 'undefined'
+          ? Math.max(MIN_MAILLIST_HEIGHT, window.innerHeight - 300)
+          : MAX_MAILLIST_HEIGHT;
+        const maxAllowed = Math.min(MAX_MAILLIST_HEIGHT, viewportLimit);
+        const next = Math.max(MIN_MAILLIST_HEIGHT, Math.min(maxAllowed, prev + deltaY));
         persist(sidebarWidth, mailListWidth, next);
         return next;
       });
@@ -88,12 +108,8 @@ export function usePaneResize() {
   }, [mailListWidth, persist]);
 
   const resetMailList = useCallback(() => {
-    // Smart auto-adjust: 340px or ~30% of available window width
-    const autoWidth = typeof window !== 'undefined'
-      ? Math.max(300, Math.min(420, Math.floor((window.innerWidth - sidebarWidth) * 0.35)))
-      : DEFAULT_MAILLIST;
-    setMailListWidth(autoWidth);
-    persist(sidebarWidth, autoWidth);
+    setMailListWidth(DEFAULT_MAILLIST);
+    persist(sidebarWidth, DEFAULT_MAILLIST);
   }, [sidebarWidth, persist]);
 
   const resetMailListHeight = useCallback(() => {

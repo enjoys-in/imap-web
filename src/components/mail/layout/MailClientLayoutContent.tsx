@@ -43,7 +43,7 @@ export function MailClientLayoutContent({
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden bg-white dark:bg-neutral-900">
         {/* Top: Mail list */}
         <div
-          className="w-full shrink-0 overflow-hidden flex flex-col border-b border-neutral-200 dark:border-neutral-800"
+          className="w-full shrink-0 overflow-hidden flex flex-col border-b border-neutral-200 dark:border-neutral-800 min-h-[160px] max-h-[460px]"
           style={{ height: hasSelectedMail ? mailListHeight : '100%' }}
         >
           <MailList
@@ -125,10 +125,10 @@ export function MailClientLayoutContent({
   // 4. Right Layout (Default Outlook side-by-side): Mail list on left, reading pane on right
   return (
     <>
-      {/* Mail List Container with max-w-[65%] and auto-adjusting widths */}
+      {/* Mail List Container with max-w-[460px] */}
       <div
         className={cn(
-          'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 select-none overflow-hidden min-w-[260px] max-w-[65%]',
+          'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 select-none overflow-hidden min-w-[260px] max-w-[460px]',
           hasSelectedMail ? 'hidden md:flex' : 'flex w-full md:w-auto'
         )}
         style={{ width: mailListWidth }}

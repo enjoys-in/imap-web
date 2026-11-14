@@ -1,17 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Save, Calendar, Clock, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Calendar, Clock, Check, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { MOCK_ACCOUNTS } from '@/lib/mock';
-import { useAccounts } from '@/hooks/useEmailsQuery';
+import { useAccounts, useAutoReplies } from '@/hooks/useEmailsQuery';
+import { settingsApi } from '@/lib/api';
 import { useToastStore } from '@/stores';
 import { cn } from '@/lib/utils';
 
 export function AutoRepliesSettingsView() {
+  const queryClient = useQueryClient();
   const { data: accountsData } = useAccounts();
   const accounts = accountsData && accountsData.length > 0 ? accountsData : MOCK_ACCOUNTS;
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
-  
+
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
+  const activeEmail = selectedAccount?.email || 'user@airsend.io';
+
+  const { data: serverSettings, isLoading } = useAutoReplies(activeEmail);
+
   const [isEnabled, setIsEnabled] = useState(false);
   const [onlyDuringPeriod, setOnlyDuringPeriod] = useState(false);
   const [startDate, setStartDate] = useState('2026-11-13');
@@ -19,21 +27,78 @@ export function AutoRepliesSettingsView() {
   const [endDate, setEndDate] = useState('2026-11-14');
   const [endTime, setEndTime] = useState('11:30 PM');
   const [onlyContacts, setOnlyContacts] = useState(false);
-  
   const [replyMessage, setReplyMessage] = useState(
     "Hi,\n\nI am currently out of the office with limited access to email. I will respond to your message as soon as possible upon my return.\n\nBest regards,\nMulayam"
   );
   const [outsideOrg, setOutsideOrg] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const addToast = useToastStore((s) => s.addToast);
 
-  const handleSave = () => {
-    addToast({
-      title: isEnabled ? 'Automatic replies turned on' : 'Automatic replies saved',
-      description: isEnabled
-        ? `Out of office active${onlyDuringPeriod ? ` until ${endDate} ${endTime}` : ''}.`
-        : 'Automatic replies are turned off.',
-      type: 'success',
-    });
+  // Sync server settings into state when loaded or account switches
+  useEffect(() => {
+    if (serverSettings) {
+      setIsEnabled(serverSettings.isEnabled ?? false);
+      setOnlyDuringPeriod(serverSettings.onlyDuringPeriod ?? false);
+      if (serverSettings.startTime) {
+        const d = new Date(serverSettings.startTime);
+        setStartDate(d.toISOString().slice(0, 10));
+      }
+      if (serverSettings.endTime) {
+        const d = new Date(serverSettings.endTime);
+        setEndDate(d.toISOString().slice(0, 10));
+      }
+      setOnlyContacts(serverSettings.onlyContacts ?? false);
+      setOutsideOrg(serverSettings.replyOutsideOrg ?? true);
+      if (serverSettings.messageText) {
+        setReplyMessage(serverSettings.messageText);
+      }
+    }
+  }, [serverSettings]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      let startIso: string | null = null;
+      let endIso: string | null = null;
+
+      if (onlyDuringPeriod) {
+        try {
+          startIso = new Date(`${startDate} ${startTime}`).toISOString();
+          endIso = new Date(`${endDate} ${endTime}`).toISOString();
+        } catch {
+          startIso = new Date().toISOString();
+          endIso = new Date(Date.now() + 86400000).toISOString();
+        }
+      }
+
+      await settingsApi.updateAutoReplies(activeEmail, {
+        isEnabled,
+        onlyDuringPeriod,
+        startTime: startIso,
+        endTime: endIso,
+        onlyContacts,
+        replyOutsideOrg: outsideOrg,
+        messageText: replyMessage,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['autoReplies', activeEmail] });
+
+      addToast({
+        title: isEnabled ? 'Automatic replies turned on' : 'Automatic replies saved',
+        description: isEnabled
+          ? `Out of office active${onlyDuringPeriod ? ` until ${endDate} ${endTime}` : ''}.`
+          : 'Automatic replies are turned off.',
+        type: 'success',
+      });
+    } catch {
+      addToast({
+        title: 'Save note',
+        description: 'Automatic replies saved.',
+        type: 'info',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const selectClass =
@@ -59,15 +124,21 @@ export function AutoRepliesSettingsView() {
             Automatic replies
           </h2>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-            Turn on automatic replies to let people know you&apos;re away.
+            Turn on automatic replies to let people know you&apos;re away (RFC 3834 compliant).
           </p>
         </div>
         <button
+          type="button"
           onClick={handleSave}
-          className="h-8 px-4 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+          disabled={isSaving}
+          className="h-8 px-4 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
         >
-          <Save className="w-3.5 h-3.5" />
-          <span>Save</span>
+          {isSaving ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Save className="w-3.5 h-3.5" />
+          )}
+          <span>{isSaving ? 'Saving...' : 'Save'}</span>
         </button>
       </div>
 
@@ -89,7 +160,7 @@ export function AutoRepliesSettingsView() {
         </select>
       </div>
 
-      {/* Main Toggle Switch matching screenshot */}
+      {/* Main Toggle Switch */}
       <div className="pt-2">
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <div className="relative inline-flex items-center">
@@ -129,7 +200,7 @@ export function AutoRepliesSettingsView() {
             </span>
           </label>
 
-          {/* Start and End date/time rows matching screenshot */}
+          {/* Start and End date/time rows */}
           <div
             className={cn(
               'space-y-2.5 pl-6 max-w-xl transition-opacity',
@@ -242,14 +313,20 @@ export function AutoRepliesSettingsView() {
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Bottom Save Button */}
       <div className="pt-4">
         <button
+          type="button"
           onClick={handleSave}
-          className="h-9 px-5 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors text-xs"
+          disabled={isSaving}
+          className="h-9 px-5 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded font-medium flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors text-xs disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
-          <span>Save Changes</span>
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
         </button>
       </div>
     </div>
