@@ -24,20 +24,16 @@ interface MailListProps {
 
 export function MailList({ activeFolderId, activeMailId, onSelectMail, width, isWideLayout }: MailListProps) {
   const generalReadingLayout = useGeneralSettingsStore((s) => s.readingPaneLayout);
-  const effectiveIsWide = isWideLayout ?? (generalReadingLayout === 'fillScreen' || generalReadingLayout === 'popoutOnly');
+  const effectiveIsWide = isWideLayout ?? (
+    generalReadingLayout === 'fillScreen' || generalReadingLayout === 'popoutOnly' ||
+    generalReadingLayout === 'bottom' || (typeof width === 'number' && width >= 480)
+  );
 
-  const selectedMailId = useMailStore((s) => s.selectedMailId);
-  const selectedIds = useMailStore((s) => s.selectedIds);
-  const searchQuery = useMailStore((s) => s.searchQuery);
-  const isSearchingServer = useMailStore((s) => s.isSearchingServer);
-  const clearSearch = useMailStore((s) => s.clearSearch);
-  const setSelectedMail = useMailStore((s) => s.setSelectedMail);
-  const toggleSelectId = useMailStore((s) => s.toggleSelectId);
-  const selectedAccountId = useMailStore((s) => s.selectedAccountId);
-  const localEmails = useMailStore((s) => s.localEmails);
-  const hasMoreEmails = useMailStore((s) => s.hasMoreEmails);
-  const isLoadingMore = useMailStore((s) => s.isLoadingMore);
-  const loadMoreEmails = useMailStore((s) => s.loadMoreEmails);
+  const {
+    selectedMailId, selectedIds, searchQuery, isSearchingServer, clearSearch,
+    setSelectedMail, toggleSelectId, selectedAccountId, localEmails,
+    hasMoreEmails, isLoadingMore, loadMoreEmails,
+  } = useMailStore();
 
   const getSettings = useAccountSettingsStore((s) => s.getSettings);
   const cardsRows = getSettings(selectedAccountId).appearance.cardsViewRows;
@@ -71,7 +67,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
   return (
     <div
       style={{ width: width ? `${width}px` : undefined }}
-      className="w-full md:w-80 lg:w-96 flex flex-col h-full border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1f1f1f] shrink-0 select-none transition-colors"
+      className="w-full flex-1 flex flex-col h-full bg-white dark:bg-[#1f1f1f] select-none transition-colors overflow-hidden min-w-0"
     >
       <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} isWideLayout={effectiveIsWide} />
 
