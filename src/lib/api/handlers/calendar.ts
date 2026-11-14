@@ -158,16 +158,20 @@ export function toCalendarServiceError(error: unknown): CalendarServiceError {
 
 /**
  * Resolves the currently active IMAP user credentials (email & name)
+ * and extracts the tenantId from the email domain.
  */
-export async function getActiveImapUser(): Promise<{ email: string; name?: string }> {
+export async function getActiveImapUser(): Promise<{ email: string; name?: string; tenantId?: string; domain?: string }> {
   try {
     const selectedAccountId = useMailStore.getState().selectedAccountId;
     const accounts = await getAccounts().catch(() => []);
     const active = (selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null) || accounts[0];
     if (active?.email) {
+      const domain = active.email.includes('@') ? active.email.split('@')[1].trim().toLowerCase() : '';
       return {
         email: active.email,
         name: active.displayName || active.userName || undefined,
+        tenantId: domain,
+        domain,
       };
     }
   } catch {}
@@ -175,9 +179,15 @@ export async function getActiveImapUser(): Promise<{ email: string; name?: strin
   try {
     const profile = await getProfile().catch(() => null);
     if (profile?.email || profile?.mid) {
+      const email = (profile.email || profile.mid || '').trim();
+      const domain = email.includes('@')
+        ? email.split('@')[1].trim().toLowerCase()
+        : (profile.domain_name || '');
       return {
-        email: profile.email || profile.mid,
+        email,
         name: profile.displayName || profile.display_name || profile.name || undefined,
+        tenantId: domain,
+        domain,
       };
     }
   } catch {}
@@ -186,17 +196,22 @@ export async function getActiveImapUser(): Promise<{ email: string; name?: strin
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      const email = payload.email || payload.mid;
+      const email = (payload.email || payload.mid || '').trim();
       if (email) {
+        const domain = email.includes('@')
+          ? email.split('@')[1].trim().toLowerCase()
+          : (payload.domain_name || '');
         return {
           email,
           name: payload.display_name || payload.name || undefined,
+          tenantId: domain,
+          domain,
         };
       }
     } catch {}
   }
 
-  return { email: '' };
+  return { email: '', tenantId: '', domain: '' };
 }
 
 /**
@@ -270,24 +285,49 @@ function toUserCalendar(raw: JmapCalendar): UserCalendar {
 }
 
 /**
- * Onboards the current IMAP user into CalDev
+ * Onboards the current IMAP user into CalDev.
+ * Supplies the user's email and uses the domain of the email as the tenant_id (not numeric ID).
  */
 export async function onboardCalendarUser(email?: string, name?: string): Promise<any> {
   let targetEmail = email?.trim();
   let targetName = name?.trim();
 
+  const imapUser = await getActiveImapUser().catch(() => ({ email: '', name: '', tenantId: '', domain: '' }));
+
   if (!targetEmail) {
-    const imapUser = await getActiveImapUser();
     targetEmail = imapUser.email;
     targetName = targetName || imapUser.name;
   }
 
+  const domain = targetEmail && targetEmail.includes('@')
+    ? targetEmail.split('@')[1].trim().toLowerCase()
+    : (imapUser.tenantId || imapUser.domain || '');
+
   const body: Record<string, string> = {};
   if (targetEmail) body.email = targetEmail;
   if (targetName) body.name = targetName;
+  if (domain) {
+    body.tenant_id = domain;
+    body.tenant = domain;
+    body.domain = domain;
+  }
 
-  const res = await apiClient.post<any>(`${getCalendarBaseUrl()}/api/calendar/onboard`, body);
-  return res?.result || res;
+  const headers: Record<string, string> = {};
+  if (domain) {
+    headers['X-Tenant-ID'] = domain;
+  }
+
+  const res = await apiClient.post<any>(`${getCalendarBaseUrl()}/api/calendar/onboard`, body, { headers });
+  const result = res?.result || res;
+  if (result && typeof result === 'object') {
+    const resolvedDomain = (result.email || targetEmail || '').split('@')[1]?.toLowerCase() || domain;
+    if (resolvedDomain) {
+      result.tenant_id = resolvedDomain;
+      result.tenant = resolvedDomain;
+      result.domain = resolvedDomain;
+    }
+  }
+  return result;
 }
 
 /**
@@ -815,6 +855,17 @@ export async function getSharedCalendars(): Promise<SharedCalendar[]> {
   }
 }
 
+export async function getCalendarShares(calendarId: string): Promise<{ user_id: number; email: string; name?: string; created_at: string }[]> {
+  try {
+    const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/shares`;
+    const res = await apiClient.get<any>(url);
+    return res?.result?.shares || res?.result || [];
+  } catch (err) {
+    console.warn('[CalDev] getCalendarShares failed:', err);
+    return [];
+  }
+}
+
 export async function shareCalendar(calendarId: string, email: string): Promise<any> {
   const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/shares`;
   const res = await apiClient.post<any>(url, { email: email.trim() });
@@ -829,6 +880,53 @@ export async function revokeCalendarShare(calendarId: string, userId: number | s
   } catch (err) {
     console.warn('[CalDev] revokeCalendarShare failed:', err);
     return false;
+  }
+}
+
+/**
+ * Fetch expanded events from a calendar shared with the current user.
+ * GET /api/shared/calendars/:id/events?start=...&end=... (UI_GUIDE.md Section 9)
+ */
+export async function getSharedCalendarEvents(
+  calendarId: string,
+  start?: Date,
+  end?: Date
+): Promise<Appointment[]> {
+  try {
+    const fromDate = start || new Date(Date.now() - 30 * 86400000);
+    const toDate = end || new Date(Date.now() + 90 * 86400000);
+
+    const params = new URLSearchParams({
+      start: fromDate.toISOString(),
+      end: toDate.toISOString(),
+    });
+
+    const url = `${getCalendarBaseUrl()}/api/shared/calendars/${calendarId}/events?${params.toString()}`;
+    const res = await apiClient.get<any>(url);
+    const events = res?.result?.events || res?.result || [];
+
+    return events.map((e: any) => ({
+      id: e.id,
+      accountId: '',
+      uid: e.uid || e.id,
+      sequence: 0,
+      title: e.private ? 'Busy' : e.title || 'Busy',
+      location: e.private ? undefined : e.location,
+      startUtc: e.start,
+      endUtc: e.end,
+      isAllDay: Boolean(e.is_all_day),
+      isRecurring: Boolean(e.recurring),
+      organizerEmail: 'shared',
+      organizerName: 'Shared Calendar',
+      isOrganizer: false,
+      attendees: '[]',
+      myResponse: 'Accepted',
+      showAs: 'Busy',
+      notes: e.private ? undefined : e.description,
+    }));
+  } catch (err) {
+    console.warn(`[CalDev] getSharedCalendarEvents for ${calendarId} failed:`, err);
+    return [];
   }
 }
 

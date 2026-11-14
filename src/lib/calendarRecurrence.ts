@@ -148,7 +148,7 @@ function generateSeriesStarts(
         results.push(new Date(current.getTime()));
       }
       emittedCount++;
-      current = new Date(current.getTime() + rule.interval * 86400000);
+      current.setDate(current.getDate() + rule.interval);
     } else if (rule.freq === 'WEEKLY') {
       const byDays = rule.byDay && rule.byDay.length > 0 ? rule.byDay : [dtStart.getDay()];
       // Check days in current week
@@ -261,7 +261,8 @@ export function expandEventOccurrences(
 
     for (const s of seriesStarts) {
       const key = s.toISOString().replace('.000Z', 'Z');
-      const patch = overrides[key];
+      const dateKey = s.toISOString().slice(0, 10);
+      const patch = overrides[key] || (ev.isAllDay ? overrides[dateKey] : undefined);
 
       if (patch?.excluded) {
         continue; // Cancelled occurrence
@@ -272,12 +273,13 @@ export function expandEventOccurrences(
       const isException = Boolean(patch);
 
       seenStarts.add(key);
+      seenStarts.add(dateKey);
 
       if (occEnd >= windowFrom && occStart <= windowTo) {
         result.push({
           eventId: ev.id,
           uid,
-          originalStart: key,
+          originalStart: ev.isAllDay ? dateKey : key,
           start: occStart,
           end: occEnd,
           title: patch?.title || ev.title,

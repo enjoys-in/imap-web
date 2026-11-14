@@ -13,10 +13,11 @@ import { ToastContainer } from '@/components/notifications/ToastContainer';
 import { GlobalAlertDialog } from '@/components/ui/AlertDialog';
 import { LiveEmailSyncBridge } from '@/components/layout/LiveEmailSyncBridge';
 import { MailActionController } from '@/components/mail/MailActionController';
+import { ROUTES } from '@/constants';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const isLoginPage = pathname === ROUTES.LOGIN;
 
   if (isLoginPage) {
     return (

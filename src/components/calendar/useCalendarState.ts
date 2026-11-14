@@ -8,6 +8,7 @@ import { ProjectItem } from './CalendarSidebar';
 import {
   getAppointments,
   createAppointment,
+  updateAppointment,
   deleteAppointment,
   rsvpAppointment,
   subscribeCalendarEvents,
@@ -370,28 +371,23 @@ export function useCalendarState() {
 
   const handleSaveSchedule = async (newEventData: Partial<CalendarEvent>) => {
     if (isViewOnly) return;
-    const created: CalendarEvent = {
-      id: `evt-${Date.now()}`,
-      title: newEventData.title || 'Untitled Schedule',
-      dayIndex: newEventData.dayIndex ?? slotDay,
-      startTime: newEventData.startTime || '08:30 AM',
-      endTime: newEventData.endTime || '09:30 AM',
-      startHour: newEventData.startHour ?? slotHour,
-      durationHours: newEventData.durationHours || 1,
-      color: newEventData.color || 'blue',
-      striped: Boolean(newEventData.striped),
-      category: newEventData.category || 'Meeting',
-      description: newEventData.description,
-      meetUrl: newEventData.meetUrl,
-      participants: newEventData.participants || [],
-    };
-    setEvents((prev) => [...prev, created]);
+    const editingId = newEventData.id || selectedEvent?.id;
+    const isEdit = Boolean(editingId);
 
     try {
       const now = new Date();
+      // Compute date based on target dayIndex (0=Mon, 1=Tue... 6=Sun)
+      const currentDay = now.getDay();
+      const currentDayIndex = currentDay === 0 ? 6 : currentDay - 1;
+      const targetDayIndex = newEventData.dayIndex ?? slotDay;
+      const dayDiff = targetDayIndex - currentDayIndex;
+
       const start = new Date(now);
-      start.setHours(created.startHour, 0, 0, 0);
-      const end = new Date(start.getTime() + (created.durationHours || 1) * 3600 * 1000);
+      start.setDate(start.getDate() + dayDiff);
+      const startHour = newEventData.startHour ?? slotHour;
+      start.setHours(startHour, 0, 0, 0);
+      const durationHours = newEventData.durationHours || 1;
+      const end = new Date(start.getTime() + durationHours * 3600 * 1000);
       const calendarId = calendars.find((c) => c.name === selectedProject)?.id;
 
       const isRecurring = Boolean(newEventData.isRecurring);
@@ -402,37 +398,51 @@ export function useCalendarState() {
         recurrenceRule = `FREQ=WEEKLY;BYDAY=${days[jsDay]}`;
       }
 
+      let startUtc = start.toISOString();
+      let endUtc = end.toISOString();
       if (newEventData.isAllDay) {
-        const startUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0)).toISOString();
-        const endUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() + 1, 0, 0, 0)).toISOString();
-        await createAppointment({
-          title: created.title,
-          location: created.category,
-          startUtc,
-          endUtc,
-          isAllDay: true,
-          notes: created.description,
-          calendarId,
-          attendees: created.participants.map((p) => p.name).filter(Boolean),
-          recurrenceRule,
-        });
+        startUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0)).toISOString();
+        endUtc = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() + 1, 0, 0, 0)).toISOString();
+      }
+
+      if (isEdit && editingId) {
+        const isOccurrenceOnly = Boolean(newEventData.isOccurrenceOnly);
+        const originalStart = newEventData.originalStart || selectedEvent?.originalStart;
+
+        await updateAppointment(
+          editingId,
+          {
+            title: newEventData.title,
+            location: newEventData.category,
+            startUtc,
+            endUtc,
+            isAllDay: Boolean(newEventData.isAllDay),
+            notes: newEventData.description,
+          },
+          {
+            isOccurrenceOnly,
+            originalStart,
+          }
+        );
       } else {
         await createAppointment({
-          title: created.title,
-          location: created.category,
-          startUtc: start.toISOString(),
-          endUtc: end.toISOString(),
-          isAllDay: false,
-          notes: created.description,
+          title: newEventData.title || 'Untitled Schedule',
+          location: newEventData.category,
+          startUtc,
+          endUtc,
+          isAllDay: Boolean(newEventData.isAllDay),
+          notes: newEventData.description,
           calendarId,
-          attendees: created.participants.map((p) => p.name).filter(Boolean),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          attendees: (newEventData.participants || []).map((p) => p.name).filter(Boolean),
+          timeZone: newEventData.isAllDay ? undefined : Intl.DateTimeFormat().resolvedOptions().timeZone,
           recurrenceRule,
         });
       }
+
       await loadEvents();
-    } catch {
-      // Ignored if server unreachable
+      setSelectedEvent(null);
+    } catch (err) {
+      console.warn('[CalDev] Save schedule failed:', err);
     }
   };
 

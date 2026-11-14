@@ -250,6 +250,7 @@ export function CalendarView() {
         onRsvp={s.handleRsvpEvent}
         onEdit={(evt) => {
           if (s.isViewOnly) return;
+          s.setSelectedEvent(evt);
           s.setSlotDay(evt.dayIndex);
           s.setSlotHour(evt.startHour);
           s.setDetailModalOpen(false);

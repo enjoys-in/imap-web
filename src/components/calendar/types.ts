@@ -34,6 +34,7 @@ export interface CalendarEvent {
   isAllDay?: boolean;
   isRecurring?: boolean;
   isException?: boolean;
+  isOccurrenceOnly?: boolean;
   originalStart?: string;
   organizerEmail?: string;
   isOrganizer?: boolean;

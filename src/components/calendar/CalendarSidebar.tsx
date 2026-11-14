@@ -66,6 +66,55 @@ export function CalendarSidebar({
   const sharedCalendars = useTeamAvailabilityStore((s) => s.sharedCalendars);
   const teammateStatus = useTeamAvailabilityStore((s) => s.teammateStatus);
 
+  const teamMembers = React.useMemo(() => {
+    const list: Array<{
+      key: string;
+      email: string;
+      name?: string;
+      allowed: boolean;
+      busy: boolean;
+      busyStatus?: 'confirmed' | 'tentative';
+      until?: string;
+      nextBusyAt?: string;
+    }> = [];
+
+    const seen = new Set<string>();
+
+    for (const m of sharedWithMe) {
+      const email = m.email.toLowerCase();
+      seen.add(email);
+      const stat = teammateStatus[email];
+      list.push({
+        key: `share-${m.user_id}`,
+        email: m.email,
+        name: m.name || stat?.name || m.email.split('@')[0],
+        allowed: stat?.allowed ?? true,
+        busy: stat?.busy ?? false,
+        busyStatus: stat?.busyStatus,
+        until: stat?.until,
+        nextBusyAt: stat?.nextBusyAt,
+      });
+    }
+
+    for (const [email, stat] of Object.entries(teammateStatus)) {
+      if (!seen.has(email)) {
+        seen.add(email);
+        list.push({
+          key: `status-${email}`,
+          email: stat.email,
+          name: stat.name || stat.email.split('@')[0],
+          allowed: stat.allowed ?? true,
+          busy: stat.busy,
+          busyStatus: stat.busyStatus,
+          until: stat.until,
+          nextBusyAt: stat.nextBusyAt,
+        });
+      }
+    }
+
+    return list;
+  }, [sharedWithMe, teammateStatus]);
+
   return (
     <aside
       className={cn(
@@ -212,16 +261,18 @@ export function CalendarSidebar({
             </div>
 
             <nav className="space-y-0.5">
-              {sharedWithMe.length === 0 ? (
+              {teamMembers.length === 0 ? (
                 <p className="text-[11px] text-neutral-400 px-2 py-1 italic">
                   No teammate shares yet.
                 </p>
               ) : (
-                sharedWithMe.map((member) => {
-                  const stat = teammateStatus[member.email.toLowerCase()];
-                  const isBusy = Boolean(stat?.busy);
-                  const isTentative = stat?.busyStatus === 'tentative';
-                  const statusColor = isBusy
+                teamMembers.map((member) => {
+                  const isNotAllowed = member.allowed === false;
+                  const isBusy = Boolean(member.busy);
+                  const isTentative = member.busyStatus === 'tentative';
+                  const statusColor = isNotAllowed
+                    ? 'bg-neutral-400'
+                    : isBusy
                     ? isTentative
                       ? 'bg-amber-500'
                       : 'bg-rose-500'
@@ -236,17 +287,27 @@ export function CalendarSidebar({
                     }
                   };
 
-                  const tooltipText = isBusy
-                    ? stat?.until
-                      ? `Busy until ${formatIsoTime(stat.until)}`
+                  const tooltipText = isNotAllowed
+                    ? 'No access'
+                    : isBusy
+                    ? member.until
+                      ? `Busy until ${formatIsoTime(member.until)}`
                       : 'Busy'
-                    : stat?.nextBusyAt
-                    ? `Free until ${formatIsoTime(stat.nextBusyAt)}`
+                    : member.nextBusyAt
+                    ? `Free until ${formatIsoTime(member.nextBusyAt)}`
                     : 'Free';
+
+                  const statusLabel = isNotAllowed
+                    ? 'No access'
+                    : isBusy
+                    ? isTentative
+                      ? 'tentative'
+                      : 'busy'
+                    : 'free';
 
                   return (
                     <div
-                      key={member.user_id}
+                      key={member.key}
                       title={`${member.email} • ${tooltipText}`}
                       className="w-full flex items-center justify-between px-2.5 h-8 rounded-lg text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/30 transition-colors"
                     >
@@ -257,7 +318,7 @@ export function CalendarSidebar({
                         </span>
                       </div>
                       <span className="text-[10px] text-neutral-400 shrink-0 capitalize">
-                        {isBusy ? (isTentative ? 'tentative' : 'busy') : 'free'}
+                        {statusLabel}
                       </span>
                     </div>
                   );

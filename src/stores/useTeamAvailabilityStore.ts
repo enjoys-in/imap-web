@@ -112,6 +112,7 @@ export const useTeamAvailabilityStore = create<TeamAvailabilityState>((set, get)
           [key]: {
             ...existing,
             name: data.name || existing.name,
+            allowed: (data as any).allowed !== undefined ? Boolean((data as any).allowed) : existing.allowed ?? true,
             busy: Boolean(data.busy),
             busyStatus: data.busyStatus as any,
             until: data.until,

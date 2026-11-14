@@ -3,6 +3,7 @@ import { Account } from '@/types';
 import { clearCachedEmails, getCachedAccounts, replaceCachedAccounts } from '@/lib/idb/mailCacheDb';
 import { getClientConfig } from '@/config/clientConfig';
 import { disablePush } from '@/lib/webPush';
+import { STORAGE_KEYS } from '@/constants';
 
 export { autodiscover, type AutodiscoverResult } from './autodiscover';
 
@@ -229,7 +230,7 @@ async function validateViaApi(
 
   if (typeof window !== 'undefined') {
     try {
-      sessionStorage.removeItem('airsend_logged_out');
+      sessionStorage.removeItem(STORAGE_KEYS.LOGGED_OUT);
     } catch {}
   }
 
@@ -277,9 +278,9 @@ export async function logout(): Promise<{ success: boolean }> {
     await clearCachedEmails();
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem('airsend_logged_out', 'true');
-        localStorage.removeItem('airsend_active_user');
-        localStorage.removeItem('airsend_custom_accounts');
+        sessionStorage.setItem(STORAGE_KEYS.LOGGED_OUT, 'true');
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+        localStorage.removeItem(STORAGE_KEYS.CUSTOM_ACCOUNTS);
       } catch {}
     }
   }
@@ -291,7 +292,7 @@ function hasIdentity(value: any): boolean {
 }
 
 export async function getProfile(): Promise<any> {
-  if (typeof window !== 'undefined' && sessionStorage.getItem('airsend_logged_out') === 'true') {
+  if (typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEYS.LOGGED_OUT) === 'true') {
     return null;
   }
 

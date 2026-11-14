@@ -229,6 +229,10 @@ export function CreateScheduleModal({
     }));
 
     onSave({
+      id: initialEvent?.id,
+      uid: initialEvent?.uid,
+      originalStart: initialEvent?.originalStart,
+      isOccurrenceOnly: initialEvent?.isOccurrenceOnly,
       title: finalTitle,
       dayIndex: initialDayIndex,
       startTime: formatTimeDisplay(startHourDecimal),

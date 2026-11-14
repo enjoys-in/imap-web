@@ -39,13 +39,21 @@ import {
   FluentBadge,
   FluentViewTransition,
 } from '@/components/ui/fluent';
+import { ROUTES } from '@/constants';
 
 type AuthViewMode = 'welcome' | 'login' | 'setup';
 
 export function LoginView() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { refreshSession } = useSession();
+  const { refreshSession, isAuthenticated } = useSession();
+
+  // If already authenticated, do not show login view - redirect immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(ROUTES.INBOX);
+    }
+  }, [isAuthenticated, router]);
 
   // Mode: 'welcome' matches the reference card with fluid animated transitions to 'login' and 'setup'
   const [view, setView] = useState<AuthViewMode>('welcome');
@@ -193,7 +201,7 @@ export function LoginView() {
       if (res && res.success) {
         await ingestSessionPayload(res.result ?? res, { queryClient });
         await refreshSession();
-        router.push('/mail/u/0#inbox');
+        router.push(ROUTES.INBOX);
         return;
       }
 
@@ -303,7 +311,7 @@ export function LoginView() {
         await ingestSessionPayload(res, { queryClient });
         await refreshSession();
         setTimeout(() => {
-          router.push('/mail/u/0#inbox');
+          router.push(ROUTES.INBOX);
         }, 1200);
       }
     } catch (err: any) {
@@ -936,7 +944,7 @@ export function LoginView() {
                         type="button"
                         variant="primary"
                         className="!py-1.5 !px-3 text-xs shrink-0"
-                        onClick={() => router.push('/mail/u/0#inbox')}
+                        onClick={() => router.push(ROUTES.INBOX)}
                       >
                         Open Inbox
                       </FluentButton>

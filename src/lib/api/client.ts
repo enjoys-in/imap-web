@@ -2,6 +2,7 @@ import { getClientConfig } from '@/config/clientConfig';
 import { getAuthToken } from './tokenStorage';
 import { moldApiResponse } from './moldResponse';
 import { resolveEndpointUrl, isDirectBaseUrlRoute } from './directBaseRoutes';
+import { APP_EVENTS, dispatchAppEvent } from '@/constants';
 
 export { getAuthToken, setAuthToken, clearAuthToken } from './tokenStorage';
 export { moldApiResponse, type ApiResponse } from './moldResponse';
@@ -99,6 +100,9 @@ async function performRequest<T>(
     const json = await res.json().catch(() => null);
 
     if (!res.ok) {
+      if (res.status === 401) {
+        dispatchAppEvent(APP_EVENTS.UNAUTHORIZED, { status: 401 });
+      }
       let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
       if (json && typeof json === 'object') {
         errorMsg = json.message || json.error || errorMsg;
@@ -111,6 +115,9 @@ async function performRequest<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      dispatchAppEvent(APP_EVENTS.UNAUTHORIZED, { status: 401 });
+    }
     const errorText = await res.text().catch(() => '');
     throw new Error(errorText || `HTTP ${res.status}: ${res.statusText}`);
   }
