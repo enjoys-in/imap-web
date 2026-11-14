@@ -92,6 +92,20 @@ export function CalendarToolbar({
           <span className="text-[10px] font-mono text-neutral-400">({timeInfo.tzAbbr})</span>
         </div>
 
+        {/* Calendar Health Indicator */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] text-neutral-600 dark:text-neutral-300"
+          title={healthMessage || (isHealthy ? 'Calendar service is healthy' : 'Calendar service reconnecting...')}
+        >
+          <span
+            className={cn(
+              'w-1.5 h-1.5 rounded-full',
+              isHealthy ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+            )}
+          />
+          <span className="text-[10px] font-medium">{isHealthy ? 'Connected' : 'Syncing'}</span>
+        </div>
+
         {isViewOnly && (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             View Only
