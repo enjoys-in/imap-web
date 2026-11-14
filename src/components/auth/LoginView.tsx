@@ -113,13 +113,18 @@ export function LoginView() {
     }
   };
 
-  // Trigger autodiscovery when user types a valid email
+  // Autodiscovery belongs to account setup only. It never runs from the sign-in
+  // form; on the setup screen it waits for a pause in typing before calling the API.
+  const AUTODISCOVER_DELAY_MS = 2000;
+  const lastDiscoveredEmailRef = useRef('');
+
   const triggerAutodiscovery = useCallback(async (targetEmail: string) => {
     const clean = targetEmail.trim();
     if (!clean.includes('@') || clean.split('@')[1]?.length < 3) {
       return;
     }
 
+    lastDiscoveredEmailRef.current = clean;
     setIsDiscovering(true);
     setErrorMessage(null);
 
@@ -146,18 +151,15 @@ export function LoginView() {
     }
   }, [displayName]);
 
-  // Autodiscovery belongs to account setup only: it runs from the setup screen's
-  // email field and when entering setup, never from the sign-in form.
-  const handleEmailBlur = () => {
-    if (email && email.includes('@')) {
-      triggerAutodiscovery(email);
-    }
-  };
+  // Debounced discovery: only while on the setup screen, only once per email.
+  useEffect(() => {
+    if (view !== 'setup' || isSetupRunning) return;
+    const clean = email.trim();
+    if (!clean || clean === lastDiscoveredEmailRef.current) return;
 
-  const goToSetup = () => {
-    setView('setup');
-    if (email) triggerAutodiscovery(email);
-  };
+    const timer = setTimeout(() => triggerAutodiscovery(clean), AUTODISCOVER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [view, email, isSetupRunning, triggerAutodiscovery]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,7 +194,7 @@ export function LoginView() {
         setInfoMessage(
           'This account has not been configured on AirSend yet. We auto-discovered your mail server settings below. Proceed with Setup to connect.'
         );
-        goToSetup();
+        setView('setup');
       } else {
         setErrorMessage(msg);
       }
@@ -366,7 +368,7 @@ export function LoginView() {
                   iconRight={<Sparkles className="w-3.5 h-3.5 text-blue-400 dark:text-blue-600" />}
                   onClick={() => {
                     setErrorMessage(null);
-                    goToSetup();
+                    setView('setup');
                   }}
                 >
                   Get Started
@@ -469,7 +471,7 @@ export function LoginView() {
                 <div className="text-center pt-2">
                   <button
                     type="button"
-                    onClick={goToSetup}
+                    onClick={() => setView('setup')}
                     className="text-xs text-[#0078d4] dark:text-blue-400 hover:underline font-medium cursor-pointer active:scale-95 transition-transform"
                   >
                     Need to setup an account? Auto-Discover Server
@@ -917,7 +919,6 @@ export function LoginView() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onBlur={handleEmailBlur}
                     placeholder="user@domain.com"
                     icon={<Mail className="w-4 h-4" />}
                     rightElement={
