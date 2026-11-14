@@ -8,11 +8,21 @@ import { cn } from '@/lib/utils';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { CalendarNotificationBell } from '@/components/notifications/CalendarNotificationBell';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useGeneralSettingsStore, HeaderTheme } from '@/stores/useGeneralSettingsStore';
 import { TopHeaderSearchBar } from './TopHeaderSearchBar';
 import { TopHeaderProfileMenu } from './TopHeaderProfileMenu';
 
+const HEADER_THEME_GRADIENTS: Record<HeaderTheme, string> = {
+  classic: 'from-[#004578] via-[#005a9e] to-[#003056] dark:from-[#092244] dark:via-[#0c3160] dark:to-[#091e38]',
+  sunset: 'from-[#782800] via-[#9e3f00] to-[#560020] dark:from-[#4a1800] dark:via-[#5c1c08] dark:to-[#380410]',
+  ocean: 'from-[#004d61] via-[#006680] to-[#002f3d] dark:from-[#052833] dark:via-[#0a3847] dark:to-[#041c24]',
+  circuit: 'from-[#1f242b] via-[#2a303c] to-[#14171c] dark:from-[#111317] dark:via-[#191c22] dark:to-[#0c0d10]',
+  aurora: 'from-[#004d40] via-[#00695c] to-[#00332c] dark:from-[#002e26] dark:via-[#003d33] dark:to-[#00211b]',
+};
+
 export function TopHeader() {
   const { theme, toggleTheme, toggleSidebar } = useUiStore();
+  const headerTheme = useGeneralSettingsStore((s) => s.headerTheme || 'classic');
   const { isSyncing, isBlocked, formattedCooldown, triggerManualSync } = useSyncManager();
   const [mounted, setMounted] = useState(false);
 
@@ -20,8 +30,10 @@ export function TopHeader() {
     setMounted(true);
   }, []);
 
+  const themeGradient = HEADER_THEME_GRADIENTS[headerTheme] || HEADER_THEME_GRADIENTS.classic;
+
   return (
-    <header className="h-12 bg-gradient-to-r from-[#004578] via-[#005a9e] to-[#003056] dark:from-[#092244] dark:via-[#0c3160] dark:to-[#091e38] text-white flex items-center justify-between px-2.5 md:px-3 shrink-0 select-none shadow-sm z-40 relative">
+    <header className={cn('h-12 bg-gradient-to-r text-white flex items-center justify-between px-2.5 md:px-3 shrink-0 select-none shadow-sm z-40 relative transition-colors duration-300', themeGradient)}>
       <div 
         className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] overflow-hidden" 
         aria-hidden="true" 

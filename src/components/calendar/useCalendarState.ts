@@ -15,6 +15,8 @@ import {
 } from '@/lib/api/handlers/calendar';
 import { DEFAULT_CALENDAR_COLOR } from '@/lib/calendarColors';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
+import { getAccounts } from '@/lib/api/handlers/account';
+import { getAuthToken } from '@/lib/api/client';
 import { Appointment } from '@/types';
 
 const PLACEHOLDER_PROJECT: ProjectItem = {
@@ -96,8 +98,45 @@ export function useCalendarState() {
   const calendars = useCalendarsStore((s) => s.calendars);
   const calendarsStatus = useCalendarsStore((s) => s.status);
   const calendarsError = useCalendarsStore((s) => s.error);
+  const isUserNotFound = useCalendarsStore((s) => s.isUserNotFound);
+  const isUnauthorized = useCalendarsStore((s) => s.isUnauthorized);
+  const isViewOnly = isUnauthorized || isUserNotFound;
   const loadCalendars = useCalendarsStore((s) => s.load);
   const createCalendarInStore = useCalendarsStore((s) => s.create);
+  const onboardInStore = useCalendarsStore((s) => s.onboard);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+
+  const handleOnboardUser = async () => {
+    setOnboardingLoading(true);
+    try {
+      const accounts = await getAccounts().catch(() => []);
+      const primary = accounts[0];
+      let email = primary?.email;
+      let name = primary?.displayName;
+
+      if (!email) {
+        const token = getAuthToken();
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            email = payload.email || payload.mid;
+            name = payload.display_name || payload.name || email;
+          } catch {}
+        }
+      }
+
+      await onboardInStore(email, name);
+      // Immediately reload appointments
+      const apts = await getAppointments().catch(() => []);
+      if (apts.length > 0) {
+        setEvents(apts.map(appointmentToCalendarEvent));
+      }
+    } catch (err) {
+      console.error('Failed to connect to calendar service:', err);
+    } finally {
+      setOnboardingLoading(false);
+    }
+  };
   const seenCalendarIds = useRef(new Set<string>());
   const projects = useMemo<ProjectItem[]>(
     () => (calendars.length > 0 ? calendars.map(toProject) : [PLACEHOLDER_PROJECT]),
@@ -185,10 +224,17 @@ export function useCalendarState() {
   };
 
   const handleAddProject = async (input: NewCalendarInput): Promise<void> => {
+    if (isViewOnly) {
+      throw new Error('Calendar is currently in view-only mode.');
+    }
+    if (calendars.length >= 1) {
+      throw new Error('Only one calendar per email is allowed. You can edit features in Settings > Calendar.');
+    }
     await createCalendarInStore(input);
   };
 
   const handleDeleteEvent = async (id: string) => {
+    if (isViewOnly) return;
     setEvents((prev) => prev.filter((e) => e.id !== id));
     try {
       await deleteAppointment(id);
@@ -198,6 +244,7 @@ export function useCalendarState() {
   };
 
   const handleSaveSchedule = async (newEventData: Partial<CalendarEvent>) => {
+    if (isViewOnly) return;
     const created: CalendarEvent = {
       id: `evt-${Date.now()}`,
       title: newEventData.title || 'Untitled Schedule',
@@ -266,6 +313,11 @@ export function useCalendarState() {
     events,
     projects,
     calendarsError: calendarsStatus === 'error' ? calendarsError : null,
+    isUserNotFound,
+    isUnauthorized,
+    isViewOnly,
+    onboardingLoading,
+    handleOnboardUser,
     reloadCalendars: () => loadCalendars({ force: true }),
     handleAddProject,
     workspaces,

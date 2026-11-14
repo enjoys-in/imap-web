@@ -1,4 +1,6 @@
 import { apiClient, getAuthToken } from '../client';
+import { getAccounts, getProfile } from './account';
+import { useMailStore } from '@/stores/useMailStore';
 import { getClientConfig } from '@/config/clientConfig';
 import { DEFAULT_CALENDAR_COLOR, normalizeCalendarColor } from '@/lib/calendarColors';
 import { Appointment } from '@/types';
@@ -24,11 +26,15 @@ export type CalendarServiceErrorKind = 'unauthorized' | 'unreachable' | 'rejecte
 
 export class CalendarServiceError extends Error {
   readonly kind: CalendarServiceErrorKind;
+  readonly isUserNotFound: boolean;
+  readonly isUnauthorized: boolean;
 
-  constructor(kind: CalendarServiceErrorKind, message: string) {
+  constructor(kind: CalendarServiceErrorKind, message: string, isUserNotFound = false, isUnauthorized = false) {
     super(message);
     this.name = 'CalendarServiceError';
     this.kind = kind;
+    this.isUserNotFound = isUserNotFound;
+    this.isUnauthorized = isUnauthorized || kind === 'unauthorized';
   }
 }
 
@@ -55,6 +61,8 @@ interface JmapGetResult {
 interface JmapSetResult {
   created?: Record<string, { id?: string }>;
   notCreated?: Record<string, JmapSetFailure>;
+  updated?: Record<string, unknown>;
+  notUpdated?: Record<string, JmapSetFailure>;
 }
 
 interface JmapErrorResult {
@@ -71,7 +79,7 @@ interface JmapEnvelope {
 
 const JMAP_USING = ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:calendars'];
 
-const UNAUTHORIZED_PATTERN = /user not found|invalid token|authentication required|bearer token required|unauthorized/i;
+const UNAUTHORIZED_PATTERN = /user not found|invalid token|authentication required|bearer token required|unauthorized|401/i;
 const UNREACHABLE_PATTERN = /failed to fetch|networkerror|network request failed|load failed|econnrefused/i;
 
 export function getCalendarBaseUrl(): string {
@@ -84,25 +92,98 @@ export function toCalendarServiceError(error: unknown): CalendarServiceError {
     return error;
   }
   const message = error instanceof Error ? error.message : String(error);
+  const status = (error as any)?.status ?? (error as any)?.statusCode;
+  const is401 = status === 401 || UNAUTHORIZED_PATTERN.test(message);
 
-  if (UNAUTHORIZED_PATTERN.test(message)) {
-    if (/user not found/i.test(message)) {
+  if (is401) {
+    if (/user not found/i.test(message) || (error as any)?.isUserNotFound) {
       return new CalendarServiceError(
         'unauthorized',
-        "The calendar server doesn't know this account yet (401 User not found). Sign in with an account that exists on the calendar server, or ask an admin to add it."
+        "Your account is not registered with the calendar service yet (401 User not found). Click below to connect.",
+        true,
+        true
       );
     }
     return new CalendarServiceError(
       'unauthorized',
-      'The calendar server rejected your session. Sign out and sign in again.'
+      'The calendar server rejected your session (401). Calendar is in view-only mode.',
+      false,
+      true
     );
   }
 
   if (error instanceof TypeError || UNREACHABLE_PATTERN.test(message)) {
-    return new CalendarServiceError('unreachable', `Can't reach the calendar server at ${getCalendarBaseUrl()}.`);
+    return new CalendarServiceError('unreachable', `Can't reach the calendar server at ${getCalendarBaseUrl()}.`, false, false);
   }
 
-  return new CalendarServiceError('rejected', message || 'The calendar server rejected the request.');
+  return new CalendarServiceError('rejected', message || 'The calendar server rejected the request.', false, false);
+}
+
+/**
+ * Resolves the currently active IMAP user credentials (email & name)
+ * from the active mail store, account cache, profile, or JWT token.
+ */
+export async function getActiveImapUser(): Promise<{ email: string; name?: string }> {
+  try {
+    const selectedAccountId = useMailStore.getState().selectedAccountId;
+    const accounts = await getAccounts().catch(() => []);
+    const active = (selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null) || accounts[0];
+    if (active?.email) {
+      return {
+        email: active.email,
+        name: active.displayName || active.userName || undefined,
+      };
+    }
+  } catch {}
+
+  try {
+    const profile = await getProfile().catch(() => null);
+    if (profile?.email || profile?.mid) {
+      return {
+        email: profile.email || profile.mid,
+        name: profile.displayName || profile.display_name || profile.name || undefined,
+      };
+    }
+  } catch {}
+
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const email = payload.email || payload.mid;
+      if (email) {
+        return {
+          email,
+          name: payload.display_name || payload.name || undefined,
+        };
+      }
+    } catch {}
+  }
+
+  return { email: '' };
+}
+
+/**
+ * Onboards the current IMAP user into the calendar service (CalDev).
+ * Uses the same email/details from IMAP API, ensuring one user per email,
+ * and creates their default calendar.
+ */
+export async function onboardCalendarUser(email?: string, name?: string): Promise<any> {
+  let targetEmail = email?.trim();
+  let targetName = name?.trim();
+
+  if (!targetEmail) {
+    const imapUser = await getActiveImapUser();
+    targetEmail = imapUser.email;
+    targetName = targetName || imapUser.name;
+  }
+
+  const body: Record<string, string> = {};
+  if (targetEmail) body.email = targetEmail;
+  if (targetName) body.name = targetName;
+
+  const res = await apiClient.post<any>(`${getCalendarBaseUrl()}/api/calendar/onboard`, body);
+  return res?.result || res;
 }
 
 async function jmapRequest(calls: JmapMethodCall[]): Promise<JmapMethodResponse[]> {
@@ -174,6 +255,37 @@ export async function createCalendar(input: NewCalendarInput): Promise<UserCalen
   }
 
   return { id: createdId, name: input.name, color, description, isVisible: true };
+}
+
+export async function updateCalendar(id: string, updates: Partial<UserCalendar>): Promise<UserCalendar> {
+  const patchProps: Record<string, unknown> = {};
+  if (updates.name !== undefined) patchProps.name = updates.name;
+  if (updates.color !== undefined) patchProps.color = normalizeCalendarColor(updates.color);
+  if (updates.description !== undefined) patchProps.description = updates.description;
+  if (updates.timezone !== undefined) patchProps.timezone = updates.timezone;
+  if (updates.isDefault !== undefined) patchProps.isDefault = updates.isDefault;
+  if (updates.isVisible !== undefined) patchProps.isVisible = updates.isVisible;
+
+  const responses = await jmapRequest([
+    [
+      'Calendar/set',
+      { update: { [id]: patchProps } },
+      'update-cal',
+    ],
+  ]);
+
+  const result = findResult<JmapSetResult>(responses, 'Calendar/set');
+  const failure = result?.notUpdated?.[id];
+  if (failure) {
+    throw new CalendarServiceError('rejected', failure.description || 'Could not update calendar.');
+  }
+
+  const all = await getCalendars();
+  const found = all.find((c) => c.id === id);
+  if (!found) {
+    throw new CalendarServiceError('rejected', 'Calendar not found after update.');
+  }
+  return found;
 }
 
 /**

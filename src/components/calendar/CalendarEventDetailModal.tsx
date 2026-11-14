@@ -10,6 +10,7 @@ interface CalendarEventDetailModalProps {
   onClose: () => void;
   onDelete: (id: string) => void;
   onEdit: (event: CalendarEvent) => void;
+  isReadOnly?: boolean;
 }
 
 export function CalendarEventDetailModal({
@@ -18,6 +19,7 @@ export function CalendarEventDetailModal({
   onClose,
   onDelete,
   onEdit,
+  isReadOnly = false,
 }: CalendarEventDetailModalProps) {
   if (!open || !event) return null;
 
@@ -100,30 +102,38 @@ export function CalendarEventDetailModal({
 
         {/* Actions Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
-          <button
-            onClick={() => {
-              onDelete(event.id);
-              onClose();
-            }}
-            className="px-3 h-8 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete</span>
-          </button>
-
-          <div className="flex items-center gap-2">
+          {isReadOnly ? (
+            <span className="text-[11px] font-semibold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2.5 py-1 rounded-md">
+              View Only
+            </span>
+          ) : (
             <button
               onClick={() => {
+                onDelete(event.id);
                 onClose();
-                onEdit(event);
               }}
-              className="px-3.5 h-8 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 transition-colors"
+              className="px-3 h-8 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              Edit
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
             </button>
+          )}
+
+          <div className="flex items-center gap-2">
+            {!isReadOnly && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(event);
+                }}
+                className="px-3.5 h-8 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 transition-colors cursor-pointer"
+              >
+                Edit
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="px-3.5 h-8 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-semibold hover:opacity-90 transition-opacity"
+              className="px-3.5 h-8 rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
             >
               Close
             </button>

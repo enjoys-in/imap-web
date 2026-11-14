@@ -11,6 +11,16 @@ export type QuickActionType = 'move' | 'read' | 'flag' | 'pin' | 'archive' | 'de
 export type SwipeActionType = 'delete' | 'read' | 'pin' | 'archive' | 'flag' | 'none';
 export type NotificationAudience = 'all' | 'direct' | 'vip' | 'high_priority';
 export type TimeFormat = '12h' | '24h';
+export type DisplayDensity = 'comfortable' | 'compact';
+export type PreviewLines = 0 | 1 | 2 | 3;
+export type FontSize = 'small' | 'medium' | 'large';
+export type FontFamily = 'system' | 'serif' | 'mono';
+export type HeaderTheme = 'classic' | 'sunset' | 'ocean' | 'circuit' | 'aurora';
+export type SidebarMode = 'expanded' | 'compact';
+export type FolderBadgeStyle = 'unread' | 'total' | 'hidden';
+export type SenderProminence = 'senderFirst' | 'subjectFirst';
+export type DateDisplayFormat = 'relative' | 'absolute';
+export type UnreadIndicatorStyle = 'dot' | 'border' | 'bold';
 
 export interface GeneralSettingsState {
   timeZone: string;
@@ -27,6 +37,20 @@ export interface GeneralSettingsState {
   messageOrder: MessageOrder;
   afterMoveOrDelete: AfterMoveOrDelete;
   showDeletedItems: boolean;
+  // Appearance & density
+  density: DisplayDensity;
+  accentColor: string;
+  previewLines: PreviewLines;
+  showAvatars: boolean;
+  fontSize: FontSize;
+  fontFamily: FontFamily;
+  headerTheme: HeaderTheme;
+  sidebarMode: SidebarMode;
+  folderBadgeStyle: FolderBadgeStyle;
+  senderProminence: SenderProminence;
+  dateDisplayFormat: DateDisplayFormat;
+  unreadIndicatorStyle: UnreadIndicatorStyle;
+  smartDarkInvert: boolean;
   // Customize actions
   quickActions: QuickActionType[];
   swipeRightAction: SwipeActionType;
@@ -80,6 +104,20 @@ const DEFAULT_SETTINGS = {
   messageOrder: 'newestOnBottom' as MessageOrder,
   afterMoveOrDelete: 'openNext' as AfterMoveOrDelete,
   showDeletedItems: true,
+  // Appearance & density defaults
+  density: 'comfortable' as DisplayDensity,
+  accentColor: '#0078d4',
+  previewLines: 1 as PreviewLines,
+  showAvatars: true,
+  fontSize: 'medium' as FontSize,
+  fontFamily: 'system' as FontFamily,
+  headerTheme: 'classic' as HeaderTheme,
+  sidebarMode: 'expanded' as SidebarMode,
+  folderBadgeStyle: 'unread' as FolderBadgeStyle,
+  senderProminence: 'senderFirst' as SenderProminence,
+  dateDisplayFormat: 'relative' as DateDisplayFormat,
+  unreadIndicatorStyle: 'dot' as UnreadIndicatorStyle,
+  smartDarkInvert: true,
   quickActions: ['flag', 'pin', 'delete'] as QuickActionType[],
   swipeRightAction: 'read' as SwipeActionType,
   swipeLeftAction: 'delete' as SwipeActionType,
@@ -132,7 +170,7 @@ export const useGeneralSettingsStore = create<GeneralSettingsState>((set) => ({
     set((state) => {
       const next = { ...state, ...partial };
       if (typeof window !== 'undefined') {
-        const { updateSettings, ...toSave } = next;
+        const { updateSettings: _ignored, ...toSave } = next;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       }
       return next;

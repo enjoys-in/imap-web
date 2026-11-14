@@ -15,6 +15,7 @@ interface CalendarToolbarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onNewSchedule: () => void;
+  isViewOnly?: boolean;
 }
 
 export function CalendarToolbar({
@@ -26,6 +27,7 @@ export function CalendarToolbar({
   searchQuery,
   onSearchChange,
   onNewSchedule,
+  isViewOnly = false,
 }: CalendarToolbarProps) {
   const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
 
@@ -85,6 +87,12 @@ export function CalendarToolbar({
           <span>{timeInfo.timeZone}</span>
           <span className="text-[10px] font-mono text-neutral-400">({timeInfo.tzAbbr})</span>
         </div>
+
+        {isViewOnly && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            View Only
+          </span>
+        )}
       </div>
 
       {/* Right: Search & "+ New Schedule" */}

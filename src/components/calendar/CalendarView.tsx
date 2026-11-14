@@ -30,9 +30,55 @@ export function CalendarView() {
     : s.events;
 
   const handleOpenSlot = (day: number, hr: number) => {
+    if (s.isViewOnly) {
+      showAlert({
+        title: s.isUserNotFound ? 'Activate Calendar' : 'View-Only Calendar',
+        description: s.isUserNotFound
+          ? 'Your calendar is currently in view-only mode. Click "Start Using Calendar" above to activate your calendar and create schedules.'
+          : 'Calendar is in view-only mode (401 Unauthorized). Please sign in to create or modify schedules.',
+        type: 'info',
+      });
+      return;
+    }
     s.setSlotDay(day);
     s.setSlotHour(hr);
     s.setCreateModalOpen(true);
+  };
+
+  const handleNewSchedule = () => {
+    if (s.isViewOnly) {
+      showAlert({
+        title: s.isUserNotFound ? 'Activate Calendar' : 'View-Only Calendar',
+        description: s.isUserNotFound
+          ? 'Your calendar is currently in view-only mode. Click "Start Using Calendar" above to activate your calendar and create schedules.'
+          : 'Calendar is in view-only mode (401 Unauthorized). Please sign in to create or modify schedules.',
+        type: 'info',
+      });
+      return;
+    }
+    s.setCreateModalOpen(true);
+  };
+
+  const handleAddProjectClick = () => {
+    if (s.isViewOnly) {
+      showAlert({
+        title: 'View-Only Mode',
+        description: s.isUserNotFound
+          ? 'Click "Start Using Calendar" above to activate your calendar.'
+          : 'Calendar is in view-only mode. Sign in to add calendars.',
+        type: 'info',
+      });
+      return;
+    }
+    if (s.projects.length >= 1 && s.projects[0].id !== 'p-1') {
+      showAlert({
+        title: 'Calendar Limit',
+        description: 'Only one calendar per email is supported. You can customize its feature settings in Settings > Calendar.',
+        type: 'info',
+      });
+      return;
+    }
+    s.setAddProjectModalOpen(true);
   };
 
   const handleOpenDetail = (evt: any) => {
@@ -47,7 +93,7 @@ export function CalendarView() {
         activeTabId={s.activeTabId}
         onSelectTab={s.handleSelectTab}
         onCloseTab={s.handleCloseTab}
-        onAddTab={() => s.setAddProjectModalOpen(true)}
+        onAddTab={handleAddProjectClick}
         sidebarOpen={s.sidebarOpen}
         onToggleSidebar={() => s.setSidebarOpen((p) => !p)}
         onOpenWorkspaceMenu={() => s.setWorkspaceMenuOpen((p) => !p)}
@@ -75,16 +121,40 @@ export function CalendarView() {
       {s.calendarsError && (
         <div
           role="alert"
-          className="flex items-center justify-between gap-3 px-4 py-2 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-b border-amber-200 dark:border-amber-900"
+          className={`flex items-center justify-between gap-3 px-4 py-2.5 text-xs border-b ${
+            s.isUserNotFound
+              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 border-blue-200 dark:border-blue-900'
+              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-900'
+          }`}
         >
-          <span>{s.calendarsError}</span>
-          <button
-            type="button"
-            onClick={() => void s.reloadCalendars()}
-            className="shrink-0 px-2.5 h-6 rounded-md font-semibold bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 transition-colors cursor-pointer"
-          >
-            Retry
-          </button>
+          <div className="flex items-center gap-2">
+            {s.isUserNotFound && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-bold">
+                ℹ
+              </span>
+            )}
+            <span>{s.calendarsError}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {s.isUserNotFound ? (
+              <button
+                type="button"
+                disabled={s.onboardingLoading}
+                onClick={() => void s.handleOnboardUser()}
+                className="shrink-0 px-3.5 py-1.5 rounded-md font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+              >
+                {s.onboardingLoading ? 'Connecting...' : 'Start Using Calendar'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void s.reloadCalendars()}
+                className="shrink-0 px-2.5 h-6 rounded-md font-semibold bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-900 transition-colors cursor-pointer"
+              >
+                Retry
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -102,7 +172,7 @@ export function CalendarView() {
             s.handleSelectTab(s.tabs.find((t) => t.name === name)?.id || s.activeTabId);
           }}
           projects={s.projects}
-          onAddProject={() => s.setAddProjectModalOpen(true)}
+          onAddProject={handleAddProjectClick}
           onOpenSettings={() => router.push('/settings/calendar')}
           onOpenReleaseNotes={() =>
             showAlert({
@@ -123,7 +193,8 @@ export function CalendarView() {
             onToday={() => s.setActiveDayIndex(1)}
             searchQuery={s.searchQuery}
             onSearchChange={s.setSearchQuery}
-            onNewSchedule={() => s.setCreateModalOpen(true)}
+            onNewSchedule={handleNewSchedule}
+            isViewOnly={s.isViewOnly}
           />
 
           {s.viewMode === 'Week' && (
@@ -172,10 +243,12 @@ export function CalendarView() {
         onClose={() => s.setDetailModalOpen(false)}
         onDelete={s.handleDeleteEvent}
         onEdit={(evt) => {
+          if (s.isViewOnly) return;
           s.setSlotDay(evt.dayIndex);
           s.setSlotHour(evt.startHour);
           s.setCreateModalOpen(true);
         }}
+        isReadOnly={s.isViewOnly}
       />
 
       <CalendarInviteModal
