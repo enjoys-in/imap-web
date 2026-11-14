@@ -28,22 +28,22 @@ export function getClientConfig(): AppConfig {
     }
   }
 
-  // Ensure baseUrl is normal domain (no /api or /v1 suffix)
-  const rawBase = (active.baseUrl || active.apiUrl || 'http://localhost:9503').replace(/\/+$/, '');
-  const baseUrl = rawBase.replace(/\/api(\/v\d+)?\/?$/, '');
-  const apiVersion = active.apiVersion || 'v1';
+  // Use apiUrl directly as configured, only trimming trailing slashes
+  const apiUrl = (
+    active.apiUrl ||
+    `${(active.baseUrl || 'http://localhost:9503').replace(/\/+$/, '')}/api/v1`
+  ).replace(/\/+$/, '');
 
-  // Ensure apiUrl always has /api/v1 (or /api/${apiVersion}) prefix over any path
-  let apiUrl = active.apiUrl ? active.apiUrl.replace(/\/+$/, '') : `${baseUrl}/api/${apiVersion}`;
-  if (!apiUrl.includes('/api/')) {
-    apiUrl = apiUrl.endsWith('/api') ? `${apiUrl}/${apiVersion}` : `${apiUrl}/api/${apiVersion}`;
-  }
+  const baseUrl = (
+    active.baseUrl ||
+    apiUrl.replace(/\/api(\/.*)?$/, '') ||
+    'http://localhost:9503'
+  ).replace(/\/+$/, '');
 
   return {
     ...active,
     baseUrl,
     apiUrl,
-    apiVersion,
   };
 }
 

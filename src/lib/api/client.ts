@@ -50,20 +50,12 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
   fallback?: T
 ): Promise<T> {
-  const { apiUrl, baseUrl, apiVersion } = getClientConfig();
+  const { apiUrl } = getClientConfig();
   const token = getAuthToken();
 
   const isFullUrl = endpoint.startsWith('http://') || endpoint.startsWith('https://');
-  let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-
-  // Strip duplicate /api/v1 or /api if already in endpoint
-  if (normalizedEndpoint.startsWith('/api/v1/')) {
-    normalizedEndpoint = normalizedEndpoint.replace(/^\/api\/v1/, '');
-  } else if (normalizedEndpoint.startsWith('/api/')) {
-    normalizedEndpoint = normalizedEndpoint.replace(/^\/api/, '');
-  }
-
   const cleanApiUrl = apiUrl.replace(/\/+$/, '');
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = isFullUrl ? endpoint : `${cleanApiUrl}${normalizedEndpoint}`;
 
   const headers: Record<string, string> = {};
