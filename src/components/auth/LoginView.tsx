@@ -20,7 +20,6 @@ import {
   Sun,
   Moon,
   Terminal,
-  X,
 } from 'lucide-react';
 import { accountsApi, type AutodiscoverResult } from '@/lib/api';
 import { useSession } from '@/components/providers/SessionProvider';
@@ -315,22 +314,6 @@ export function LoginView() {
 
       {/* ──────────────── Reusable Fluent Acrylic Glass Modal Card ──────────────── */}
       <FluentCard className="w-full max-w-[420px] relative z-10">
-        {/* Top-Right Dismiss / Reset Button */}
-        <button
-          type="button"
-          onClick={() => {
-            if (view !== 'welcome') {
-              setView('welcome');
-              setErrorMessage(null);
-              setInfoMessage(null);
-            }
-          }}
-          className="absolute top-5 right-5 p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer active:scale-90"
-          title={view === 'welcome' ? 'AirSend Webmail' : 'Return to Overview'}
-        >
-          <X className="w-4 h-4" />
-        </button>
-
         {/* ──────────────── 1. INTRO / WELCOME VIEW (Matching Screenshot) ──────────────── */}
         {view === 'welcome' && (
           <FluentViewTransition viewKey="welcome">
