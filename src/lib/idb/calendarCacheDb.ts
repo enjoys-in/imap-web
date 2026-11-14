@@ -1,8 +1,28 @@
 import { IDB } from '@enjoys/react-api/idb';
 import type { Table } from 'dexie';
-import type { UserCalendar } from '@/lib/api/handlers/calendar';
+import type {
+  UserCalendar,
+  SharedCalendar,
+  TeammateAvailability,
+  AvailabilitySharesResult,
+} from '@/lib/api/handlers/calendar';
+import type { Appointment } from '@/types';
 
 export interface CachedCalendarRecord extends UserCalendar {
+  cachedAt: number;
+}
+
+export interface CachedAppointmentRecord extends Appointment {
+  cachedAt: number;
+}
+
+export interface CachedTeamDataRecord {
+  id: string;
+  shared_by_me: AvailabilitySharesResult['shared_by_me'];
+  shared_with_me: AvailabilitySharesResult['shared_with_me'];
+  org_visible: boolean;
+  shared_calendars: SharedCalendar[];
+  teammate_status: Record<string, TeammateAvailability>;
   cachedAt: number;
 }
 
@@ -27,15 +47,19 @@ export type CalendarDbTables = {
   calendars: Table<CachedCalendarRecord, string>;
   account_status: Table<CachedAccountCalendarStatus, string>;
   health: Table<CachedCalendarHealthRecord, string>;
+  appointments: Table<CachedAppointmentRecord, string>;
+  team_data: Table<CachedTeamDataRecord, string>;
 };
 
 const schema: any = {
   calendars: 'id,ownerEmail,isDefault,cachedAt',
   account_status: 'email,hasCalendar,updatedAt',
   health: 'id,isHealthy,lastChecked',
+  appointments: 'id,uid,calendarId,cachedAt',
+  team_data: 'id,cachedAt',
 };
 
-const DB_NAME = 'airsend-calendar-cache-v1';
+const DB_NAME = 'airsend-calendar-cache-v2';
 
 let idbInstance: IDB<CalendarDbTables> | null = null;
 
@@ -66,6 +90,8 @@ async function withDb<T>(
   }
 }
 
+// ──────────────── Cached User Calendars ────────────────
+
 export async function getCachedCalendars(): Promise<UserCalendar[]> {
   return withDb(async (db) => {
     const records = await db.calendars.toArray();
@@ -86,6 +112,8 @@ export async function saveCachedCalendars(calendars: UserCalendar[]): Promise<vo
     });
   }, undefined);
 }
+
+// ──────────────── Cached Account Status ────────────────
 
 export async function getCachedAccountCalendarStatus(
   email: string
@@ -139,6 +167,8 @@ export async function getAllCachedAccountStatuses(): Promise<CachedAccountCalend
   }, []);
 }
 
+// ──────────────── Cached Health Status ────────────────
+
 export async function getCachedCalendarHealth(): Promise<CachedCalendarHealthRecord | null> {
   return withDb(async (db) => {
     return (await db.health.get('health_status')) || null;
@@ -157,5 +187,49 @@ export async function saveCachedCalendarHealth(
   };
   await withDb(async (db) => {
     await db.health.put(record);
+  }, undefined);
+}
+
+// ──────────────── Cached Appointments (Events) ────────────────
+
+export async function getCachedAppointments(): Promise<Appointment[]> {
+  return withDb(async (db) => {
+    const records = await db.appointments.toArray();
+    return records.map(({ cachedAt, ...apt }) => apt as Appointment);
+  }, []);
+}
+
+export async function saveCachedAppointments(appointments: Appointment[]): Promise<void> {
+  const now = Date.now();
+  await withDb(async (db) => {
+    await db.transaction('rw', db.appointments, async () => {
+      await db.appointments.clear();
+      const records: CachedAppointmentRecord[] = appointments.map((apt) => ({
+        ...apt,
+        cachedAt: now,
+      }));
+      await db.appointments.bulkPut(records);
+    });
+  }, undefined);
+}
+
+// ──────────────── Cached Team Availability & Shares ────────────────
+
+export async function getCachedTeamData(): Promise<CachedTeamDataRecord | null> {
+  return withDb(async (db) => {
+    return (await db.team_data.get('team-data')) || null;
+  }, null);
+}
+
+export async function saveCachedTeamData(
+  data: Omit<CachedTeamDataRecord, 'id' | 'cachedAt'>
+): Promise<void> {
+  const record: CachedTeamDataRecord = {
+    id: 'team-data',
+    ...data,
+    cachedAt: Date.now(),
+  };
+  await withDb(async (db) => {
+    await db.team_data.put(record);
   }, undefined);
 }

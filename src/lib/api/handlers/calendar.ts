@@ -5,6 +5,12 @@ import { getClientConfig } from '@/config/clientConfig';
 import { DEFAULT_CALENDAR_COLOR, normalizeCalendarColor } from '@/lib/calendarColors';
 import { Appointment } from '@/types';
 import {
+  getCachedCalendars,
+  saveCachedCalendars,
+  getCachedAppointments,
+  saveCachedAppointments,
+} from '@/lib/idb/calendarCacheDb';
+import {
   expandEventOccurrences,
   type RawJmapEvent,
   type ExpandedOccurrence,
@@ -118,6 +124,13 @@ const UNAUTHORIZED_PATTERN = /user not found|invalid token|authentication requir
 const UNREACHABLE_PATTERN = /failed to fetch|networkerror|network request failed|load failed|econnrefused/i;
 
 let cachedAccountId: string | null = null;
+let pendingAccountIdPromise: Promise<string> | null = null;
+let cachedImapUser: { email: string; name?: string; tenantId?: string; domain?: string } | null = null;
+let pendingImapUserPromise: Promise<{ email: string; name?: string; tenantId?: string; domain?: string }> | null = null;
+let cachedCalendarsMemory: UserCalendar[] | null = null;
+let pendingCalendarsPromise: Promise<UserCalendar[]> | null = null;
+let cachedAppointmentsMemory: Appointment[] | null = null;
+let pendingAppointmentsPromise: Promise<Appointment[]> | null = null;
 let latestCalState: string | null = null;
 let latestEventState: string | null = null;
 
@@ -161,86 +174,110 @@ export function toCalendarServiceError(error: unknown): CalendarServiceError {
 /**
  * Resolves the currently active IMAP user credentials (email & name)
  * and extracts the tenantId from the email domain.
+ * Caches in memory to eliminate repeated network requests.
  */
 export async function getActiveImapUser(): Promise<{ email: string; name?: string; tenantId?: string; domain?: string }> {
-  try {
-    const selectedAccountId = useMailStore.getState().selectedAccountId;
-    const accounts = await getAccounts().catch(() => []);
-    const active = (selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null) || accounts[0];
-    if (active?.email) {
-      const domain = active.email.includes('@') ? active.email.split('@')[1].trim().toLowerCase() : '';
-      return {
-        email: active.email,
-        name: active.displayName || active.userName || undefined,
-        tenantId: domain,
-        domain,
-      };
-    }
-  } catch {}
+  if (cachedImapUser?.email) return cachedImapUser;
+  if (pendingImapUserPromise) return pendingImapUserPromise;
 
-  try {
-    const profile = await getProfile().catch(() => null);
-    if (profile?.email || profile?.mid) {
-      const email = (profile.email || profile.mid || '').trim();
-      const domain = email.includes('@')
-        ? email.split('@')[1].trim().toLowerCase()
-        : (profile.domain_name || '');
-      return {
-        email,
-        name: profile.displayName || profile.display_name || profile.name || undefined,
-        tenantId: domain,
-        domain,
-      };
-    }
-  } catch {}
-
-  const token = getAuthToken();
-  if (token) {
+  pendingImapUserPromise = (async () => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const email = (payload.email || payload.mid || '').trim();
-      if (email) {
-        const domain = email.includes('@')
-          ? email.split('@')[1].trim().toLowerCase()
-          : (payload.domain_name || '');
-        return {
-          email,
-          name: payload.display_name || payload.name || undefined,
+      const selectedAccountId = useMailStore.getState().selectedAccountId;
+      const accounts = await getAccounts().catch(() => []);
+      const active = (selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null) || accounts[0];
+      if (active?.email) {
+        const domain = active.email.includes('@') ? active.email.split('@')[1].trim().toLowerCase() : '';
+        const user = {
+          email: active.email,
+          name: active.displayName || active.userName || undefined,
           tenantId: domain,
           domain,
         };
+        cachedImapUser = user;
+        return user;
       }
     } catch {}
-  }
 
-  return { email: '', tenantId: '', domain: '' };
+    try {
+      const profile = await getProfile().catch(() => null);
+      if (profile?.email || profile?.mid) {
+        const email = (profile.email || profile.mid || '').trim();
+        const domain = email.includes('@')
+          ? email.split('@')[1].trim().toLowerCase()
+          : (profile.domain_name || '');
+        const user = {
+          email,
+          name: profile.displayName || profile.display_name || profile.name || undefined,
+          tenantId: domain,
+          domain,
+        };
+        cachedImapUser = user;
+        return user;
+      }
+    } catch {}
+
+    const token = getAuthToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = (payload.email || payload.mid || '').trim();
+        if (email) {
+          const domain = email.includes('@')
+            ? email.split('@')[1].trim().toLowerCase()
+            : (payload.domain_name || '');
+          const user = {
+            email,
+            name: payload.display_name || payload.name || undefined,
+            tenantId: domain,
+            domain,
+          };
+          cachedImapUser = user;
+          return user;
+        }
+      } catch {}
+    }
+
+    return { email: '', tenantId: '', domain: '' };
+  })().finally(() => {
+    pendingImapUserPromise = null;
+  });
+
+  return pendingImapUserPromise;
 }
 
 /**
- * Resolves the CalDev JMAP accountId via GET /jmap/session
+ * Resolves the CalDev JMAP accountId via GET /jmap/session.
+ * Cached in memory to eliminate repeated network calls.
  */
 export async function getJmapAccountId(): Promise<string> {
   if (cachedAccountId) return cachedAccountId;
+  if (pendingAccountIdPromise) return pendingAccountIdPromise;
 
-  try {
-    const sessionUrl = `${getCalendarBaseUrl()}/jmap/session`;
-    const res = await apiClient.get<any>(sessionUrl);
-    const primary = res?.primaryAccounts?.['urn:ietf:params:jmap:calendars'];
-    if (primary) {
-      cachedAccountId = primary;
-      return primary;
-    }
-    if (res?.accounts && typeof res.accounts === 'object') {
-      const first = Object.keys(res.accounts)[0];
-      if (first) {
-        cachedAccountId = first;
-        return first;
+  pendingAccountIdPromise = (async () => {
+    try {
+      const sessionUrl = `${getCalendarBaseUrl()}/jmap/session`;
+      const res = await apiClient.get<any>(sessionUrl);
+      const primary = res?.primaryAccounts?.['urn:ietf:params:jmap:calendars'];
+      if (primary) {
+        cachedAccountId = primary;
+        return primary;
       }
+      if (res?.accounts && typeof res.accounts === 'object') {
+        const first = Object.keys(res.accounts)[0];
+        if (first) {
+          cachedAccountId = first;
+          return first;
+        }
+      }
+    } catch (err) {
+      console.warn('[CalDev] Session discovery failed, using fallback:', err);
     }
-  } catch (err) {
-    console.warn('[CalDev] Session discovery failed, using fallback:', err);
-  }
-  return '0:0';
+    return '0:0';
+  })().finally(() => {
+    pendingAccountIdPromise = null;
+  });
+
+  return pendingAccountIdPromise;
 }
 
 /**
@@ -336,16 +373,42 @@ export async function onboardCalendarUser(email?: string, name?: string): Promis
 }
 
 /**
- * Fetch user's calendars via JMAP Calendar/get
+ * Fetch user's calendars via JMAP Calendar/get.
+ * Cached in memory and IndexedDB to avoid repeated network calls.
  */
-export async function getCalendars(): Promise<UserCalendar[]> {
-  const accountId = await getJmapAccountId();
-  const imapUser = await getActiveImapUser().catch(() => ({ email: '', tenantId: '', domain: '' }));
-  const domain = imapUser.domain || (imapUser.email && imapUser.email.includes('@') ? imapUser.email.split('@')[1] : 'example.com');
-  const responses = await jmapRequest([['Calendar/get', { accountId }, 'c0']]);
-  const result = findResult<JmapGetResult>(responses, 'Calendar/get');
-  if (result?.state) latestCalState = result.state;
-  return (result?.list ?? []).map((cal) => toUserCalendar(cal, domain));
+export async function getCalendars(options?: { force?: boolean }): Promise<UserCalendar[]> {
+  if (!options?.force) {
+    if (cachedCalendarsMemory && cachedCalendarsMemory.length > 0) {
+      return cachedCalendarsMemory;
+    }
+    if (pendingCalendarsPromise) {
+      return pendingCalendarsPromise;
+    }
+    const cached = await getCachedCalendars().catch(() => []);
+    if (cached.length > 0) {
+      cachedCalendarsMemory = cached;
+      return cached;
+    }
+  }
+
+  if (pendingCalendarsPromise) return pendingCalendarsPromise;
+
+  pendingCalendarsPromise = (async () => {
+    const accountId = await getJmapAccountId();
+    const imapUser = await getActiveImapUser().catch(() => ({ email: '', tenantId: '', domain: '' }));
+    const domain = imapUser.domain || (imapUser.email && imapUser.email.includes('@') ? imapUser.email.split('@')[1] : 'example.com');
+    const responses = await jmapRequest([['Calendar/get', { accountId }, 'c0']]);
+    const result = findResult<JmapGetResult>(responses, 'Calendar/get');
+    if (result?.state) latestCalState = result.state;
+    const list = (result?.list ?? []).map((cal) => toUserCalendar(cal, domain));
+    cachedCalendarsMemory = list;
+    void saveCachedCalendars(list);
+    return list;
+  })().finally(() => {
+    pendingCalendarsPromise = null;
+  });
+
+  return pendingCalendarsPromise;
 }
 
 /**
@@ -385,7 +448,12 @@ export async function createCalendar(input: NewCalendarInput): Promise<UserCalen
     );
   }
 
-  return { id: createdId, name: input.name, color, description, isVisible: true, timezone };
+  const created = { id: createdId, name: input.name, color, description, isVisible: true, timezone };
+  if (cachedCalendarsMemory) {
+    cachedCalendarsMemory = [...cachedCalendarsMemory.filter((c) => c.id !== created.id), created];
+    void saveCachedCalendars(cachedCalendarsMemory);
+  }
+  return created;
 }
 
 /**
@@ -415,10 +483,14 @@ export async function updateCalendar(id: string, updates: Partial<UserCalendar>)
     throw new CalendarServiceError('rejected', failure.description || 'Could not update calendar.');
   }
 
-  const all = await getCalendars();
+  const all = await getCalendars({ force: true });
   const found = all.find((c) => c.id === id);
   if (!found) {
     throw new CalendarServiceError('rejected', 'Calendar not found after update.');
+  }
+  if (cachedCalendarsMemory) {
+    cachedCalendarsMemory = cachedCalendarsMemory.map((c) => (c.id === id ? found : c));
+    void saveCachedCalendars(cachedCalendarsMemory);
   }
   return found;
 }
@@ -431,7 +503,12 @@ export async function deleteCalendar(id: string): Promise<boolean> {
     const accountId = await getJmapAccountId();
     const responses = await jmapRequest([['Calendar/set', { accountId, destroy: [id] }, 'del-cal']]);
     const result = findResult<{ destroyed?: string[] }>(responses, 'Calendar/set');
-    return result?.destroyed?.includes(id) ?? false;
+    const ok = result?.destroyed?.includes(id) ?? false;
+    if (ok && cachedCalendarsMemory) {
+      cachedCalendarsMemory = cachedCalendarsMemory.filter((c) => c.id !== id);
+      void saveCachedCalendars(cachedCalendarsMemory);
+    }
+    return ok;
   } catch (err) {
     console.warn('Calendar service rejected deleteCalendar:', err);
     return false;
@@ -485,60 +562,115 @@ function occurrenceToAppointment(
  * Fetch calendar appointments / events from CalDev JMAP API.
  * Uses CalendarEvent/query + CalendarEvent/get, then expands recurring
  * occurrences client-side according to UI_GUIDE.md Section 6.
+ * Cached in memory and IndexedDB to avoid repeated network calls.
  */
 export async function getAppointments(
   calendarId?: string,
   windowStart?: Date,
-  windowEnd?: Date
+  windowEnd?: Date,
+  options?: { force?: boolean }
 ): Promise<Appointment[]> {
-  try {
-    const accountId = await getJmapAccountId();
-    const myUser = await getActiveImapUser();
+  const isDefaultQuery = !calendarId;
 
-    // Default window: -30 days to +90 days
-    const fromDate = windowStart || new Date(Date.now() - 30 * 86400000);
-    const toDate = windowEnd || new Date(Date.now() + 90 * 86400000);
-
-    const filter: Record<string, unknown> = {
-      after: fromDate.toISOString(),
-      before: toDate.toISOString(),
-    };
-    if (calendarId) filter.calendarId = calendarId;
-
-    const queryCall: JmapMethodCall = [
-      'CalendarEvent/query',
-      { accountId, filter, limit: 300, position: 0 },
-      'q0',
-    ];
-
-    const responses = await jmapRequest([queryCall]);
-    const queryResult = findResult<{ ids?: string[]; total?: number }>(responses, 'CalendarEvent/query');
-    const ids = queryResult?.ids || [];
-
-    if (ids.length === 0) {
-      return [];
+  // 1. If not forced and querying default calendar, check memory cache first
+  if (!options?.force && isDefaultQuery) {
+    if (cachedAppointmentsMemory && cachedAppointmentsMemory.length > 0) {
+      return cachedAppointmentsMemory;
     }
-
-    // Fetch full event definitions by ids
-    const getCall: JmapMethodCall = [
-      'CalendarEvent/get',
-      { accountId, ids },
-      'g0',
-    ];
-    const getResponses = await jmapRequest([getCall]);
-    const getResult = findResult<{ list?: RawJmapEvent[]; state?: string }>(getResponses, 'CalendarEvent/get');
-
-    if (getResult?.state) {
-      latestEventState = getResult.state;
+    if (pendingAppointmentsPromise) {
+      return pendingAppointmentsPromise;
     }
-
-    const rawList = getResult?.list || [];
-    const occurrences = expandEventOccurrences(rawList, fromDate, toDate);
-    return occurrences.map((occ) => occurrenceToAppointment(occ, myUser.email));
-  } catch (err) {
-    console.warn('[CalDev] getAppointments failed:', err);
-    return [];
+    // Check IndexedDB
+    const idbCached = await getCachedAppointments().catch(() => []);
+    if (idbCached.length > 0) {
+      cachedAppointmentsMemory = idbCached;
+      return idbCached;
+    }
   }
+
+  if (isDefaultQuery && pendingAppointmentsPromise) {
+    return pendingAppointmentsPromise;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const fromDate = windowStart || new Date(Date.now() - 30 * 86400000);
+      const toDate = windowEnd || new Date(Date.now() + 90 * 86400000);
+
+      // Check if querying a shared calendar
+      if (calendarId) {
+        const sharedList = await getSharedCalendars().catch(() => []);
+        if (sharedList.some((c) => c.id === calendarId)) {
+          return await getSharedCalendarEvents(calendarId, fromDate, toDate);
+        }
+      }
+
+      const accountId = await getJmapAccountId();
+      const myUser = await getActiveImapUser();
+
+      const filter: Record<string, unknown> = {
+        after: fromDate.toISOString(),
+        before: toDate.toISOString(),
+      };
+      if (calendarId) filter.calendarId = calendarId;
+
+      // Batched JMAP call: query + get with back-reference in a single HTTP request
+      const queryCall: JmapMethodCall = [
+        'CalendarEvent/query',
+        { accountId, filter, limit: 300, position: 0 },
+        'q0',
+      ];
+      const getCall: JmapMethodCall = [
+        'CalendarEvent/get',
+        { accountId, '#ids': { resultOf: 'q0', name: 'CalendarEvent/query', path: '/ids' } },
+        'g0',
+      ];
+
+      const responses = await jmapRequest([queryCall, getCall]);
+      let rawList: RawJmapEvent[] = [];
+      const getResult = findResult<{ list?: RawJmapEvent[]; state?: string }>(responses, 'CalendarEvent/get');
+
+      if (getResult?.list) {
+        rawList = getResult.list;
+        if (getResult.state) latestEventState = getResult.state;
+      } else {
+        // Fallback if server did not resolve back-reference
+        const queryResult = findResult<{ ids?: string[]; total?: number }>(responses, 'CalendarEvent/query');
+        const ids = queryResult?.ids || [];
+        if (ids.length > 0) {
+          const fallbackResponses = await jmapRequest([['CalendarEvent/get', { accountId, ids }, 'g1']]);
+          const fallbackGet = findResult<{ list?: RawJmapEvent[]; state?: string }>(fallbackResponses, 'CalendarEvent/get');
+          rawList = fallbackGet?.list || [];
+          if (fallbackGet?.state) latestEventState = fallbackGet.state;
+        }
+      }
+
+      const occurrences = expandEventOccurrences(rawList, fromDate, toDate);
+      const appointments = occurrences.map((occ) => occurrenceToAppointment(occ, myUser.email));
+
+      if (isDefaultQuery) {
+        cachedAppointmentsMemory = appointments;
+        void saveCachedAppointments(appointments);
+      }
+
+      return appointments;
+    } catch (err) {
+      console.warn('[CalDev] getAppointments failed:', err);
+      if (cachedAppointmentsMemory && cachedAppointmentsMemory.length > 0) {
+        return cachedAppointmentsMemory;
+      }
+      return await getCachedAppointments().catch(() => []);
+    }
+  })();
+
+  if (isDefaultQuery) {
+    pendingAppointmentsPromise = fetchPromise.finally(() => {
+      pendingAppointmentsPromise = null;
+    });
+    return pendingAppointmentsPromise;
+  }
+
+  return fetchPromise;
 }
 
 export interface CreateAppointmentInput {
@@ -624,7 +756,7 @@ export async function createAppointment(
     const result = findResult<JmapSetResult>(responses, 'CalendarEvent/set');
     const createdInfo = result?.created?.[tempId];
 
-    return {
+    const createdApt: Appointment = {
       id: createdInfo?.id || tempId,
       accountId,
       uid: createdInfo?.uid || tempId,
@@ -643,6 +775,13 @@ export async function createAppointment(
       showAs: 'Busy',
       notes: data.notes,
     };
+
+    if (cachedAppointmentsMemory) {
+      cachedAppointmentsMemory = [...cachedAppointmentsMemory, createdApt];
+      void saveCachedAppointments(cachedAppointmentsMemory);
+    }
+
+    return createdApt;
   } catch (err) {
     console.warn('[CalDev] createAppointment failed:', err);
     throw toCalendarServiceError(err);
@@ -701,7 +840,13 @@ export async function updateAppointment(
       ],
     ]);
 
-    return { id, ...data } as Appointment;
+    const updated = { id, ...data } as Appointment;
+    if (cachedAppointmentsMemory) {
+      cachedAppointmentsMemory = cachedAppointmentsMemory.map((a) => (a.id === id ? { ...a, ...data } : a));
+      void saveCachedAppointments(cachedAppointmentsMemory);
+    }
+
+    return updated;
   } catch (err) {
     console.warn(`[CalDev] updateAppointment ${id} failed:`, err);
     throw toCalendarServiceError(err);
@@ -736,11 +881,19 @@ export async function deleteAppointment(
           'cancel-occurrence',
         ],
       ]);
+      if (cachedAppointmentsMemory) {
+        cachedAppointmentsMemory = cachedAppointmentsMemory.filter((a) => !(a.id === id && a.startUtc === options.originalStart));
+        void saveCachedAppointments(cachedAppointmentsMemory);
+      }
     } else {
       // Destroy whole event
       await jmapRequest([
         ['CalendarEvent/set', { accountId, destroy: [id] }, 'del-event'],
       ]);
+      if (cachedAppointmentsMemory) {
+        cachedAppointmentsMemory = cachedAppointmentsMemory.filter((a) => a.id !== id);
+        void saveCachedAppointments(cachedAppointmentsMemory);
+      }
     }
     return true;
   } catch (err) {
@@ -1002,12 +1155,27 @@ class LiveCalendarStream {
         this.backoff = 1000;
       };
 
-      // 1. "state" event: changes to own events / calendars
+      // 1. "state" event: changes to own events / calendars (UI_GUIDE.md Section 10)
       es.addEventListener('state', (e: MessageEvent) => {
         try {
           const parsed = JSON.parse(e.data);
           const changed = parsed.changed || {};
-          this.handlers.forEach((h) => h.onState?.(changed));
+          let calChanged = false;
+          let evtChanged = false;
+          for (const types of Object.values(changed as Record<string, { Calendar?: string; CalendarEvent?: string }>)) {
+            if (types.Calendar && types.Calendar !== latestCalState) {
+              calChanged = true;
+              latestCalState = types.Calendar;
+            }
+            if (types.CalendarEvent && types.CalendarEvent !== latestEventState) {
+              evtChanged = true;
+              latestEventState = types.CalendarEvent;
+            }
+          }
+          // Only dispatch if state actually differs from what we hold (ignores initial redundant snapshot)
+          if (calChanged || evtChanged) {
+            this.handlers.forEach((h) => h.onState?.(changed));
+          }
         } catch (err) {
           console.warn('[CalDev SSE] Failed to parse state frame:', err);
         }

@@ -71,10 +71,12 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
 
   load: (options = {}) => {
     if (inflight) return inflight;
-    if (get().status === 'ready' && !options.force) return Promise.resolve();
+    if (!options.force && (get().status === 'ready' || get().calendars.length > 0)) {
+      return Promise.resolve();
+    }
 
     set({ status: 'loading', error: null });
-    inflight = getCalendars()
+    inflight = getCalendars({ force: options.force })
       .then((calendars) => {
         void saveCachedCalendars(calendars);
         set((state) => {

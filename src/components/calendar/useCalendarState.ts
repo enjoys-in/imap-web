@@ -23,6 +23,7 @@ import { useToastStore } from '@/stores/useToastStore';
 import { useCalendarHealthPoll } from '@/hooks/useCalendarHealthPoll';
 import { getAccounts } from '@/lib/api/handlers/account';
 import { getAuthToken } from '@/lib/api/client';
+import { getCachedAppointments } from '@/lib/idb/calendarCacheDb';
 import { Appointment } from '@/types';
 
 const PLACEHOLDER_PROJECT: ProjectItem = {
@@ -138,18 +139,25 @@ export function useCalendarState() {
   const isUnauthorized = useCalendarsStore((s) => s.isUnauthorized);
   const initFromCache = useCalendarsStore((s) => s.initFromCache);
   const isCalendarAddedForAccount = useCalendarsStore((s) => s.isCalendarAddedForAccount);
+  const initTeamCache = useTeamAvailabilityStore((s) => s.initFromCache);
 
   const { isHealthy, healthMessage } = useCalendarHealthPoll();
   const [activeEmail, setActiveEmail] = useState<string>('');
 
   useEffect(() => {
     void initFromCache();
+    void initTeamCache();
+    void getCachedAppointments().then((cached: Appointment[]) => {
+      if (cached.length > 0) {
+        setEvents(cached.map(appointmentToCalendarEvent));
+      }
+    });
     void getAccounts().then((accs) => {
       if (accs.length > 0 && accs[0].email) {
         setActiveEmail(accs[0].email);
       }
     });
-  }, [initFromCache]);
+  }, [initFromCache, initTeamCache]);
 
   const isCalendarAdded = isCalendarAddedForAccount(activeEmail);
   const isViewOnly = isUnauthorized || (!isCalendarAdded && isUserNotFound);
@@ -218,17 +226,20 @@ export function useCalendarState() {
     [reminders]
   );
 
-  const loadEvents = async () => {
+  const loadEvents = async (options?: { force?: boolean }) => {
     try {
-      const apts = await getAppointments();
+      const apts = await getAppointments(undefined, undefined, undefined, options);
       if (apts.length > 0) {
         setEvents(apts.map(appointmentToCalendarEvent));
       }
     } catch {}
   };
 
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
-    let active = true;
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
 
     const loadAll = async () => {
       await Promise.all([
@@ -250,24 +261,23 @@ export function useCalendarState() {
           void loadCalendars({ force: true });
         }
         if (hasEvt || hasCal) {
-          void loadEvents();
+          void loadEvents({ force: true });
         }
       },
       onAvailability: (data) => {
         updateTeammateFromSSE(data);
       },
       onShares: () => {
-        void loadTeamData();
+        void loadTeamData({ force: true });
       },
       onResync: () => {
         void loadCalendars({ force: true });
-        void loadEvents();
-        void loadTeamData();
+        void loadEvents({ force: true });
+        void loadTeamData({ force: true });
       },
     });
 
     return () => {
-      active = false;
       unsubscribePush();
     };
   }, [loadCalendars, loadTeamData, updateTeammateFromSSE]);
