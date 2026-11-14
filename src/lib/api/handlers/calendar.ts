@@ -273,7 +273,8 @@ function findResult<T>(responses: JmapMethodResponse[], method: string): T | und
   return responses.find(([name]) => name === method)?.[1] as T | undefined;
 }
 
-function toUserCalendar(raw: JmapCalendar): UserCalendar {
+function toUserCalendar(raw: JmapCalendar, defaultDomain?: string): UserCalendar {
+  const domain = defaultDomain || 'example.com';
   return {
     id: raw.id,
     name: raw.name || 'Untitled Calendar',
@@ -283,6 +284,8 @@ function toUserCalendar(raw: JmapCalendar): UserCalendar {
     isDefault: raw.isDefault,
     isVisible: raw.isVisible,
     isReadOnly: raw.isReadOnly,
+    tenant_id: domain,
+    tenantId: domain,
   };
 }
 
@@ -303,7 +306,7 @@ export async function onboardCalendarUser(email?: string, name?: string): Promis
 
   const domain = targetEmail && targetEmail.includes('@')
     ? targetEmail.split('@')[1].trim().toLowerCase()
-    : (imapUser.tenantId || imapUser.domain || '');
+    : (imapUser.tenantId || imapUser.domain || 'example.com');
 
   const body: Record<string, string> = {};
   if (targetEmail) body.email = targetEmail;
@@ -337,10 +340,12 @@ export async function onboardCalendarUser(email?: string, name?: string): Promis
  */
 export async function getCalendars(): Promise<UserCalendar[]> {
   const accountId = await getJmapAccountId();
+  const imapUser = await getActiveImapUser().catch(() => ({ email: '', tenantId: '', domain: '' }));
+  const domain = imapUser.domain || (imapUser.email && imapUser.email.includes('@') ? imapUser.email.split('@')[1] : 'example.com');
   const responses = await jmapRequest([['Calendar/get', { accountId }, 'c0']]);
   const result = findResult<JmapGetResult>(responses, 'Calendar/get');
   if (result?.state) latestCalState = result.state;
-  return (result?.list ?? []).map(toUserCalendar);
+  return (result?.list ?? []).map((cal) => toUserCalendar(cal, domain));
 }
 
 /**
