@@ -45,7 +45,7 @@ export function RightAppsCalendar() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200">
       {/* Month Navigation */}
       <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
         <span className="font-bold text-neutral-900 dark:text-white">

@@ -26,7 +26,7 @@ export function ActivityPageView() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-neutral-50/50 dark:bg-[#181818] select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-neutral-50/50 dark:bg-[#181818]">
       {/* Header */}
       <ActivityHeader
         unreadCount={unreadCount}

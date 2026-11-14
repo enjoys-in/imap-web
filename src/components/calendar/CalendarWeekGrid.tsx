@@ -61,7 +61,7 @@ export function CalendarWeekGrid({
   }, [nowLineTop]);
 
   return (
-    <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] select-none scroll-smooth">
+    <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] scroll-smooth">
       {/* Day Headers */}
       <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 flex shrink-0 sticky top-0 bg-white/95 dark:bg-[#0e0e0e]/95 backdrop-blur-xs z-30">
         <div className="w-20 sm:w-24 border-r border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">

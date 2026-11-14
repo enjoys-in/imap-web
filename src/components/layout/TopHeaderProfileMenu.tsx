@@ -37,7 +37,7 @@ export function TopHeaderProfileMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-2xl p-3 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100 select-none">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-2xl p-3 z-50 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in-95 duration-100">
           <div className="flex items-center gap-2.5 pb-2.5 border-b border-neutral-200 dark:border-neutral-800">
             <Avatar
               name={user?.display_name || account?.displayName || user?.email || 'User'}

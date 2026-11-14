@@ -50,7 +50,7 @@ export const MailListItem = React.memo(function MailListItem({
       onDoubleClick={onOpen ? () => onOpen(email) : undefined}
       onContextMenu={(e) => onContextMenu && onContextMenu(e, email)}
       className={cn(
-        'group relative flex items-start gap-2 px-3 py-2 cursor-pointer border-b select-none transition-colors text-xs border-neutral-200 dark:border-neutral-800/80',
+        'group relative flex items-start gap-2 px-3 py-2 cursor-pointer border-b transition-colors text-xs border-neutral-200 dark:border-neutral-800/80',
         isChecked
           ? 'bg-[#c7e0f4]/80 text-neutral-900 border-l-2 border-[#0078d4] dark:bg-[#003865] dark:text-white dark:border-l-2 dark:border-[#0078d4] shadow-xs'
           : isSelected

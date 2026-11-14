@@ -352,7 +352,7 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden select-none font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans">
       {/* ──────────────── Animated Windows 11 Fluent Blue Silk Backdrop ──────────────── */}
       <FluentBloomBackground />
 
@@ -540,7 +540,7 @@ export function LoginView() {
 
               {isSetupRunning ? (
                 /* ──────────────── Production-Grade Account Setup Telemetry ──────────────── */
-                <div className="space-y-4 select-none animate-in fade-in duration-200">
+                <div className="space-y-4 animate-in fade-in duration-200">
                   {/* Status Header & Progress Meter */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">

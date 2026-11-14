@@ -30,7 +30,7 @@ export function CalendarNotificationsPopover({
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-4 top-13 z-50 w-80 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-3 space-y-2.5 animate-in fade-in zoom-in-95 select-none">
+      <div className="absolute right-4 top-13 z-50 w-80 bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-3 space-y-2.5 animate-in fade-in zoom-in-95">
         <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-1.5">
             <Bell className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -51,7 +51,7 @@ export function CalendarNotificationsPopover({
         <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
           {notifications.length === 0 ? (
             <div className="py-6 text-center text-xs text-neutral-400">
-              No new notifications
+              No notifications
             </div>
           ) : (
             notifications.map((item) => (

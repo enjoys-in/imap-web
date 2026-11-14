@@ -38,7 +38,7 @@ const APPS: AppLaunchItem[] = [
 
 export function AppsPageView() {
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 md:p-8 bg-neutral-50/50 dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-100 select-none transition-colors">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-6 md:p-8 bg-neutral-50/50 dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-100 transition-colors">
       <div className="max-w-4xl w-full mx-auto space-y-6">
         <div className="pb-4 border-b border-neutral-200 dark:border-neutral-800">
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">Productivity Apps</h1>

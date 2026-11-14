@@ -17,7 +17,7 @@ export function PeopleView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 select-none overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden">
       <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 px-4 flex items-center gap-3 shrink-0">
         <Users className="w-5 h-5 text-[#0078d4]" />
         <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">

@@ -128,7 +128,7 @@ export function MailClientLayoutContent({
       {/* Mail List Container with max-w-[460px] */}
       <div
         className={cn(
-          'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 select-none overflow-hidden min-w-[260px] max-w-[460px]',
+          'flex flex-col border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 overflow-hidden min-w-[260px] max-w-[460px]',
           hasSelectedMail ? 'hidden md:flex' : 'flex w-full md:w-auto'
         )}
         style={{ width: mailListWidth }}

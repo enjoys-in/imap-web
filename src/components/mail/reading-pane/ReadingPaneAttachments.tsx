@@ -79,7 +79,7 @@ export function ReadingPaneAttachments({
   };
 
   return (
-    <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30 select-none">
+    <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30">
       <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
         Attachments ({attachments.length})
       </div>

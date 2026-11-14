@@ -247,7 +247,7 @@ export function CreateScheduleModal({
   const CHARMS = ['❤️', '⭐', '🎂', '☕', '💡', '🎉', '✈️', '💼', '📌', '🏋️', '📚', '🎯'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
       {/* Modal Dialog Container */}
       <div className="w-full max-w-5xl bg-[#181818] text-neutral-100 rounded-xl shadow-2xl border border-neutral-800 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Window Title Bar */}

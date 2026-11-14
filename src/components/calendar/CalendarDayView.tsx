@@ -72,7 +72,7 @@ export function CalendarDayView({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] select-none w-full scroll-smooth"
+      className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] w-full scroll-smooth"
     >
       {/* Day Header Banner with Timezone Display */}
       <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 flex items-center shrink-0 bg-white/95 dark:bg-[#0e0e0e]/95 sticky top-0 z-40 backdrop-blur-md">

@@ -148,7 +148,7 @@ export function ThreadConversationView({ mailId }: ThreadConversationViewProps) 
 
           return (
             <div key={msg.id} className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-neutral-50/40 dark:bg-neutral-800/30 shadow-xs">
-              <div onClick={() => toggleExpand(msg.id)} className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/50 dark:hover:bg-neutral-800/60 transition-colors select-none">
+              <div onClick={() => toggleExpand(msg.id)} className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/50 dark:hover:bg-neutral-800/60 transition-colors">
                 <div className="flex items-center gap-2.5">
                   <BimiAvatar name={msg.fromName || msg.fromAddress} email={msg.fromAddress} explicitLogo={msg.bimiLogoUrl} size="sm" />
                   <div>

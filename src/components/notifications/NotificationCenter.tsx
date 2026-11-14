@@ -50,7 +50,7 @@ export function NotificationCenter() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-2xl z-50 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
             <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
                 Notifications ({unreadCount})
@@ -82,7 +82,7 @@ export function NotificationCenter() {
             <div className="max-h-72 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
               {notifications.length === 0 ? (
                 <div className="p-6 text-center text-xs text-neutral-400">
-                  No notifications yet. Connected to live SSE stream.
+                  No notifications
                 </div>
               ) : (
                 notifications.map((item) => (
@@ -126,8 +126,8 @@ export function NotificationCenter() {
 
             <div className="p-2 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/50 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live stream connected</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>No updates</span>
               </div>
               {notifications.length > 0 && (
                 <button

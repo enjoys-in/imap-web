@@ -69,7 +69,7 @@ export function FolderSidebar({
   return (
     <div
       style={{ width: width ? `${width}px` : undefined }}
-      className="w-64 bg-[#f8f8f8] dark:bg-[#1f1f1f] text-neutral-700 dark:text-neutral-300 border-r border-neutral-200 dark:border-neutral-800 flex flex-col h-full shrink-0 select-none transition-colors"
+      className="w-64 bg-[#f8f8f8] dark:bg-[#1f1f1f] text-neutral-700 dark:text-neutral-300 border-r border-neutral-200 dark:border-neutral-800 flex flex-col h-full shrink-0 transition-colors"
     >
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
         {/* Favorites Section */}

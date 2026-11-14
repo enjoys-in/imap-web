@@ -67,7 +67,7 @@ export function AlertDialog({
     <div
       role="alertdialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
       onClick={(e) => { if (e.target === e.currentTarget) { onCancel?.(); onClose(); } }}
     >
       <div className="w-full max-w-sm bg-white dark:bg-[#1e1e1e] border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150">

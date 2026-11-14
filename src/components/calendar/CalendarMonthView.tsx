@@ -19,7 +19,7 @@ export function CalendarMonthView({
   onEventClick,
 }: CalendarMonthViewProps) {
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] select-none">
+    <div className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e]">
       {/* Month Days Header */}
       <div className="grid grid-cols-7 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-850">
         {WEEKDAYS.map((wd) => (

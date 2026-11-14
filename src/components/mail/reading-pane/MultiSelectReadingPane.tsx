@@ -39,7 +39,7 @@ export function MultiSelectReadingPane({ folderName = 'Inbox', folderEmailIds }:
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-200 select-none transition-colors">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-200 transition-colors">
       {/* Outlook 3D Envelope Illustration */}
       <div className="relative w-28 h-28 mb-5 flex items-center justify-center">
         {/* Glow backdrop */}

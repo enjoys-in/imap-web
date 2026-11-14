@@ -41,7 +41,7 @@ export function ProfileCardModal({ contact, isOpen, onClose }: ProfileCardModalP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-4 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-4">
       <div className="bg-white dark:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-neutral-900 dark:text-neutral-100 animate-in fade-in zoom-in-95 duration-100 transition-colors">
         {/* Top Header Card matching Screenshot 2 */}
         <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#1e1e1e] shrink-0 relative">

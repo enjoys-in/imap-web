@@ -15,7 +15,7 @@ export function ReadingPaneSecurityBanner({
   if (isContentAllowed) return null;
 
   return (
-    <div className="bg-[#fff8e5] dark:bg-[#2a1d00] border-b border-[#fed888] dark:border-[#553a00] px-4 py-2 flex items-center justify-between text-xs text-[#7a4e00] dark:text-amber-200 select-none transition-colors">
+    <div className="bg-[#fff8e5] dark:bg-[#2a1d00] border-b border-[#fed888] dark:border-[#553a00] px-4 py-2 flex items-center justify-between text-xs text-[#7a4e00] dark:text-amber-200 transition-colors">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 text-[#b87600] dark:text-amber-400 shrink-0" />
         <span className="font-medium">

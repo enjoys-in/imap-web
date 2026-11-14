@@ -30,7 +30,7 @@ export function RightAppsTodo() {
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200">
       {/* Quick Add Form */}
       <form onSubmit={handleAdd} className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40">
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1a1a1a] focus-within:border-[#0078d4] transition-colors">

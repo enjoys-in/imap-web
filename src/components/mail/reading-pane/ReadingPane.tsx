@@ -307,7 +307,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
                             prev.includes(histMsg.id) ? prev.filter((id) => id !== histMsg.id) : [...prev, histMsg.id]
                           );
                         }}
-                        className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/70 dark:hover:bg-neutral-800/80 transition-colors select-none"
+                        className="p-3 flex items-center justify-between cursor-pointer hover:bg-neutral-100/70 dark:hover:bg-neutral-800/80 transition-colors"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <BimiAvatar

@@ -43,8 +43,8 @@ export function CalendarNotificationBell() {
     try {
       await checkNow();
       addToast({
-        title: 'Alerts Synced',
-        description: 'Checked calendar server for upcoming meeting reminders.',
+        title: 'Notifications',
+        description: 'Notifications updated.',
         type: 'info',
       });
     } finally {
@@ -71,7 +71,7 @@ export function CalendarNotificationBell() {
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-2xl z-50 overflow-hidden select-none animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white dark:bg-[#1f1f1f] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
             {/* Popover Header */}
             <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/70 dark:bg-neutral-800/50">
               <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export function CalendarNotificationBell() {
             <div className="max-h-72 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
               {reminders.length === 0 ? (
                 <div className="p-6 text-center text-xs text-neutral-400">
-                  No upcoming meeting reminders. Connected to live calendar SSE stream.
+                  No notifications
                 </div>
               ) : (
                 reminders.map((rem) => (
@@ -165,11 +165,11 @@ export function CalendarNotificationBell() {
               )}
             </div>
 
-            {/* Live SSE Stream Status Footer */}
+            {/* Status Footer */}
             <div className="p-2 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-800/50 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-[11px]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Live SSE Stream</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>No updates</span>
               </div>
               <button
                 onClick={handleManualCheck}
@@ -177,7 +177,7 @@ export function CalendarNotificationBell() {
                 className="px-2.5 py-1 rounded bg-[#0078d4] hover:bg-[#106ebe] text-white text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>Sync now</span>
+                <span>Refresh</span>
               </button>
             </div>
           </div>

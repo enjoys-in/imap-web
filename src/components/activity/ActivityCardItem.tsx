@@ -44,7 +44,7 @@ export function ActivityCardItem({ item, onMarkRead, onDelete }: ActivityCardIte
   return (
     <div
       className={cn(
-        'p-4 rounded-xl border transition-all flex gap-3.5 group relative select-none',
+        'p-4 rounded-xl border transition-all flex gap-3.5 group relative',
         item.isRead
           ? 'bg-white dark:bg-[#202020] border-neutral-200 dark:border-neutral-800'
           : 'bg-blue-50/30 dark:bg-[#1f2733] border-blue-200 dark:border-blue-900/60 shadow-xs'

@@ -37,7 +37,7 @@ export function TodoPageView() {
   ];
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-100 select-none transition-colors">
+    <div className="flex-1 flex h-full overflow-hidden bg-white dark:bg-[#1a1a1a] text-neutral-800 dark:text-neutral-100 transition-colors">
       {/* Todo Lists Sidebar */}
       <div className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-[#161616] p-3 flex flex-col gap-1 shrink-0">
         <h2 className="text-sm font-bold text-neutral-900 dark:text-white px-3 py-2">To Do</h2>

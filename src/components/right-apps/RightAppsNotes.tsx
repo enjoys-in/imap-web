@@ -39,7 +39,7 @@ export function RightAppsNotes() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden text-xs text-neutral-800 dark:text-neutral-200">
       {/* Top Search & Create Bar */}
       <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 space-y-2.5 bg-neutral-50/50 dark:bg-neutral-800/40">
         <div className="flex items-center gap-1.5">

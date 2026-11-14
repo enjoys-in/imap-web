@@ -101,7 +101,7 @@ export function TopHeaderSearchBar() {
         </div>
 
         {isSearchFocused && (
-          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 p-2 text-xs text-neutral-800 dark:text-neutral-200 z-50 select-none animate-in fade-in-50 duration-100">
+          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-800 p-2 text-xs text-neutral-800 dark:text-neutral-200 z-50 animate-in fade-in-50 duration-100">
             <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
               <Sparkles className="w-3 h-3 text-[#0078d4]" />
               <span>Search filters & operators</span>

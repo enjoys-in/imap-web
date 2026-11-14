@@ -91,7 +91,7 @@ export function MailList({ activeFolderId, activeMailId, onSelectMail, width, is
   return (
     <div
       style={{ width: width ? `${width}px` : undefined }}
-      className="w-full flex-1 flex flex-col h-full bg-white dark:bg-[#1f1f1f] select-none transition-colors overflow-hidden min-w-0"
+      className="w-full flex-1 flex flex-col h-full bg-white dark:bg-[#1f1f1f] transition-colors overflow-hidden min-w-0"
     >
       <MailListHeader totalEmailsCount={filteredEmails.length} currentEmailIds={currentIds} isWideLayout={effectiveIsWide} />
 

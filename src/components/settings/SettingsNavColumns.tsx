@@ -21,7 +21,7 @@ export function SettingsNavColumns() {
   );
 
   return (
-    <div className="flex flex-col sm:flex-row shrink-0 border-b sm:border-b-0 sm:border-r border-neutral-200 dark:border-[#2b2b2b] select-none transition-colors">
+    <div className="flex flex-col sm:flex-row shrink-0 border-b sm:border-b-0 sm:border-r border-neutral-200 dark:border-[#2b2b2b] transition-colors">
       {/* Column 1: Main Categories */}
       <div className="w-full sm:w-48 bg-neutral-100 dark:bg-[#161616] p-2.5 flex flex-col gap-1.5 shrink-0 border-b sm:border-b-0 sm:border-r border-neutral-200 dark:border-[#2b2b2b] transition-colors">
         {/* Search Input */}

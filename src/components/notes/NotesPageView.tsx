@@ -129,7 +129,7 @@ export function NotesPageView() {
   const pinnedCount = notes.filter((n) => n.isPinned).length;
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-neutral-100/60 dark:bg-[#161616] text-neutral-800 dark:text-neutral-100 select-none transition-colors">
+    <div className="flex-1 flex h-full overflow-hidden bg-neutral-100/60 dark:bg-[#161616] text-neutral-800 dark:text-neutral-100 transition-colors">
       {/* Left Sidebar */}
       <div className="w-56 md:w-60 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1c1c1c] p-3 flex flex-col gap-2 shrink-0">
         <div className="flex items-center justify-between px-2 py-1">

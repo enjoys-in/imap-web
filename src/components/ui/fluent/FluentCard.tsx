@@ -20,7 +20,7 @@ export function FluentCard({ className, children, ...props }: FluentCardProps) {
         'bg-white/85 dark:bg-[#151923]/85 backdrop-blur-3xl',
         'border border-white/70 dark:border-white/10',
         'shadow-[0_24px_70px_rgba(0,0,0,0.18)] dark:shadow-[0_28px_80px_rgba(0,0,0,0.65)]',
-        'transition-all duration-300 ease-out select-none',
+        'transition-all duration-300 ease-out',
         className
       )}
       {...props}

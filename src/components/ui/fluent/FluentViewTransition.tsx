@@ -21,7 +21,7 @@ export function FluentViewTransition({
     <div
       key={viewKey}
       className={cn(
-        'w-full animate-fluent-enter select-none',
+        'w-full animate-fluent-enter',
         className
       )}
     >

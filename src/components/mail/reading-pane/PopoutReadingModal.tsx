@@ -15,7 +15,7 @@ export function PopoutReadingModal({ mailId, onClose }: PopoutReadingModalProps)
   if (!mailId) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in">
       <div
         className={`bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700/80 flex flex-col overflow-hidden transition-all duration-200 ${
           isMaximized

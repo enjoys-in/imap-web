@@ -93,7 +93,7 @@ export function CommandPaletteModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-xs select-none">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/50 backdrop-blur-xs">
       <div className="fixed inset-0" onClick={() => setIsOpen(false)} />
       <div className="relative w-full max-w-lg bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-2xl overflow-hidden z-10 text-neutral-800 dark:text-neutral-200">
         <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-neutral-200 dark:border-neutral-800">

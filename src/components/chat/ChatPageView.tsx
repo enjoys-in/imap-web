@@ -28,7 +28,7 @@ export function ChatPageView() {
   } = useChatState();
 
   return (
-    <div className="flex-1 flex h-full overflow-hidden bg-white dark:bg-[#181818] select-none">
+    <div className="flex-1 flex h-full overflow-hidden bg-white dark:bg-[#181818]">
       {/* Channels & DMs Sidebar */}
       <ChatSidebar
         conversations={conversations}

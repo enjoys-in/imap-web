@@ -87,7 +87,7 @@ export function CalendarView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden select-none relative">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden relative">
       <CalendarWorkspaceTabs
         tabs={s.tabs}
         activeTabId={s.activeTabId}
