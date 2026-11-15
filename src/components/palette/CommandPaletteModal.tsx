@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Search, Mail, Inbox, Send, Archive, Trash2, FileEdit, FileText,
   Sliders, ShieldCheck, HardDrive, Settings, Sun, RefreshCw,
-  Calendar, Users, Bell, CheckSquare
+  Calendar, Users, CheckSquare
 } from 'lucide-react';
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,6 @@ export function CommandPaletteModal() {
     { id: 'toggle-theme', category: 'Actions', title: 'Toggle Theme', subtitle: 'Switch light / dark mode', icon: Sun, action: () => document.documentElement.classList.toggle('dark') },
     { id: 'nav-inbox', category: 'Navigation', title: 'Inbox', subtitle: 'Go to Inbox', icon: Inbox, action: () => { router.push('/mail/u/0#inbox'); } },
     { id: 'nav-files', category: 'Navigation', title: 'Cloud Files', subtitle: 'Mail attachments & storage hub', icon: HardDrive, action: () => router.push('/files') },
-    { id: 'nav-activity', category: 'Navigation', title: 'Activity Feed', subtitle: 'Timeline of mentions & updates', icon: Bell, action: () => router.push('/activity') },
     { id: 'nav-cal', category: 'Navigation', title: 'Calendar', subtitle: 'Schedules & appointments', icon: Calendar, action: () => router.push('/calendar') },
     { id: 'nav-todo', category: 'Navigation', title: 'To Do', subtitle: 'Task lists & deadlines', icon: CheckSquare, action: () => router.push('/todo') },
     { id: 'nav-notes', category: 'Navigation', title: 'Notes', subtitle: 'Sticky notes & scratchpads', icon: FileText, action: () => router.push('/notes') },

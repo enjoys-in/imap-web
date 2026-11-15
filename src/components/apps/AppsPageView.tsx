@@ -10,7 +10,6 @@ import {
   FileText,
   Settings,
   HardDrive,
-  Bell,
   ExternalLink,
 } from 'lucide-react';
 
@@ -27,7 +26,6 @@ const APPS: AppLaunchItem[] = [
   { id: 'mail', name: 'AirSend Mail', desc: 'Modern web mail client with IMAP/SMTP synchronization', href: '/mail', icon: Mail, color: 'bg-blue-600 text-white' },
   { id: 'calendar', name: 'Calendar Studio', desc: 'Schedule meetings, pastel color codes, week/day/month views', href: '/calendar', icon: Calendar, color: 'bg-teal-600 text-white' },
   { id: 'files', name: 'Cloud Storage & Files', desc: 'Unified explorer for email attachments, folders, and documents', href: '/files', icon: HardDrive, color: 'bg-blue-500 text-white' },
-  { id: 'activity', name: 'Activity Feed', desc: 'Live timeline of mentions, invites, file uploads, and mail events', href: '/activity', icon: Bell, color: 'bg-rose-500 text-white' },
   { id: 'people', name: 'People & Contacts', desc: 'Address book, contact cards, and team directories', href: '/people', icon: Users, color: 'bg-indigo-600 text-white' },
   { id: 'todo', name: 'To Do', desc: 'Task lists, daily priorities, and deadline management', href: '/todo', icon: CheckSquare, color: 'bg-sky-600 text-white' },
   { id: 'notes', name: 'Sticky Notes', desc: 'Quick capture notes with color tags and instant search', href: '/notes', icon: FileText, color: 'bg-amber-500 text-white' },
