@@ -11,7 +11,7 @@ export interface ActivityItem {
   actorAvatar: string;
   actionText: string;
   targetTitle: string;
-  targetType: 'mail' | 'calendar' | 'files' | 'chat' | 'todo';
+  targetType: 'mail' | 'calendar' | 'files' | 'todo';
   targetHref: string;
   timestamp: string;
   group: 'Today' | 'Yesterday' | 'Earlier this week';
@@ -25,10 +25,10 @@ const INITIAL_ACTIVITIES: ActivityItem[] = [
     category: 'mention',
     actorName: 'Sarah Connor',
     actorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-    actionText: 'mentioned you in #design-system',
+    actionText: 'mentioned you in email thread',
     targetTitle: 'Wireframe Review & Handoff',
-    targetType: 'chat',
-    targetHref: '/chat',
+    targetType: 'mail',
+    targetHref: '/mail/u/0#inbox',
     timestamp: '10 mins ago',
     group: 'Today',
     isRead: false,

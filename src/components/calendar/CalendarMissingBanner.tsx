@@ -57,7 +57,7 @@ export function CalendarMissingBanner({
           onClick={onOnboardUser}
           className="px-3.5 py-1.5 rounded-md font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
         >
-          {onboardingLoading ? 'Adding...' : 'Add to Calendar'}
+          {onboardingLoading ? 'Starting...' : 'Start Using Calendar'}
         </button>
       </div>
     </div>

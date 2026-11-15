@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Search, Mail, Inbox, Send, Archive, Trash2, FileEdit, FileText,
   Sliders, ShieldCheck, HardDrive, Settings, Sun, RefreshCw,
-  MessageSquare, Calendar, Users, Bell, CheckSquare
+  Calendar, Users, Bell, CheckSquare
 } from 'lucide-react';
 import { useMailStore, useComposeStore, useToastStore } from '@/stores';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,6 @@ export function CommandPaletteModal() {
     { id: 'sync-mail', category: 'Actions', title: 'Sync Mailbox', subtitle: 'Fetch latest messages from IMAP', icon: RefreshCw, action: () => { fetchEmails(); addToast({ title: 'Synced', description: 'Folder refreshed', type: 'success' }); } },
     { id: 'toggle-theme', category: 'Actions', title: 'Toggle Theme', subtitle: 'Switch light / dark mode', icon: Sun, action: () => document.documentElement.classList.toggle('dark') },
     { id: 'nav-inbox', category: 'Navigation', title: 'Inbox', subtitle: 'Go to Inbox', icon: Inbox, action: () => { router.push('/mail/u/0#inbox'); } },
-    { id: 'nav-chat', category: 'Navigation', title: 'Team Chat', subtitle: 'Channels & Direct Messages', icon: MessageSquare, action: () => router.push('/chat') },
     { id: 'nav-files', category: 'Navigation', title: 'Cloud Files', subtitle: 'Mail attachments & storage hub', icon: HardDrive, action: () => router.push('/files') },
     { id: 'nav-activity', category: 'Navigation', title: 'Activity Feed', subtitle: 'Timeline of mentions & updates', icon: Bell, action: () => router.push('/activity') },
     { id: 'nav-cal', category: 'Navigation', title: 'Calendar', subtitle: 'Schedules & appointments', icon: Calendar, action: () => router.push('/calendar') },
