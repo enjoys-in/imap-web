@@ -34,6 +34,7 @@ interface ScheduleFormFieldsProps {
 export function ScheduleFormFields({
   title, setTitle, selectedCharm, setSelectedCharm,
   attendees, onAddAttendee, onRemoveAttendee,
+  hasByoSmtp,
   timeRowNode,
   location, setLocation, hasOnlineMeeting, setHasOnlineMeeting,
   meetUrl, setMeetUrl, description, setDescription, agenda, setAgenda,
@@ -156,6 +157,13 @@ export function ScheduleFormFields({
             <ChevronDown className="w-3 h-3 ml-0.5" />
           </button>
         </div>
+
+        {hasByoSmtp === false && attendees.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-amber-400 bg-amber-950/30 border border-amber-900/40 px-2.5 py-1 rounded-md">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+            <span>This calendar has no SMTP configured. External invitees will not receive email invitations.</span>
+          </div>
+        )}
       </div>
 
       {/* Row 3: Date, Time & Scheduler */}

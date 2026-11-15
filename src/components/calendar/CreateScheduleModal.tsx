@@ -8,6 +8,7 @@ import { ScheduleFormFields } from './schedule/ScheduleFormFields';
 import { ScheduleMiniCanvas } from './schedule/ScheduleMiniCanvas';
 import { formatTimeDisplay } from './schedule/scheduleConstants';
 import { cn } from '@/lib/utils';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 interface CreateScheduleModalProps {
   open: boolean;
@@ -42,6 +43,8 @@ export function CreateScheduleModal({
   const [isAllDay, setIsAllDay] = useState(false);
 
   const [attendees, setAttendees] = useState<string[]>([]);
+  const calendars = useCalendarsStore((s) => s.calendars);
+  const activeCal = calendars.find((c) => c.isDefault) || calendars[0];
   const [location, setLocation] = useState(initialEvent?.category || '');
   const [hasOnlineMeeting, setHasOnlineMeeting] = useState(Boolean(initialEvent?.meetUrl));
   const [meetUrl, setMeetUrl] = useState(initialEvent?.meetUrl || '');
@@ -163,6 +166,7 @@ export function CreateScheduleModal({
               selectedCharm={selectedCharm}
               setSelectedCharm={setSelectedCharm}
               attendees={attendees}
+              hasByoSmtp={activeCal?.hasByoSmtp}
               onAddAttendee={(e) => attendees.length < 3000 && !attendees.includes(e) && setAttendees([...attendees, e])}
               onRemoveAttendee={(e) => setAttendees(attendees.filter((a) => a !== e))}
               timeRowNode={

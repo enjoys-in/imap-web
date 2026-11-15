@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { CalendarEvent, CalendarViewMode, WorkspaceTab, CalendarColor } from './types';
 import { WorkspaceItem } from './CalendarWorkspaceMenu';
 import { CalendarNotificationItem } from './CalendarNotificationsPopover';
