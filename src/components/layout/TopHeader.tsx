@@ -30,10 +30,18 @@ export function TopHeader() {
     setMounted(true);
   }, []);
 
-  const themeGradient = HEADER_THEME_GRADIENTS[headerTheme] || HEADER_THEME_GRADIENTS.classic;
+  const themeGradient = mounted
+    ? (HEADER_THEME_GRADIENTS[headerTheme] || HEADER_THEME_GRADIENTS.classic)
+    : HEADER_THEME_GRADIENTS.classic;
 
   return (
-    <header className={cn('h-12 bg-gradient-to-r text-white flex items-center justify-between px-2.5 md:px-3 shrink-0 select-none shadow-sm z-40 relative transition-colors duration-300', themeGradient)}>
+    <header
+      suppressHydrationWarning
+      className={cn(
+        'h-12 bg-gradient-to-r text-white flex items-center justify-between px-2.5 md:px-3 shrink-0 select-none shadow-sm z-40 relative transition-colors duration-300',
+        themeGradient
+      )}
+    >
       <div 
         className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] overflow-hidden" 
         aria-hidden="true" 
@@ -74,15 +82,15 @@ export function TopHeader() {
         {/* Sync Button: 2-minute cooldown block on manual click + auto-sync every 5 minutes */}
         <button
           onClick={triggerManualSync}
-          disabled={isBlocked || isSyncing}
+          disabled={mounted ? (isBlocked || isSyncing) : false}
           className={cn(
             'p-1.5 rounded text-white transition-all flex items-center gap-1.5 cursor-pointer select-none',
-            isBlocked
+            mounted && isBlocked
               ? 'opacity-65 cursor-not-allowed bg-black/25 hover:bg-black/25'
               : 'hover:bg-white/15'
           )}
           title={
-            isBlocked
+            mounted && isBlocked
               ? `Sync cooldown active: blocked for 2 minutes (${formattedCooldown} remaining)`
               : isSyncing
               ? 'Synchronizing mailbox with IMAP server...'
@@ -90,8 +98,8 @@ export function TopHeader() {
           }
           aria-label="Sync Mailbox"
         >
-          <RefreshCw className={cn('w-4 h-4 shrink-0', isSyncing && 'animate-spin')} />
-          {isBlocked && (
+          <RefreshCw className={cn('w-4 h-4 shrink-0', mounted && isSyncing && 'animate-spin')} />
+          {mounted && isBlocked && (
             <span className="text-[10px] font-mono font-semibold text-white/95 leading-none pr-0.5">
               {formattedCooldown}
             </span>

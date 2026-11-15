@@ -55,6 +55,7 @@ export function CalendarNotificationBell() {
   return (
     <div className="relative">
       <button
+        suppressHydrationWarning
         onClick={() => setIsOpen((prev) => !prev)}
         className="p-1.5 hover:bg-white/15 rounded text-white transition-colors relative cursor-pointer"
         title="Calendar Notifications"
