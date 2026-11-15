@@ -163,7 +163,7 @@ export function CreateScheduleModal({
               selectedCharm={selectedCharm}
               setSelectedCharm={setSelectedCharm}
               attendees={attendees}
-              onAddAttendee={(e) => !attendees.includes(e) && setAttendees([...attendees, e])}
+              onAddAttendee={(e) => attendees.length < 3000 && !attendees.includes(e) && setAttendees([...attendees, e])}
               onRemoveAttendee={(e) => setAttendees(attendees.filter((a) => a !== e))}
               timeRowNode={
                 <ScheduleTimeRow

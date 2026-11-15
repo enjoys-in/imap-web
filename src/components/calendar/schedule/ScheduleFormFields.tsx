@@ -45,6 +45,7 @@ export function ScheduleFormFields({
   const handleKeyDownAttendee = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && attendeeInput.trim()) {
       e.preventDefault();
+      if (attendees.length >= 3000) return;
       onAddAttendee(attendeeInput.trim());
       setAttendeeInput('');
     }
@@ -134,8 +135,15 @@ export function ScheduleFormFields({
             value={attendeeInput}
             onChange={(e) => setAttendeeInput(e.target.value)}
             onKeyDown={handleKeyDownAttendee}
-            placeholder={attendees.length === 0 ? 'Invite required attendees' : 'Add another attendee...'}
-            className="flex-1 min-w-[160px] text-xs bg-transparent text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden py-0.5"
+            disabled={attendees.length >= 3000}
+            placeholder={
+              attendees.length >= 3000
+                ? 'Maximum 3,000 attendees reached'
+                : attendees.length === 0
+                ? 'Invite required attendees'
+                : 'Add another attendee...'
+            }
+            className="flex-1 min-w-[160px] text-xs bg-transparent text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden py-0.5 disabled:opacity-50"
           />
           <button
             type="button"
