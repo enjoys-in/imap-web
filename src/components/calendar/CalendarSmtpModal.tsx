@@ -92,9 +92,26 @@ export function CalendarSmtpModal({
 
   if (!open || !calendar) return null;
 
+  // The saved password is only reused for the same server and account; changing any of these
+  // requires entering the password again (the calendar server refuses otherwise).
+  const serverChanged = Boolean(
+    existingConfig?.configured &&
+      (host.trim().toLowerCase() !== (existingConfig.host || '').toLowerCase() ||
+        port !== existingConfig.port ||
+        username.trim() !== (existingConfig.username || ''))
+  );
+  const passwordMissing = !password.trim() && (!existingConfig?.configured || serverChanged);
+  const passwordMessage = existingConfig?.configured
+    ? 'Enter the password again: the host, port or username changed.'
+    : 'Password is required for the initial setup.';
+
   const handleTest = async () => {
     if (!host.trim() || !username.trim()) {
       setError('Host and username are required to test the connection.');
+      return;
+    }
+    if (passwordMissing) {
+      setError(passwordMessage);
       return;
     }
     setTesting(true);
@@ -127,8 +144,8 @@ export function CalendarSmtpModal({
       setError('Host, username, and from email are required.');
       return;
     }
-    if (!existingConfig?.configured && !password.trim()) {
-      setError('Password is required for the initial setup.');
+    if (passwordMissing) {
+      setError(passwordMessage);
       return;
     }
 
@@ -262,7 +279,13 @@ export function CalendarSmtpModal({
                   type="number"
                   required
                   value={port}
-                  onChange={(e) => setPort(Number(e.target.value))}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setPort(next);
+                    // The server uses exactly the encryption chosen, so match the standard ports.
+                    if (next === 465) setEncryption('ssl');
+                    else if (next === 587 && encryption === 'ssl') setEncryption('starttls');
+                  }}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -285,7 +308,10 @@ export function CalendarSmtpModal({
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                  Password {existingConfig?.configured ? '(Leave blank to keep)' : <span className="text-red-500">*</span>}
+                  Password{' '}
+                  {!existingConfig?.configured || serverChanged
+                    ? <span className="text-red-500">*</span>
+                    : '(Leave blank to keep)'}
                 </label>
                 <input
                   type="password"

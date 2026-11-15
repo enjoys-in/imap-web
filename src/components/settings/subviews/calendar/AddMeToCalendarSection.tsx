@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { getSignedInEmail } from '@/lib/api/handlers/calendar';
 
 interface AddMeToCalendarSectionProps {
   email: string;
@@ -23,6 +24,10 @@ export function AddMeToCalendarSection({
   const status = useCalendarsStore((s) => s.status);
   const addToast = useToastStore((s) => s.addToast);
   const [loading, setLoading] = useState(false);
+
+  // The calendar service only adds the account the session is signed in with.
+  const signedIn = getSignedInEmail();
+  const isOtherAccount = Boolean(signedIn) && signedIn !== email.trim().toLowerCase();
 
   const handleOnboard = async () => {
     setLoading(true);
@@ -55,7 +60,9 @@ export function AddMeToCalendarSection({
             Add me to Calendar
           </h3>
           <p className="text-blue-900/80 dark:text-blue-200/80 mt-0.5">
-            Connect your IMAP email account ({email}) to the calendar service to automatically provision your calendar and sync events.
+            {isOtherAccount
+              ? `A calendar can only be added for the account you're signed in with (${signedIn}). Sign in as ${email} to add one for it.`
+              : `Connect your IMAP email account (${email}) to the calendar service to automatically provision your calendar and sync events.`}
           </p>
         </div>
       </div>
@@ -63,7 +70,7 @@ export function AddMeToCalendarSection({
       <div className="flex items-center gap-2 shrink-0">
         <button
           type="button"
-          disabled={loading || status === 'loading'}
+          disabled={loading || status === 'loading' || isOtherAccount}
           onClick={() => void handleOnboard()}
           className="h-8 px-4 rounded-md font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
         >

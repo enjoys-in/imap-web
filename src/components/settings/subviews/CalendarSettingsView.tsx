@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useAccounts } from '@/hooks/useEmailsQuery';
-import type { UserCalendar } from '@/lib/api/handlers/calendar';
+import { getSignedInEmail, type UserCalendar } from '@/lib/api/handlers/calendar';
 import { CalendarSmtpModal } from '@/components/calendar/CalendarSmtpModal';
 import { CalendarAccountSelector } from './calendar/CalendarAccountSelector';
 import { AddMeToCalendarSection } from './calendar/AddMeToCalendarSection';
@@ -44,11 +44,16 @@ export function CalendarSettingsView() {
     return c.ownerEmail.toLowerCase().trim() === activeEmail.toLowerCase().trim();
   }) || (isConnected && calendars.length > 0 ? calendars[0] : null);
 
+  // Used by the "not registered yet" prompt, which is about the signed-in user (the calendar
+  // service only onboards the account in the session token), so onboard that account.
   const handleOnboard = async () => {
-    if (!activeEmail) return;
+    const signedIn = getSignedInEmail();
+    const target = signedIn || activeEmail;
+    if (!target) return;
+    const sameAccount = target.toLowerCase() === activeEmail.toLowerCase();
     setOnboardingLoading(true);
     try {
-      await onboard(activeEmail, activeAccount?.displayName);
+      await onboard(target, sameAccount ? activeAccount?.displayName : undefined);
     } finally {
       setOnboardingLoading(false);
     }

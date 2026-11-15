@@ -400,10 +400,20 @@ export function useCalendarState() {
     } else {
       setEvents((prev) => prev.filter((e) => e.id !== id));
     }
+    let ok = false;
     try {
-      await deleteAppointment(id, options);
+      ok = await deleteAppointment(id, options);
     } catch {
-      // Ignored if server unreachable
+      ok = false;
+    }
+    if (!ok) {
+      // The server refused or couldn't be reached: put the real state back on screen.
+      addToast({
+        title: 'Delete Failed',
+        description: 'The calendar server did not delete this event.',
+        type: 'error',
+      });
+      await loadEvents();
     }
   };
 

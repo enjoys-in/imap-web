@@ -316,6 +316,13 @@ function findResult<T>(responses: JmapMethodResponse[], method: string): T | und
   return responses.find(([name]) => name === method)?.[1] as T | undefined;
 }
 
+/** Human-readable text for a JMAP SetError (e.g. invalidProperties with its property list). */
+function jmapFailureMessage(failure: (JmapSetFailure & { properties?: string[] }) | undefined, fallback: string): string {
+  if (!failure) return fallback;
+  const props = failure.properties?.length ? ` (${failure.properties.join(', ')})` : '';
+  return (failure.description || failure.type || fallback) + props;
+}
+
 function toUserCalendar(raw: JmapCalendar, defaultDomain?: string): UserCalendar {
   const domain = defaultDomain || 'example.com';
   return {
@@ -336,39 +343,53 @@ function toUserCalendar(raw: JmapCalendar, defaultDomain?: string): UserCalendar
 }
 
 /**
- * Onboards the current IMAP user into CalDev.
- * Supplies the user's email and uses the domain of the email as the tenant_id (not numeric ID).
+ * Returns the email of the signed-in user, read from the auth token (lower-cased), or '' when
+ * there is no readable token. CalDev identifies the user by this email.
+ */
+export function getSignedInEmail(): string {
+  const token = getAuthToken();
+  if (!token) return '';
+  try {
+    const part = token.split('.')[1] || '';
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
+    const payload = JSON.parse(atob(b64));
+    return String(payload.email || '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Onboards the signed-in user into CalDev.
+ * CalDev only onboards the email in the auth token (anything else is refused with 403), so a
+ * different mailbox selected in the UI can't be onboarded with this session. The server sets the
+ * account's tenant (its email domain) itself.
  */
 export async function onboardCalendarUser(email?: string, name?: string): Promise<any> {
-  let targetEmail = email?.trim();
+  const signedIn = getSignedInEmail();
+  const requested = email?.trim().toLowerCase() || '';
+
+  if (signedIn && requested && requested !== signedIn) {
+    throw new CalendarServiceError(
+      'rejected',
+      `Calendar can only be added for the account you're signed in with (${signedIn}). Sign in as ${requested} to add it.`
+    );
+  }
+
+  let targetEmail = signedIn || requested;
   let targetName = name?.trim();
-
-  const imapUser = await getActiveImapUser().catch(() => ({ email: '', name: '', tenantId: '', domain: '' }));
-
   if (!targetEmail) {
+    const imapUser = await getActiveImapUser().catch(() => ({ email: '', name: '', tenantId: '', domain: '' }));
     targetEmail = imapUser.email;
     targetName = targetName || imapUser.name;
   }
-
-  const domain = targetEmail && targetEmail.includes('@')
-    ? targetEmail.split('@')[1].trim().toLowerCase()
-    : (imapUser.tenantId || imapUser.domain || 'example.com');
+  const domain = targetEmail && targetEmail.includes('@') ? targetEmail.split('@')[1].trim().toLowerCase() : '';
 
   const body: Record<string, string> = {};
   if (targetEmail) body.email = targetEmail;
   if (targetName) body.name = targetName;
-  if (domain) {
-    body.tenant_id = domain;
-    body.tenant = domain;
-    body.domain = domain;
-  }
 
-  const headers: Record<string, string> = {};
-  if (domain) {
-    headers['X-Tenant-ID'] = domain;
-  }
-
-  const res = await apiClient.post<any>(`${getCalendarBaseUrl()}/api/calendar/onboard`, body, { headers });
+  const res = await apiClient.post<any>(`${getCalendarBaseUrl()}/api/calendar/onboard`, body);
   const result = res?.result || res;
   if (result && typeof result === 'object') {
     const resolvedDomain = (result.email || targetEmail || '').split('@')[1]?.toLowerCase() || domain;
@@ -764,6 +785,9 @@ export async function createAppointment(
 
     const result = findResult<JmapSetResult>(responses, 'CalendarEvent/set');
     const createdInfo = result?.created?.[tempId];
+    if (!createdInfo?.id) {
+      throw new CalendarServiceError('rejected', jmapFailureMessage(result?.notCreated?.[tempId], 'The calendar server did not create the event.'));
+    }
 
     const createdApt: Appointment = {
       id: createdInfo?.id || tempId,
@@ -841,13 +865,17 @@ export async function updateAppointment(
       updatePayload = patch;
     }
 
-    await jmapRequest([
+    const responses = await jmapRequest([
       [
         'CalendarEvent/set',
         { accountId, update: { [id]: updatePayload } },
         'update-event',
       ],
     ]);
+    const result = findResult<JmapSetResult>(responses, 'CalendarEvent/set');
+    if (result?.notUpdated?.[id]) {
+      throw new CalendarServiceError('rejected', jmapFailureMessage(result.notUpdated[id], 'Could not update the event.'));
+    }
 
     const updated = { id, ...data } as Appointment;
     if (cachedAppointmentsMemory) {
@@ -874,7 +902,7 @@ export async function deleteAppointment(
   try {
     if (options?.isOccurrenceOnly && options.originalStart) {
       // Cancel single occurrence via { excluded: true }
-      await jmapRequest([
+      const responses = await jmapRequest([
         [
           'CalendarEvent/set',
           {
@@ -890,15 +918,25 @@ export async function deleteAppointment(
           'cancel-occurrence',
         ],
       ]);
+      const result = findResult<JmapSetResult>(responses, 'CalendarEvent/set');
+      if (result?.notUpdated?.[id]) {
+        console.warn(`[CalDev] cancel occurrence of ${id} rejected:`, jmapFailureMessage(result.notUpdated[id], 'rejected'));
+        return false;
+      }
       if (cachedAppointmentsMemory) {
         cachedAppointmentsMemory = cachedAppointmentsMemory.filter((a) => !(a.id === id && a.startUtc === options.originalStart));
         void saveCachedAppointments(cachedAppointmentsMemory);
       }
     } else {
       // Destroy whole event
-      await jmapRequest([
+      const responses = await jmapRequest([
         ['CalendarEvent/set', { accountId, destroy: [id] }, 'del-event'],
       ]);
+      const result = findResult<JmapSetResult>(responses, 'CalendarEvent/set');
+      if (!result?.destroyed?.includes(id)) {
+        console.warn(`[CalDev] delete of ${id} rejected:`, jmapFailureMessage(result?.notDestroyed?.[id], 'not destroyed'));
+        return false;
+      }
       if (cachedAppointmentsMemory) {
         cachedAppointmentsMemory = cachedAppointmentsMemory.filter((a) => a.id !== id);
         void saveCachedAppointments(cachedAppointmentsMemory);
