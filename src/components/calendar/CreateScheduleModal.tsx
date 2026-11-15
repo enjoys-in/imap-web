@@ -15,12 +15,13 @@ interface CreateScheduleModalProps {
   onSave: (event: Partial<CalendarEvent>) => void;
   initialDayIndex?: number;
   initialHour?: number;
+  initialDate?: Date;
   initialEvent?: CalendarEvent | null;
 }
 
 export function CreateScheduleModal({
   open, onClose, onSave,
-  initialDayIndex = 6, initialHour = 7, initialEvent,
+  initialDayIndex = 6, initialHour = 7, initialDate, initialEvent,
 }: CreateScheduleModalProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [title, setTitle] = useState(initialEvent?.title || '');
@@ -30,7 +31,7 @@ export function CreateScheduleModal({
   const [categoryColor, setCategoryColor] = useState<CalendarColor>('salmon');
   const [sensitivity, setSensitivity] = useState('Normal');
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(() => initialDate ? new Date(initialDate) : new Date());
   const [startHourDecimal, setStartHourDecimal] = useState(initialEvent?.startHour ?? initialHour);
   const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 0.5);
   const [isAllDay, setIsAllDay] = useState(false);
@@ -60,9 +61,10 @@ export function CreateScheduleModal({
     } else {
       setTitle(''); setStartHourDecimal(initialHour); setDurationHours(0.5);
       setDescription(''); setAgenda(''); setAttendees([]);
-      setHasOnlineMeeting(false); setMeetUrl(''); setSelectedDate(new Date());
+      setHasOnlineMeeting(false); setMeetUrl('');
+      setSelectedDate(initialDate ? new Date(initialDate) : new Date());
     }
-  }, [open, initialHour, initialEvent]);
+  }, [open, initialHour, initialEvent, initialDate]);
 
   if (!open) return null;
 
@@ -73,7 +75,7 @@ export function CreateScheduleModal({
     const participants: CalendarParticipant[] = attendees.map((email, idx) => ({
       id: `p-${idx}`,
       name: email.split('@')[0],
-      avatar: `https://images.unsplash.com/photo-${1534528741775 + idx}?w=64&h=64&fit=crop&crop=faces`,
+      avatar: '',
     }));
 
     const finalMeet = hasOnlineMeeting

@@ -133,6 +133,8 @@ export function useCalendarState() {
   const [selectedProject, setSelectedProject] = useState('General');
   const [activeEssential, setActiveEssential] = useState('calendar');
   const [viewMode, setViewMode] = useState<CalendarViewMode>('Week');
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [slotDate, setSlotDate] = useState<Date>(() => new Date());
   const getTodayDayIndex = () => {
     const jsDay = new Date().getDay();
     return jsDay === 0 ? 6 : jsDay - 1;
@@ -151,6 +153,7 @@ export function useCalendarState() {
 
   const { isHealthy, healthMessage } = useCalendarHealthPoll();
   const [activeEmail, setActiveEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
     void initFromCache();
@@ -161,8 +164,11 @@ export function useCalendarState() {
       }
     });
     void getAccounts().then((accs) => {
-      if (accs.length > 0 && accs[0].email) {
-        setActiveEmail(accs[0].email);
+      if (accs.length > 0) {
+        const primary = accs[0];
+        if (primary.email) setActiveEmail(primary.email);
+        const name = primary.displayName || (primary as any).name || primary.email?.split('@')[0] || '';
+        if (name) setUserName(name);
       }
     });
   }, [initFromCache, initTeamCache]);
@@ -521,6 +527,11 @@ export function useCalendarState() {
     setActiveEssential,
     viewMode,
     setViewMode,
+    currentDate,
+    setCurrentDate,
+    slotDate,
+    setSlotDate,
+    userName,
     activeDayIndex,
     setActiveDayIndex,
     searchQuery,

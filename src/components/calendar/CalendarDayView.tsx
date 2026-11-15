@@ -9,7 +9,8 @@ import { Globe } from 'lucide-react';
 interface CalendarDayViewProps {
   events: CalendarEvent[];
   activeDayIndex: number;
-  onSlotClick: (dayIndex: number, hour: number) => void;
+  currentDate?: Date;
+  onSlotClick: (dayIndex: number, hour: number, date?: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -28,7 +29,7 @@ function getWeekDays(referenceDate: Date = new Date()) {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const isToday = i === currentDayIndex;
+    const isToday = d.toDateString() === new Date().toDateString();
     const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
     const month = d.toLocaleDateString('en-US', { month: 'short' });
     const dayNum = d.getDate();
@@ -50,17 +51,28 @@ function formatHour(h: number): string {
 export function CalendarDayView({
   events,
   activeDayIndex,
+  currentDate = new Date(),
   onSlotClick,
   onEventClick,
 }: CalendarDayViewProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const weekDays = React.useMemo(() => getWeekDays(), []);
+  const weekDays = React.useMemo(() => getWeekDays(currentDate), [currentDate]);
   const activeDayInfo = weekDays[activeDayIndex] || weekDays[0];
   const isToday = activeDayInfo?.isToday ?? false;
   const dayLabel = activeDayInfo?.label ?? 'Day Schedule';
 
-  const dayEvents = events.filter((e) => e.dayIndex === activeDayIndex);
+  const dayEvents = events.filter((e) => {
+    if (e.startUtc) {
+      const ed = new Date(e.startUtc);
+      return (
+        ed.getFullYear() === activeDayInfo.date.getFullYear() &&
+        ed.getMonth() === activeDayInfo.date.getMonth() &&
+        ed.getDate() === activeDayInfo.date.getDate()
+      );
+    }
+    return e.dayIndex === activeDayIndex;
+  });
 
   // Live time info resolved from the user's system timezone (e.g. Asia/Kolkata / GMT+5:30)
   const [timeInfo, setTimeInfo] = useState<UserTimeInfo>(() => getUserTimeInfo());
@@ -181,7 +193,7 @@ export function CalendarDayView({
           {HOURS.map((hour) => (
             <div
               key={hour}
-              onClick={() => onSlotClick(activeDayIndex, hour)}
+              onClick={() => onSlotClick(activeDayIndex, hour, activeDayInfo.date)}
               className="h-20 border-b border-neutral-100 dark:border-neutral-850 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/20 transition-colors cursor-pointer"
             />
           ))}

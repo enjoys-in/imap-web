@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 
 interface CalendarWeekGridProps {
   events: CalendarEvent[];
-  onSlotClick: (dayIndex: number, hour: number) => void;
+  currentDate?: Date;
+  onSlotClick: (dayIndex: number, hour: number, date?: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
   onSelectDayHeader?: (dayIndex: number) => void;
   pendingSlot?: { dayIndex: number; hour: number } | null;
@@ -26,11 +27,12 @@ function getWeekDays(referenceDate: Date = new Date()) {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const isToday = i === currentDayIndex;
+    const isToday = d.toDateString() === new Date().toDateString();
     const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
     const dayNum = d.getDate();
     return {
       dayIndex: i,
+      date: d,
       label: `${dayNum} ${weekdayShort}`,
       isToday,
     };
@@ -47,6 +49,7 @@ function formatHour(h: number): string {
 
 export function CalendarWeekGrid({
   events,
+  currentDate = new Date(),
   onSlotClick,
   onEventClick,
   onSelectDayHeader,
@@ -54,7 +57,7 @@ export function CalendarWeekGrid({
 }: CalendarWeekGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
-  const days = React.useMemo(() => getWeekDays(), []);
+  const days = React.useMemo(() => getWeekDays(currentDate), [currentDate]);
 
   useEffect(() => {
     const update = () => setTimeInfo(getUserTimeInfo());
@@ -130,7 +133,17 @@ export function CalendarWeekGrid({
           </div>
 
           {days.map((day) => {
-            const dayEvents = events.filter((e) => e.dayIndex === day.dayIndex);
+            const dayEvents = events.filter((e) => {
+              if (e.startUtc) {
+                const ed = new Date(e.startUtc);
+                return (
+                  ed.getFullYear() === day.date.getFullYear() &&
+                  ed.getMonth() === day.date.getMonth() &&
+                  ed.getDate() === day.date.getDate()
+                );
+              }
+              return e.dayIndex === day.dayIndex;
+            });
             return (
               <div
                 key={day.dayIndex}
@@ -139,7 +152,7 @@ export function CalendarWeekGrid({
                 {HOURS.map((hour) => (
                   <div
                     key={hour}
-                    onClick={() => onSlotClick(day.dayIndex, hour)}
+                    onClick={() => onSlotClick(day.dayIndex, hour, day.date)}
                     className="h-20 border-b border-neutral-100 dark:border-neutral-850 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/20 transition-colors cursor-pointer"
                   />
                 ))}

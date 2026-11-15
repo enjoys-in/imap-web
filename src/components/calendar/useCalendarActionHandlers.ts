@@ -18,7 +18,7 @@ export function useCalendarActionHandlers({ s, showAlert }: HandlerParams) {
     );
   }, [s.events, s.searchQuery]);
 
-  const handleOpenSlot = (day: number, hr: number) => {
+  const handleOpenSlot = (day: number, hr: number, date?: Date) => {
     if (s.isViewOnly) {
       showAlert({
         title: s.isUserNotFound ? 'Activate Calendar' : 'View-Only Calendar',
@@ -31,6 +31,10 @@ export function useCalendarActionHandlers({ s, showAlert }: HandlerParams) {
     }
     s.setSlotDay(day);
     s.setSlotHour(hr);
+    if (date) {
+      s.setSlotDate(date);
+    }
+    s.setSelectedEvent(null);
     s.setCreateModalOpen(true);
   };
 
@@ -45,6 +49,8 @@ export function useCalendarActionHandlers({ s, showAlert }: HandlerParams) {
       });
       return;
     }
+    s.setSelectedEvent(null);
+    s.setSlotDate(new Date());
     s.setCreateModalOpen(true);
   };
 

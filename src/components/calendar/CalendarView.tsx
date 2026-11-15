@@ -29,6 +29,49 @@ export function CalendarView() {
     handleOpenDetail,
   } = useCalendarActionHandlers({ s, showAlert });
 
+  const handlePrev = () => {
+    if (s.viewMode === 'Day') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setDate(nextDate.getDate() - 1);
+      s.setCurrentDate(nextDate);
+      const jsDay = nextDate.getDay();
+      s.setActiveDayIndex(jsDay === 0 ? 6 : jsDay - 1);
+    } else if (s.viewMode === 'Week') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setDate(nextDate.getDate() - 7);
+      s.setCurrentDate(nextDate);
+    } else if (s.viewMode === 'Month') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setMonth(nextDate.getMonth() - 1);
+      s.setCurrentDate(nextDate);
+    }
+  };
+
+  const handleNext = () => {
+    if (s.viewMode === 'Day') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      s.setCurrentDate(nextDate);
+      const jsDay = nextDate.getDay();
+      s.setActiveDayIndex(jsDay === 0 ? 6 : jsDay - 1);
+    } else if (s.viewMode === 'Week') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setDate(nextDate.getDate() + 7);
+      s.setCurrentDate(nextDate);
+    } else if (s.viewMode === 'Month') {
+      const nextDate = new Date(s.currentDate);
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      s.setCurrentDate(nextDate);
+    }
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    s.setCurrentDate(today);
+    const jsDay = today.getDay();
+    s.setActiveDayIndex(jsDay === 0 ? 6 : jsDay - 1);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-neutral-900 overflow-hidden relative">
       <CalendarWorkspaceTabs
@@ -43,6 +86,8 @@ export function CalendarView() {
         onOpenNotifications={() => s.setNotificationsOpen((p) => !p)}
         unreadNotifications={s.notifications.some((n) => !n.read)}
         onOpenInvite={() => s.setInviteModalOpen(true)}
+        userName={s.userName}
+        activeEmail={s.activeEmail}
       />
 
       <CalendarWorkspaceMenu
@@ -102,9 +147,10 @@ export function CalendarView() {
           <CalendarToolbar
             viewMode={s.viewMode}
             onViewModeChange={s.setViewMode}
-            onPrev={() => s.setActiveDayIndex((prev) => (prev > 0 ? prev - 1 : 6))}
-            onNext={() => s.setActiveDayIndex((prev) => (prev < 6 ? prev + 1 : 0))}
-            onToday={() => s.setActiveDayIndex(1)}
+            currentDate={s.currentDate}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onToday={handleToday}
             searchQuery={s.searchQuery}
             onSearchChange={s.setSearchQuery}
             onNewSchedule={handleNewSchedule}
@@ -116,11 +162,18 @@ export function CalendarView() {
           {s.viewMode === 'Week' && (
             <CalendarWeekGrid
               events={filteredEvents}
+              currentDate={s.currentDate}
               onSlotClick={handleOpenSlot}
               onEventClick={handleOpenDetail}
               pendingSlot={s.createModalOpen ? { dayIndex: s.slotDay, hour: s.slotHour } : null}
               onSelectDayHeader={(day) => {
                 s.setActiveDayIndex(day);
+                const jsDay = s.currentDate.getDay();
+                const currentIdx = jsDay === 0 ? 6 : jsDay - 1;
+                const diff = day - currentIdx;
+                const targetDate = new Date(s.currentDate);
+                targetDate.setDate(targetDate.getDate() + diff);
+                s.setCurrentDate(targetDate);
                 s.setViewMode('Day');
               }}
             />
@@ -130,6 +183,7 @@ export function CalendarView() {
             <CalendarDayView
               events={filteredEvents}
               activeDayIndex={s.activeDayIndex}
+              currentDate={s.currentDate}
               onSlotClick={handleOpenSlot}
               onEventClick={handleOpenDetail}
             />
@@ -138,6 +192,7 @@ export function CalendarView() {
           {s.viewMode === 'Month' && (
             <CalendarMonthView
               events={filteredEvents}
+              currentDate={s.currentDate}
               onSlotClick={handleOpenSlot}
               onEventClick={handleOpenDetail}
             />

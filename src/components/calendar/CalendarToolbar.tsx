@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 interface CalendarToolbarProps {
   viewMode: CalendarViewMode;
   onViewModeChange: (mode: CalendarViewMode) => void;
+  currentDate?: Date;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
@@ -23,6 +24,7 @@ interface CalendarToolbarProps {
 export function CalendarToolbar({
   viewMode,
   onViewModeChange,
+  currentDate,
   onPrev,
   onNext,
   onToday,
@@ -120,7 +122,7 @@ export function CalendarToolbar({
 
         {/* Current Month & Year Header */}
         <h2 className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-100 px-1 shrink-0">
-          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          {(currentDate || new Date()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </h2>
 
         {/* User Timezone indicator - hidden on smaller screens */}

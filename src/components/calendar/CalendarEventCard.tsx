@@ -96,15 +96,25 @@ export function CalendarEventCard({ event, onClick, startHourOffset = 8 }: Calen
       {/* Footer Attendees Avatars & Count */}
       <div className="flex items-center justify-between pt-1 mt-auto">
         <div className="flex items-center -space-x-1.5 overflow-hidden">
-          {event.participants.map((p) => (
-            <img
-              key={p.id}
-              src={p.avatar}
-              alt={p.name}
-              title={p.name}
-              className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 object-cover"
-            />
-          ))}
+          {event.participants.map((p) =>
+            p.avatar ? (
+              <img
+                key={p.id}
+                src={p.avatar}
+                alt={p.name}
+                title={p.name}
+                className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 object-cover"
+              />
+            ) : (
+              <div
+                key={p.id}
+                title={p.name}
+                className="w-5 h-5 rounded-full border border-white dark:border-neutral-900 bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-[9px] font-bold flex items-center justify-center shrink-0 uppercase"
+              >
+                {p.name.charAt(0) || 'U'}
+              </div>
+            )
+          )}
           {event.extraAttendeesCount && (
             <div className="h-5 px-1.5 rounded-full bg-white/90 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-[10px] font-bold text-neutral-700 dark:text-neutral-200 flex items-center justify-center shadow-2xs">
               {event.extraAttendeesCount}+

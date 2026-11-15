@@ -23,6 +23,7 @@ export function CalendarModals({ s }: CalendarModalsProps) {
         onSave={s.handleSaveSchedule}
         initialDayIndex={s.slotDay}
         initialHour={s.slotHour}
+        initialDate={s.slotDate}
         initialEvent={s.selectedEvent}
       />
 

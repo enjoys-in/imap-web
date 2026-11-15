@@ -17,6 +17,8 @@ interface CalendarWorkspaceTabsProps {
   onOpenNotifications: () => void;
   unreadNotifications: boolean;
   onOpenInvite: () => void;
+  userName?: string;
+  activeEmail?: string;
 }
 
 export function CalendarWorkspaceTabs({
@@ -31,6 +33,8 @@ export function CalendarWorkspaceTabs({
   onOpenNotifications,
   unreadNotifications,
   onOpenInvite,
+  userName,
+  activeEmail,
 }: CalendarWorkspaceTabsProps) {
   return (
     <header className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-[#f8f9fa] dark:bg-[#121212] px-3 flex items-center justify-between shrink-0 select-none relative">
@@ -40,18 +44,18 @@ export function CalendarWorkspaceTabs({
           onClick={onOpenWorkspaceMenu}
           className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer text-left group"
         >
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
-            ✽
+          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 uppercase">
+            {userName ? userName.charAt(0) : '✽'}
           </div>
           <div className="hidden sm:flex flex-col text-left leading-tight">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                Agus Ardhi
+              <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[130px]">
+                {userName || 'My Calendar'}
               </span>
               <ChevronDown className="w-3 h-3 text-neutral-400 group-hover:text-neutral-700" />
             </div>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-              Cansaas Studio
+            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate max-w-[130px]">
+              {activeEmail || 'AirSend Workspace'}
             </span>
           </div>
         </button>
