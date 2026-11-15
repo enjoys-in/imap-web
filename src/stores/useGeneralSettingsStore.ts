@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { NotificationActionType } from '@/constants';
 
 const STORAGE_KEY = 'airsend_general_settings';
 
@@ -55,6 +56,8 @@ export interface GeneralSettingsState {
   quickActions: QuickActionType[];
   swipeRightAction: SwipeActionType;
   swipeLeftAction: SwipeActionType;
+  notificationInAppActions?: NotificationActionType[];
+  notificationPushActions?: NotificationActionType[];
   // Notification rules
   inAppNotificationsEnabled: boolean;
   inAppNotificationAudience: NotificationAudience;
@@ -121,6 +124,8 @@ const DEFAULT_SETTINGS = {
   quickActions: ['flag', 'pin', 'delete'] as QuickActionType[],
   swipeRightAction: 'read' as SwipeActionType,
   swipeLeftAction: 'delete' as SwipeActionType,
+  notificationInAppActions: ['open', 'read'] as NotificationActionType[],
+  notificationPushActions: ['open', 'read'] as NotificationActionType[],
   inAppNotificationsEnabled: true,
   inAppNotificationAudience: 'all' as NotificationAudience,
   inAppMentionsOnly: false,

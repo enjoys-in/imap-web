@@ -8,6 +8,7 @@ import { useFolders, useAccounts } from '@/hooks/useEmailsQuery';
 import { FolderItem } from './FolderItem';
 import { FolderContextMenu } from './FolderContextMenu';
 import { SidebarQuota } from './SidebarQuota';
+import { SidebarUpcomingMeetings } from './SidebarUpcomingMeetings';
 import { SidebarAccountsList } from './SidebarAccountsList';
 import { SidebarFolderActions } from './SidebarFolderActions';
 import { MailFolder } from '@/types';
@@ -127,6 +128,9 @@ export function FolderSidebar({
 
         <SidebarFolderActions activeAccId={activeAccId} />
       </div>
+
+      {/* Upcoming Meetings Accordion Section */}
+      <SidebarUpcomingMeetings />
 
       {/* Docked Quota Section: Just above version footer */}
       <SidebarQuota />

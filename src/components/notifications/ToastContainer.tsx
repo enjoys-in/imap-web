@@ -44,6 +44,31 @@ export function ToastContainer() {
                 {toast.description}
               </p>
             )}
+
+            {toast.actions && toast.actions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-1.5 border-t border-neutral-100 dark:border-neutral-700/60">
+                {toast.actions.map((act, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      act.onClick();
+                      removeToast(toast.id);
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer shadow-xs',
+                      act.variant === 'primary'
+                        ? 'bg-[#0078d4] hover:bg-[#106ebe] text-white'
+                        : act.variant === 'danger'
+                        ? 'bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:text-red-400 border border-red-200 dark:border-red-900/60'
+                        : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-600'
+                    )}
+                  >
+                    {act.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <button

@@ -47,14 +47,24 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
+  const action = event.action || 'open';
 
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
       if (open) {
-        await open.focus();
-        open.postMessage({ type: 'airsend:open-mail', folder: data.folder, uid: data.uid });
+        if (action === 'open') {
+          await open.focus();
+          open.postMessage({ type: 'airsend:open-mail', folder: data.folder, uid: data.uid });
+        } else {
+          open.postMessage({
+            type: 'airsend:notification-action',
+            action,
+            folder: data.folder,
+            uid: data.uid,
+          });
+        }
         return;
       }
       await self.clients.openWindow(sameOriginUrl(data.url));

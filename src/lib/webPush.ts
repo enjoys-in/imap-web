@@ -7,6 +7,8 @@ import {
   type PushSubscriptionJson,
   type PushTestResult,
 } from '@/lib/api/handlers/push';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
+import { NOTIFICATION_ACTIONS } from '@/constants';
 
 export const PUSH_WORKER_URL = '/sw.js';
 const NOTIFICATION_ICON = '/favicon.ico';
@@ -147,12 +149,33 @@ export async function showMailNotification(mail: MailNotification): Promise<void
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
     return;
   }
+  const { notificationPushActions } = useGeneralSettingsStore.getState();
+  const pushActions = (notificationPushActions || [NOTIFICATION_ACTIONS.OPEN, NOTIFICATION_ACTIONS.READ])
+    .slice(0, 2)
+    .map((actionId) => {
+      switch (actionId) {
+        case NOTIFICATION_ACTIONS.OPEN:
+          return { action: 'open', title: 'Open' };
+        case NOTIFICATION_ACTIONS.READ:
+          return { action: 'read', title: 'Mark as read' };
+        case NOTIFICATION_ACTIONS.DELETE:
+          return { action: 'delete', title: 'Delete' };
+        case NOTIFICATION_ACTIONS.ARCHIVE:
+          return { action: 'archive', title: 'Archive' };
+        case NOTIFICATION_ACTIONS.FLAG:
+          return { action: 'flag', title: 'Flag' };
+        default:
+          return { action: actionId, title: actionId };
+      }
+    });
+
   const options: NotificationOptions = {
     body: mail.body,
     tag: mail.tag,
     icon: NOTIFICATION_ICON,
     badge: NOTIFICATION_ICON,
     data: { url: '/', folder: mail.folder, uid: mail.uid },
+    ...(pushActions.length > 0 ? { actions: pushActions as any } : {}),
   };
   try {
     const registration = isPushSupported()

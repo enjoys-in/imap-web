@@ -48,6 +48,19 @@ export const CALENDAR_HEALTH_CONFIG = {
 } as const;
 
 /**
+ * Notification Action Types for In-App & Web Push
+ */
+export const NOTIFICATION_ACTIONS = {
+  OPEN: 'open',
+  READ: 'read',
+  DELETE: 'delete',
+  ARCHIVE: 'archive',
+  FLAG: 'flag',
+} as const;
+
+export type NotificationActionType = (typeof NOTIFICATION_ACTIONS)[keyof typeof NOTIFICATION_ACTIONS];
+
+/**
  * Application Custom Events
  */
 export const APP_EVENTS = {
