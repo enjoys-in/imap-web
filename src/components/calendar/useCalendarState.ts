@@ -43,6 +43,9 @@ const toProject = (calendar: UserCalendar): ProjectItem => ({
   name: calendar.name,
   color: calendar.color,
   icon: projectIcon(calendar),
+  hasByoSmtp: calendar.hasByoSmtp,
+  byoSmtpFrom: calendar.byoSmtpFrom,
+  canSendInvitations: calendar.canSendInvitations,
 });
 
 function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
@@ -337,9 +340,30 @@ export function useCalendarState() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [addProjectModalOpen, setAddProjectModalOpen] = useState(false);
+  const [smtpModalOpen, setSmtpModalOpen] = useState(false);
+  const [smtpCalendar, setSmtpCalendar] = useState<UserCalendar | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [slotDay, setSlotDay] = useState(1);
   const [slotHour, setSlotHour] = useState(9);
+
+  const handleOpenSmtpModal = useCallback(
+    (calendarId: string) => {
+      const cal = calendars.find((c) => c.id === calendarId) || null;
+      if (cal) {
+        setSmtpCalendar(cal);
+        setSmtpModalOpen(true);
+      }
+    },
+    [calendars]
+  );
+
+  const activeCalendar = useMemo<UserCalendar | null>(() => {
+    if (selectedProject) {
+      const matched = calendars.find((c) => c.name === selectedProject);
+      if (matched) return matched;
+    }
+    return calendars.find((c) => c.isDefault) || calendars[0] || null;
+  }, [calendars, selectedProject]);
 
   const handleSelectTab = (id: string) => {
     setTabs((prev) => prev.map((t) => ({ ...t, active: t.id === id })));
@@ -604,6 +628,11 @@ export function useCalendarState() {
     setInviteModalOpen,
     addProjectModalOpen,
     setAddProjectModalOpen,
+    smtpModalOpen,
+    setSmtpModalOpen,
+    smtpCalendar,
+    handleOpenSmtpModal,
+    activeCalendar,
     selectedEvent,
     setSelectedEvent,
     slotDay,

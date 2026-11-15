@@ -16,6 +16,8 @@ import {
   Command,
   Share2,
   CalendarClock,
+  Mail,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTeamAvailabilityStore } from '@/stores/useTeamAvailabilityStore';
@@ -25,6 +27,9 @@ export interface ProjectItem {
   name: string;
   color: string;
   icon: string;
+  hasByoSmtp?: boolean;
+  byoSmtpFrom?: string;
+  canSendInvitations?: boolean;
 }
 
 interface CalendarSidebarProps {
@@ -38,6 +43,7 @@ interface CalendarSidebarProps {
   onOpenSettings: () => void;
   onOpenReleaseNotes: () => void;
   onShareAvailability?: () => void;
+  onConfigureSmtp?: (calendarId: string) => void;
 }
 
 const ESSENTIALS = [
@@ -61,6 +67,7 @@ export function CalendarSidebar({
   onOpenSettings,
   onOpenReleaseNotes,
   onShareAvailability,
+  onConfigureSmtp,
 }: CalendarSidebarProps) {
   const sharedWithMe = useTeamAvailabilityStore((s) => s.sharedWithMe);
   const sharedCalendars = useTeamAvailabilityStore((s) => s.sharedCalendars);
@@ -190,24 +197,57 @@ export function CalendarSidebar({
               {projects.map((proj) => {
                 const isSelected = selectedProject === proj.name;
                 return (
-                  <button
+                  <div
                     key={proj.id}
                     onClick={() => onSelectProject(proj.name)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left truncate cursor-pointer',
+                      'group w-full flex items-center justify-between px-2.5 h-8 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer',
                       isSelected
                         ? 'bg-neutral-200/70 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold'
                         : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/40 dark:hover:bg-neutral-800/30'
                     )}
                   >
-                    <span
-                      style={{ backgroundColor: proj.color }}
-                      className="w-4 h-4 rounded text-white flex items-center justify-center text-[10px] font-bold shrink-0"
-                    >
-                      {proj.icon}
-                    </span>
-                    <span className="truncate">{proj.name}</span>
-                  </button>
+                    <div className="flex items-center gap-2 truncate min-w-0">
+                      <span
+                        style={{ backgroundColor: proj.color }}
+                        className="w-4 h-4 rounded text-white flex items-center justify-center text-[10px] font-bold shrink-0"
+                      >
+                        {proj.icon}
+                      </span>
+                      <span className="truncate">{proj.name}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-1">
+                      {proj.hasByoSmtp ? (
+                        <span
+                          title={`BYO SMTP configured (${proj.byoSmtpFrom || 'Active'})`}
+                          className="text-emerald-500 hover:text-emerald-600 p-0.5"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                        </span>
+                      ) : (
+                        <span
+                          title="Missing SMTP: Outgoing invitations are disabled"
+                          className="text-amber-500 hover:text-amber-600 p-0.5"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                      {onConfigureSmtp && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onConfigureSmtp(proj.id);
+                          }}
+                          title="Configure SMTP settings"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded hover:bg-neutral-300/50 dark:hover:bg-neutral-700 transition-opacity"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </nav>

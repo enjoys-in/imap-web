@@ -6,6 +6,7 @@ import { CalendarWorkspaceTabs } from './CalendarWorkspaceTabs';
 import { CalendarWorkspaceMenu } from './CalendarWorkspaceMenu';
 import { CalendarNotificationsPopover } from './CalendarNotificationsPopover';
 import { CalendarMissingBanner } from './CalendarMissingBanner';
+import { CalendarSmtpBanner } from './CalendarSmtpBanner';
 import { CalendarSidebar } from './CalendarSidebar';
 import { CalendarToolbar } from './CalendarToolbar';
 import { CalendarWeekGrid } from './CalendarWeekGrid';
@@ -117,6 +118,11 @@ export function CalendarView() {
         onReload={() => void s.reloadCalendars()}
       />
 
+      <CalendarSmtpBanner
+        calendar={s.activeCalendar}
+        onConfigureSmtp={s.handleOpenSmtpModal}
+      />
+
       <div className="flex-1 flex overflow-hidden">
         <CalendarSidebar
           open={s.sidebarOpen}
@@ -133,6 +139,7 @@ export function CalendarView() {
           projects={s.projects}
           onAddProject={handleAddProjectClick}
           onShareAvailability={() => s.setInviteModalOpen(true)}
+          onConfigureSmtp={s.handleOpenSmtpModal}
           onOpenSettings={() => router.push('/settings/calendar')}
           onOpenReleaseNotes={() =>
             showAlert({

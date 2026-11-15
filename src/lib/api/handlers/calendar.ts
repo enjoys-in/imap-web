@@ -28,6 +28,9 @@ export interface UserCalendar {
   ownerEmail?: string;
   tenant_id?: string;
   tenantId?: string;
+  hasByoSmtp?: boolean;
+  byoSmtpFrom?: string;
+  canSendInvitations?: boolean;
 }
 
 export interface SharedCalendar extends UserCalendar {
@@ -84,6 +87,9 @@ interface JmapCalendar {
   isDefault?: boolean;
   isVisible?: boolean;
   isReadOnly?: boolean;
+  hasByoSmtp?: boolean;
+  byoSmtpFrom?: string;
+  canSendInvitations?: boolean;
 }
 
 interface JmapSetFailure {
@@ -323,6 +329,9 @@ function toUserCalendar(raw: JmapCalendar, defaultDomain?: string): UserCalendar
     isReadOnly: raw.isReadOnly,
     tenant_id: domain,
     tenantId: domain,
+    hasByoSmtp: Boolean(raw.hasByoSmtp),
+    byoSmtpFrom: raw.byoSmtpFrom || '',
+    canSendInvitations: Boolean(raw.hasByoSmtp || raw.canSendInvitations),
   };
 }
 
@@ -1257,4 +1266,71 @@ export function subscribeCalendarEvents(
   }
 
   return stream.subscribe(handlerOrCallback);
+}
+
+export interface CalendarSmtpConfig {
+  configured: boolean;
+  id?: string;
+  calendar_id?: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  from_email?: string;
+  from_name?: string;
+  reply_to?: string;
+  encryption?: 'none' | 'ssl' | 'starttls';
+  status?: 'active' | 'failing' | 'disabled';
+  last_tested_at?: string;
+  last_error?: string;
+}
+
+export interface SaveCalendarSmtpInput {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  from_email: string;
+  from_name?: string;
+  reply_to?: string;
+  encryption: 'none' | 'ssl' | 'starttls';
+}
+
+export async function getCalendarSmtp(calendarId: string): Promise<CalendarSmtpConfig> {
+  try {
+    const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/smtp`;
+    const res = await apiClient.get<any>(url);
+    return res?.result || res || { configured: false };
+  } catch (err) {
+    console.warn('[CalDev] getCalendarSmtp failed:', err);
+    return { configured: false };
+  }
+}
+
+export async function saveCalendarSmtp(
+  calendarId: string,
+  input: SaveCalendarSmtpInput
+): Promise<CalendarSmtpConfig> {
+  const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/smtp`;
+  const res = await apiClient.put<any>(url, input);
+  return res?.result || res;
+}
+
+export async function testCalendarSmtp(
+  calendarId: string,
+  input?: Partial<SaveCalendarSmtpInput>
+): Promise<{ success: boolean; message?: string }> {
+  const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/smtp/test`;
+  const res = await apiClient.post<any>(url, input || {});
+  return { success: true, message: res?.message || 'SMTP verified successfully' };
+}
+
+export async function deleteCalendarSmtp(calendarId: string): Promise<boolean> {
+  try {
+    const url = `${getCalendarBaseUrl()}/api/calendars/${calendarId}/smtp`;
+    await apiClient.delete(url);
+    return true;
+  } catch (err) {
+    console.warn('[CalDev] deleteCalendarSmtp failed:', err);
+    return false;
+  }
 }

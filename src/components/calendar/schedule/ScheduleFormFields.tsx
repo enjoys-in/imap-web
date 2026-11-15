@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import {
   Smile, Users, UserPlus, ChevronDown, MapPin, Video, FileText,
   Paperclip, Image as ImageIcon, Sun, Sparkles, Accessibility,
-  ClipboardList, Check,
+  ClipboardList, Check, AlertTriangle,
 } from 'lucide-react';
 import { CHARMS } from './scheduleConstants';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface ScheduleFormFieldsProps {
   attendees: string[];
   onAddAttendee: (email: string) => void;
   onRemoveAttendee: (email: string) => void;
+  hasByoSmtp?: boolean;
   timeRowNode?: React.ReactNode;
   location: string;
   setLocation: (loc: string) => void;

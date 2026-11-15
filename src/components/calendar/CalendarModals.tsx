@@ -5,6 +5,7 @@ import { CreateScheduleModal } from './CreateScheduleModal';
 import { CalendarEventDetailModal } from './CalendarEventDetailModal';
 import { CalendarInviteModal } from './CalendarInviteModal';
 import { CalendarAddProjectModal } from './CalendarAddProjectModal';
+import { CalendarSmtpModal } from './CalendarSmtpModal';
 import { useCalendarState } from './useCalendarState';
 
 interface CalendarModalsProps {
@@ -56,6 +57,13 @@ export function CalendarModals({ s }: CalendarModalsProps) {
         open={s.addProjectModalOpen}
         onClose={() => s.setAddProjectModalOpen(false)}
         onAdd={s.handleAddProject}
+      />
+
+      <CalendarSmtpModal
+        open={s.smtpModalOpen}
+        calendar={s.smtpCalendar}
+        onClose={() => s.setSmtpModalOpen(false)}
+        onSaved={() => void s.reloadCalendars()}
       />
     </>
   );
