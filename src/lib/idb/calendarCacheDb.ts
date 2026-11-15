@@ -84,6 +84,24 @@ export async function saveCachedCalendars(calendars: UserCalendar[]): Promise<vo
   }, undefined);
 }
 
+export async function updateCachedCalendarSmtp(
+  calendarId: string,
+  hasByoSmtp: boolean,
+  byoSmtpFrom?: string
+): Promise<void> {
+  await withDb(async (db) => {
+    const existing = await db.calendars.get(calendarId);
+    if (existing) {
+      await db.calendars.update(calendarId, {
+        hasByoSmtp,
+        byoSmtpFrom: byoSmtpFrom || '',
+        canSendInvitations: hasByoSmtp,
+        cachedAt: Date.now(),
+      });
+    }
+  }, undefined);
+}
+
 // ──────────────── Cached Timezone & Settings ────────────────
 
 export async function getCachedCalendarTimezone(): Promise<string> {

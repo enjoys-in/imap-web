@@ -8,7 +8,7 @@ import {
 } from '@/lib/api/handlers/calendar';
 import { checkCalendarHealth } from '@/lib/api/handlers/calendarHealth';
 import {
-  getCachedCalendars, saveCachedCalendars,
+  getCachedCalendars, saveCachedCalendars, updateCachedCalendarSmtp,
   getAllCachedAccountStatuses, saveAccountCalendarStatus, getCachedCalendarHealth,
 } from '@/lib/idb/calendarCacheDb';
 import { STORAGE_KEYS } from '@/constants';
@@ -34,6 +34,7 @@ interface CalendarsState {
   onboard: (email?: string, name?: string) => Promise<any>;
   pollHealth: () => Promise<boolean>;
   isCalendarAddedForAccount: (email?: string) => boolean;
+  updateCalendarSmtp: (calendarId: string, hasByoSmtp: boolean, byoSmtpFrom?: string) => void;
 }
 
 let inflight: Promise<void> | null = null;
@@ -124,6 +125,23 @@ export const useCalendarsStore = create<CalendarsState>((set, get) => ({
     void saveCachedCalendars(nextList);
     set({ calendars: nextList, status: 'ready', error: null });
     return updated;
+  },
+
+  updateCalendarSmtp: (calendarId: string, hasByoSmtp: boolean, byoSmtpFrom?: string) => {
+    const current = get().calendars;
+    const nextList = current.map((c) =>
+      c.id === calendarId
+        ? {
+            ...c,
+            hasByoSmtp,
+            byoSmtpFrom: byoSmtpFrom || '',
+            canSendInvitations: hasByoSmtp,
+          }
+        : c
+    );
+    void saveCachedCalendars(nextList);
+    void updateCachedCalendarSmtp(calendarId, hasByoSmtp, byoSmtpFrom);
+    set({ calendars: nextList });
   },
 
   onboard: async (email?: string, name?: string) => {

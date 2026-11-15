@@ -10,6 +10,7 @@ import {
   deleteCalendarSmtp,
   type CalendarSmtpConfig,
 } from '@/lib/api/handlers/calendar';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
 
 interface CalendarSmtpModalProps {
   open: boolean;
@@ -146,6 +147,9 @@ export function CalendarSmtpModal({
         encryption,
       });
 
+      // Update in-memory store and IndexedDB cache immediately (zero extra network calls)
+      useCalendarsStore.getState().updateCalendarSmtp(calendar.id, true, fromEmail.trim());
+
       if (onSaved) onSaved();
       onClose();
     } catch (err: any) {
@@ -163,6 +167,10 @@ export function CalendarSmtpModal({
     setError(null);
     try {
       await deleteCalendarSmtp(calendar.id);
+
+      // Update in-memory store and IndexedDB cache immediately (zero extra network calls)
+      useCalendarsStore.getState().updateCalendarSmtp(calendar.id, false, '');
+
       if (onSaved) onSaved();
       onClose();
     } catch (err: any) {

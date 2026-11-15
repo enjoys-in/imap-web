@@ -63,7 +63,6 @@ export function CalendarModals({ s }: CalendarModalsProps) {
         open={s.smtpModalOpen}
         calendar={s.smtpCalendar}
         onClose={() => s.setSmtpModalOpen(false)}
-        onSaved={() => void s.reloadCalendars()}
       />
     </>
   );

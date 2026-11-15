@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Mail, CheckCircle2, AlertTriangle } from 'lucide-react';
 import type { UserCalendar } from '@/lib/api/handlers/calendar';
 import type { CalendarsStatus } from '@/stores/useCalendarsStore';
 
@@ -15,6 +15,7 @@ interface CalendarListCardProps {
   onRefresh: () => void;
   onOnboard: () => void;
   onboardingLoading: boolean;
+  onConfigureSmtp?: (calendar: UserCalendar) => void;
 }
 
 export function CalendarListCard({
@@ -26,6 +27,7 @@ export function CalendarListCard({
   onRefresh,
   onOnboard,
   onboardingLoading,
+  onConfigureSmtp,
 }: CalendarListCardProps) {
   // Filter calendars belonging to selected account or generic default
   const filteredCalendars = calendars.filter((c) => {
@@ -103,25 +105,62 @@ export function CalendarListCard({
       {filteredCalendars.length > 0 && (
         <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
           {filteredCalendars.map((calendar) => (
-            <li key={calendar.id} className="flex items-center gap-3 py-2 text-xs">
-              <span
-                aria-hidden
-                style={{ backgroundColor: calendar.color }}
-                className="w-3 h-3 rounded-full shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                    {calendar.name}
-                  </span>
-                  {calendar.isDefault && (
-                    <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">
-                      Default
+            <li
+              key={calendar.id}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-2.5 text-xs"
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span
+                  aria-hidden
+                  style={{ backgroundColor: calendar.color }}
+                  className="w-3 h-3 rounded-full shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                      {calendar.name}
                     </span>
+                    {calendar.isDefault && (
+                      <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  {calendar.description && (
+                    <p className="text-neutral-500 truncate text-[11px]">{calendar.description}</p>
                   )}
                 </div>
-                {calendar.description && (
-                  <p className="text-neutral-500 truncate text-[11px]">{calendar.description}</p>
+              </div>
+
+              {/* SMTP Status & Actions */}
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-center pl-6 sm:pl-0">
+                {calendar.hasByoSmtp ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                    <CheckCircle2 className="w-3 h-3 shrink-0" />
+                    <span className="max-w-[150px] truncate" title={calendar.byoSmtpFrom || 'Configured'}>
+                      SMTP: {calendar.byoSmtpFrom || 'Active'}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60">
+                    <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>No SMTP (Cannot send invites)</span>
+                  </span>
+                )}
+
+                {onConfigureSmtp && (
+                  <button
+                    type="button"
+                    onClick={() => onConfigureSmtp(calendar)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 ${
+                      calendar.hasByoSmtp
+                        ? 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700'
+                        : 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                    }`}
+                  >
+                    <Mail className="w-3 h-3" />
+                    <span>{calendar.hasByoSmtp ? 'Manage SMTP' : 'Configure SMTP'}</span>
+                  </button>
                 )}
               </div>
             </li>

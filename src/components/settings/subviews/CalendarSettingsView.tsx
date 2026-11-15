@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useAccounts } from '@/hooks/useEmailsQuery';
+import type { UserCalendar } from '@/lib/api/handlers/calendar';
+import { CalendarSmtpModal } from '@/components/calendar/CalendarSmtpModal';
 import { CalendarAccountSelector } from './calendar/CalendarAccountSelector';
 import { AddMeToCalendarSection } from './calendar/AddMeToCalendarSection';
 import { CalendarListCard } from './calendar/CalendarListCard';
@@ -20,6 +22,7 @@ export function CalendarSettingsView() {
 
   const [selectedEmail, setSelectedEmail] = useState<string>('');
   const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const [smtpModalCal, setSmtpModalCal] = useState<UserCalendar | null>(null);
 
   useEffect(() => {
     void load();
@@ -85,12 +88,25 @@ export function CalendarSettingsView() {
         onRefresh={() => void load({ force: true })}
         onOnboard={() => void handleOnboard()}
         onboardingLoading={onboardingLoading}
+        onConfigureSmtp={(cal) => setSmtpModalCal(cal)}
       />
 
       {/* Feature Settings Card for the account's calendar */}
-      {accountCalendar && <CalendarFeatureSettingsCard calendar={accountCalendar} />}
+      {accountCalendar && (
+        <CalendarFeatureSettingsCard
+          calendar={accountCalendar}
+          onConfigureSmtp={(cal) => setSmtpModalCal(cal)}
+        />
+      )}
 
       <WeekStartCard />
+
+      {/* BYO SMTP Modal for configuring outbound email & RSVP */}
+      <CalendarSmtpModal
+        open={Boolean(smtpModalCal)}
+        calendar={smtpModalCal ? calendars.find((c) => c.id === smtpModalCal.id) || smtpModalCal : null}
+        onClose={() => setSmtpModalCal(null)}
+      />
     </div>
   );
 }
