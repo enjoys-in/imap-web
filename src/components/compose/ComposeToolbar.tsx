@@ -1,17 +1,20 @@
 'use client';
 
 import React from 'react';
-import { Send, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useComposeStore, useMailStore } from '@/stores';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
+import { ComposeScheduleSendMenu } from './ComposeScheduleSendMenu';
+import { ComposeSuggestTimesMenu } from './ComposeSuggestTimesMenu';
 
 interface ComposeToolbarProps {
   onSend: () => void;
+  onScheduleSend?: (scheduledTime: Date) => void;
 }
 
-export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
+export function ComposeToolbar({ onSend, onScheduleSend }: ComposeToolbarProps) {
   const close = useComposeStore((s) => s.close);
   const draftId = useComposeStore((s) => s.draftId);
   const deleteEmail = useMailStore((s) => s.deleteEmail);
@@ -27,17 +30,14 @@ export function ComposeToolbar({ onSend }: ComposeToolbarProps) {
   return (
     <div className="h-10 border-b border-neutral-200 dark:border-neutral-700 px-3 flex items-center justify-between bg-white dark:bg-neutral-900 select-none">
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onSend}
-          className="h-7 px-3 bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold rounded shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <Send className="w-3.5 h-3.5" />
-          <span>Send</span>
-        </button>
+        <ComposeScheduleSendMenu
+          onSend={onSend}
+          onScheduleSend={onScheduleSend || (() => onSend())}
+        />
 
         <ComposeAttachMenu variant="button" />
         <ComposeSignatureMenu />
+        <ComposeSuggestTimesMenu />
       </div>
 
       <button

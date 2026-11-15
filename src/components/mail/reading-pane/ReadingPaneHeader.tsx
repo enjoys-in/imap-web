@@ -4,12 +4,17 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   CornerUpLeft, ReplyAll, CornerUpRight, LayoutGrid,
-  MoreHorizontal, ChevronDown, ChevronUp, Printer, Flag, Trash2, Download
+  MoreHorizontal, ChevronDown, ChevronUp, Printer, Flag, Trash2, Download, CalendarPlus
 } from 'lucide-react';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
 import { getRegisteredFolder, folderSlug } from '@/lib/folders';
 import { ProfileCardModal, ProfileContactData } from '@/components/profile/ProfileCardModal';
+import { CreateScheduleModal } from '@/components/calendar/CreateScheduleModal';
+import { CalendarEvent } from '@/components/calendar/types';
+import { createAppointment } from '@/lib/api/handlers/calendar';
+import { useCalendarsStore } from '@/stores/useCalendarsStore';
+import { useToastStore } from '@/stores/useToastStore';
 import { ReadingPaneHeaderDetails } from './ReadingPaneHeaderDetails';
 import { exportEmailToEml } from '@/lib/emlExport';
 import { SnoozeMenu } from '../SnoozeMenu';
@@ -36,7 +41,43 @@ export function ReadingPaneHeader({
   const { account, accounts } = useSession();
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isConvertEventOpen, setIsConvertEventOpen] = useState(false);
   const [profileContact, setProfileContact] = useState<ProfileContactData | null>(null);
+
+  const addToast = useToastStore((s) => s.addToast);
+  const reloadCalendars = useCalendarsStore((s) => s.load);
+
+  const handleSaveEvent = async (event: Partial<CalendarEvent>) => {
+    try {
+      const now = new Date();
+      const startHour = event.startHour ?? 10;
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(startHour), (startHour % 1) * 60);
+      const end = new Date(start.getTime() + (event.durationHours || 1) * 3600000);
+
+      await createAppointment({
+        title: event.title || email.subject || 'Meeting',
+        startUtc: start.toISOString(),
+        endUtc: end.toISOString(),
+        location: event.location || '',
+        notes: event.description || `Converted from email: "${email.subject}"\nFrom: ${email.fromName} <${email.fromAddress}>`,
+        attendees: [email.fromAddress],
+      });
+
+      addToast({
+        title: 'Event Created',
+        description: `"${event.title || email.subject}" has been added to your calendar.`,
+        type: 'success',
+      });
+      reloadCalendars({ force: true }).catch(() => {});
+      setIsConvertEventOpen(false);
+    } catch (err: any) {
+      addToast({
+        title: 'Failed to create event',
+        description: err?.message || 'Could not schedule event.',
+        type: 'error',
+      });
+    }
+  };
 
   const formattedDate = format(new Date(email.date), 'EEE M/d/yyyy h:mm a');
   const senderName = email.fromName || email.fromAddress;
@@ -96,13 +137,17 @@ export function ReadingPaneHeader({
             <button onClick={onReplyAll} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-purple-400 dark:text-purple-300 hidden sm:inline-flex" title="Reply all"><ReplyAll className="w-4 h-4" /></button>
             <button onClick={onForward} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-cyan-400 dark:text-cyan-300" title="Forward"><CornerUpRight className="w-4 h-4" /></button>
             <Link href={`/mail/view/${email.id}#${openInWindowSlug}`} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-blue-500 dark:text-blue-400" title="Open in new window"><LayoutGrid className="w-4 h-4" /></Link>
+            <button onClick={() => setIsConvertEventOpen(true)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-amber-500 dark:text-amber-400" title="Convert email to calendar event"><CalendarPlus className="w-4 h-4" /></button>
 
             <div className="relative">
               <button onClick={() => setIsMoreOpen((v) => !v)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer" title="More actions"><MoreHorizontal className="w-4 h-4" /></button>
               {isMoreOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsMoreOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-[#383838] rounded-md shadow-2xl py-1 z-40 text-xs">
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-[#383838] rounded-md shadow-2xl py-1 z-40 text-xs">
+                    <button onClick={() => { setIsConvertEventOpen(true); setIsMoreOpen(false); }} className="w-full px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-[#333333] flex items-center gap-2 cursor-pointer text-blue-600 dark:text-blue-400 font-medium">
+                      <CalendarPlus className="w-3.5 h-3.5" /><span>Create Event from Email</span>
+                    </button>
                     <button onClick={() => { exportEmailToEml(email); setIsMoreOpen(false); }} className="w-full px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-[#333333] flex items-center gap-2 cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium">
                       <Download className="w-3.5 h-3.5" /><span>Download (.eml)</span>
                     </button>
@@ -132,6 +177,32 @@ export function ReadingPaneHeader({
         />
       )}
       <ProfileCardModal contact={profileContact} isOpen={Boolean(profileContact)} onClose={() => setProfileContact(null)} />
+
+      {isConvertEventOpen && (
+        <CreateScheduleModal
+          open={isConvertEventOpen}
+          onClose={() => setIsConvertEventOpen(false)}
+          onSave={handleSaveEvent}
+          initialEvent={{
+            id: `convert-${email.id}`,
+            title: email.subject || 'Meeting',
+            dayIndex: (new Date().getDay() + 6) % 7,
+            startTime: '10:00 AM',
+            endTime: '11:00 AM',
+            startHour: 10,
+            durationHours: 1,
+            color: 'blue',
+            participants: [
+              {
+                id: 'p-orig',
+                name: email.fromName || email.fromAddress,
+                avatar: email.fromName?.[0] || 'U',
+              },
+            ],
+            description: `Email conversation: "${email.subject}"\nFrom: ${email.fromName} <${email.fromAddress}>\n\n${email.preview || ''}`,
+          }}
+        />
+      )}
     </div>
   );
 }

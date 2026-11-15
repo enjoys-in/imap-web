@@ -13,6 +13,8 @@ import { ReadingPaneSecurityBanner } from './ReadingPaneSecurityBanner';
 import { ReadingPaneAttachments } from './ReadingPaneAttachments';
 import { ReadingPaneOtpBanner } from './ReadingPaneOtpBanner';
 import { ReadingPaneRsvpCard } from './ReadingPaneRsvpCard';
+import { ReadingPaneUnsubscribeBanner } from './ReadingPaneUnsubscribeBanner';
+import { ReadingPanePackageTracker } from './ReadingPanePackageTracker';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
@@ -246,6 +248,21 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       />
 
       <div className="flex-1 overflow-y-auto">
+        <ReadingPaneUnsubscribeBanner
+          emailId={email.id}
+          fromAddress={email.fromAddress}
+          fromName={email.fromName}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+          bodyText={fetchedBody?.bodyText || inlineBodyText}
+        />
+
+        <ReadingPanePackageTracker
+          emailId={email.id}
+          subject={email.subject}
+          bodyText={fetchedBody?.bodyText || inlineBodyText}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+        />
+
         <ReadingPaneOtpBanner
           emailId={email.id}
           subject={email.subject}

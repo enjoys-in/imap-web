@@ -15,6 +15,7 @@ import { useComposeDraftSync } from './useComposeDraftSync';
 import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
 import { MailMessage } from '@/types';
+import { format } from 'date-fns';
 
 export function ComposeModal() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -140,6 +141,21 @@ export function ComposeModal() {
     );
   };
 
+  const handleScheduleSend = (scheduledTime: Date) => {
+    const accountId = useMailStore.getState().selectedAccountId;
+    if (draftId) {
+      useMailStore.getState().deleteEmail(draftId, findRegisteredSpecialFolder('Drafts', accountId)?.id);
+    }
+    close();
+
+    useToastStore.getState().addToast({
+      title: 'Email Scheduled',
+      description: `Your message to ${to || 'recipient'} will be sent on ${format(scheduledTime, 'EEEE, MMM d, yyyy h:mm a')}.`,
+      type: 'success',
+      duration: 5500,
+    });
+  };
+
   return (
     <div
       ref={containerRef}
@@ -158,7 +174,7 @@ export function ComposeModal() {
 
       {!isMinimized && (
         <>
-          <ComposeToolbar onSend={handleSend} />
+          <ComposeToolbar onSend={handleSend} onScheduleSend={handleScheduleSend} />
           <ComposeFields />
           <ComposeEditor />
         </>
