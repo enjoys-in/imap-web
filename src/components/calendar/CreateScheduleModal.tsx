@@ -58,8 +58,11 @@ export function CreateScheduleModal({
       setDurationHours(initialEvent.durationHours || 0.5);
       setDescription(initialEvent.description || '');
       setCategoryColor(initialEvent.color || 'salmon');
-      setHasOnlineMeeting(Boolean(initialEvent.meetUrl));
-      setMeetUrl(initialEvent.meetUrl || '');
+      const existingMeet =
+        initialEvent.meetUrl ||
+        (initialEvent.category && /https?:\/\//i.test(initialEvent.category) ? initialEvent.category : '');
+      setHasOnlineMeeting(Boolean(existingMeet));
+      setMeetUrl(existingMeet || '');
       if (initialEvent.startUtc || initialEvent.date) {
         setSelectedDate(new Date(initialEvent.startUtc || initialEvent.date!));
       }
@@ -88,9 +91,7 @@ export function CreateScheduleModal({
       avatar: '',
     }));
 
-    const finalMeet = hasOnlineMeeting
-      ? meetUrl.trim() || `https://teams.microsoft.com/l/meetup-join/airsend-${Math.random().toString(36).substring(2, 9)}`
-      : undefined;
+    const finalMeet = hasOnlineMeeting && meetUrl.trim() ? meetUrl.trim() : undefined;
 
     const startH = Math.floor(startHourDecimal);
     const startM = Math.round((startHourDecimal - startH) * 60);
@@ -112,9 +113,10 @@ export function CreateScheduleModal({
       startHour: startHourDecimal,
       durationHours,
       color: categoryColor,
-      category: location || (hasOnlineMeeting ? 'Online Meeting' : 'General'),
-      description: agenda ? `${description}\n\nAgenda:\n${agenda}`.trim() : description,
+      category: location.trim() || (finalMeet ? finalMeet : 'General'),
+      location: location.trim() || finalMeet || '',
       meetUrl: finalMeet,
+      description: agenda ? `${description}\n\nAgenda:\n${agenda}`.trim() : description,
       participants,
       isAllDay,
       isRecurring: isSeries,

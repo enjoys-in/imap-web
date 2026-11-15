@@ -167,9 +167,9 @@ export function CalendarEventDetailModal({
         )}
 
         {/* Meeting Link CTA */}
-        {event.meetUrl && (
+        {Boolean(event.meetUrl || (event.location && /https?:\/\//i.test(event.location))) && (
           <a
-            href={event.meetUrl}
+            href={event.meetUrl || event.location?.match(/https?:\/\/[^\s]+/i)?.[0]}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"

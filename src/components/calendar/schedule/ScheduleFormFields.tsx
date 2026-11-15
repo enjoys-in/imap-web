@@ -168,36 +168,61 @@ export function ScheduleFormFields({
         </div>
       </div>
 
-      {/* Row 5: Microsoft Teams meeting toggle */}
-      <div className="flex items-center gap-3">
-        <div className="w-7 flex items-center justify-center text-neutral-400 shrink-0">
+      {/* Row 5: Online meeting link toggle & URL input */}
+      <div className="flex items-start gap-3">
+        <div className="w-7 flex items-center justify-center pt-1 text-neutral-400 shrink-0">
           <Video className="w-4 h-4" />
         </div>
-        <div className="flex-1 flex items-center gap-3 select-none">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={hasOnlineMeeting}
-            onClick={() => {
-              const next = !hasOnlineMeeting;
-              setHasOnlineMeeting(next);
-              if (next && !meetUrl) {
-                setMeetUrl(`https://teams.microsoft.com/l/meetup-join/airsend-${Math.random().toString(36).substring(2, 9)}`);
-              }
-            }}
-            className={cn(
-              'w-9 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer select-none inline-flex items-center shrink-0',
-              hasOnlineMeeting ? 'bg-[#0078d4]' : 'bg-neutral-700'
-            )}
-          >
-            <div
+        <div className="flex-1 space-y-2 select-none">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={hasOnlineMeeting}
+              onClick={() => {
+                const next = !hasOnlineMeeting;
+                setHasOnlineMeeting(next);
+                if (!next) {
+                  setMeetUrl('');
+                }
+              }}
               className={cn(
-                'w-4 h-4 rounded-full bg-white transition-transform shadow-xs',
-                hasOnlineMeeting ? 'translate-x-4' : 'translate-x-0'
+                'w-9 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer select-none inline-flex items-center shrink-0',
+                hasOnlineMeeting ? 'bg-[#0078d4]' : 'bg-neutral-700'
               )}
-            />
-          </button>
-          <span className="text-xs text-neutral-200 font-normal">Microsoft Teams meeting</span>
+            >
+              <div
+                className={cn(
+                  'w-4 h-4 rounded-full bg-white transition-transform shadow-xs',
+                  hasOnlineMeeting ? 'translate-x-4' : 'translate-x-0'
+                )}
+              />
+            </button>
+            <span className="text-xs text-neutral-200 font-normal">Online meeting</span>
+          </div>
+
+          {hasOnlineMeeting && (
+            <div className="flex items-center gap-2 border-b border-neutral-700/80 pb-1.5 focus-within:border-[#0078d4] animate-in fade-in slide-in-from-top-1">
+              <input
+                type="url"
+                value={meetUrl}
+                onChange={(e) => setMeetUrl(e.target.value)}
+                placeholder="Enter or paste meeting link (e.g. Teams, Google Meet, Zoom)..."
+                className="w-full text-xs bg-transparent text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden py-0.5"
+                autoFocus={!meetUrl}
+              />
+              {meetUrl && (
+                <button
+                  type="button"
+                  onClick={() => setMeetUrl('')}
+                  className="text-neutral-400 hover:text-white p-0.5 rounded cursor-pointer shrink-0 text-xs"
+                  title="Clear meeting link"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

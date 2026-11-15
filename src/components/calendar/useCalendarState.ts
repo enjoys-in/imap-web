@@ -99,6 +99,13 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
     ? [{ id: 'org', name: apt.organizerName || apt.organizerEmail, avatar: '' }]
     : [];
 
+  const extractedMeetUrl =
+    apt.location && /https?:\/\/[^\s]+/i.test(apt.location)
+      ? apt.location.match(/https?:\/\/[^\s]+/i)?.[0]
+      : apt.notes && /https?:\/\/[^\s]+/i.test(apt.notes)
+      ? apt.notes.match(/https?:\/\/[^\s]+/i)?.[0]
+      : undefined;
+
   return {
     id: apt.id || apt.uid || `apt-${Date.now()}`,
     uid: apt.uid || apt.id,
@@ -111,8 +118,9 @@ function appointmentToCalendarEvent(apt: Appointment): CalendarEvent {
     color: colors[colorIndex],
     striped: Boolean(apt.isRecurring),
     category: apt.location || 'Meeting',
+    location: apt.location,
     description: apt.notes,
-    meetUrl: undefined,
+    meetUrl: extractedMeetUrl,
     participants,
     isAllDay: Boolean(apt.isAllDay),
     isRecurring: Boolean(apt.isRecurring),
@@ -454,6 +462,19 @@ export function useCalendarState() {
         const originalStart = newEventData.originalStart || selectedEvent?.originalStart;
 
         // Optimistically update UI immediately so event moves to the new position without waiting
+        const rawLoc = (newEventData.location || (newEventData.category !== 'General' && newEventData.category !== 'Online Meeting' ? newEventData.category : '') || '').trim();
+        const meet = newEventData.meetUrl?.trim();
+
+        let payloadLocation = rawLoc;
+        if (meet) {
+          payloadLocation = rawLoc && rawLoc !== meet ? `${rawLoc} • ${meet}` : meet;
+        }
+
+        let payloadNotes = newEventData.description?.trim() || '';
+        if (meet && !payloadNotes.includes(meet)) {
+          payloadNotes = payloadNotes ? `${payloadNotes}\n\nMeeting link: ${meet}` : `Meeting link: ${meet}`;
+        }
+
         setEvents((prev) =>
           prev.map((e) =>
             e.id === editingId
@@ -468,6 +489,9 @@ export function useCalendarState() {
                   startTime: newEventData.startTime || e.startTime,
                   endTime: newEventData.endTime || e.endTime,
                   title: newEventData.title || e.title,
+                  location: payloadLocation,
+                  category: payloadLocation || 'Meeting',
+                  description: payloadNotes,
                 }
               : e
           )
@@ -477,11 +501,11 @@ export function useCalendarState() {
           editingId,
           {
             title: newEventData.title,
-            location: newEventData.category,
+            location: payloadLocation,
             startUtc,
             endUtc,
             isAllDay: Boolean(newEventData.isAllDay),
-            notes: newEventData.description,
+            notes: payloadNotes,
           },
           {
             isOccurrenceOnly,
@@ -489,13 +513,26 @@ export function useCalendarState() {
           }
         );
       } else {
+        const rawLoc = (newEventData.location || (newEventData.category !== 'General' && newEventData.category !== 'Online Meeting' ? newEventData.category : '') || '').trim();
+        const meet = newEventData.meetUrl?.trim();
+
+        let payloadLocation = rawLoc;
+        if (meet) {
+          payloadLocation = rawLoc && rawLoc !== meet ? `${rawLoc} • ${meet}` : meet;
+        }
+
+        let payloadNotes = newEventData.description?.trim() || '';
+        if (meet && !payloadNotes.includes(meet)) {
+          payloadNotes = payloadNotes ? `${payloadNotes}\n\nMeeting link: ${meet}` : `Meeting link: ${meet}`;
+        }
+
         const createdApt = await createAppointment({
           title: newEventData.title || 'Untitled Schedule',
-          location: newEventData.category,
+          location: payloadLocation,
           startUtc,
           endUtc,
           isAllDay: Boolean(newEventData.isAllDay),
-          notes: newEventData.description,
+          notes: payloadNotes,
           calendarId,
           attendees: (newEventData.participants || []).map((p) => p.name).filter(Boolean),
           timeZone: newEventData.isAllDay ? undefined : Intl.DateTimeFormat().resolvedOptions().timeZone,

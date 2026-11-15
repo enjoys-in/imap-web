@@ -25,6 +25,7 @@ export interface CalendarEvent {
   color: CalendarColor;
   striped?: boolean;
   category?: string;
+  location?: string;
   description?: string;
   meetUrl?: string;
   participants: CalendarParticipant[];
