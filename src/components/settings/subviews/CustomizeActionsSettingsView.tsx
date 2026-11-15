@@ -13,12 +13,16 @@ import {
   ArrowLeft,
   Check,
   Save,
+  Bell,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import {
   useGeneralSettingsStore,
   QuickActionType,
   SwipeActionType,
 } from '@/stores/useGeneralSettingsStore';
+import { NOTIFICATION_ACTIONS, NotificationActionType } from '@/constants';
 import { useToastStore } from '@/stores/useToastStore';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +56,46 @@ const SWIPE_OPTIONS_CONFIG: SwipeOptionConfig[] = [
   { id: 'none', label: 'None', icon: Ban },
 ];
 
+interface NotificationActionConfig {
+  id: NotificationActionType;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const NOTIFICATION_ACTIONS_CONFIG: NotificationActionConfig[] = [
+  {
+    id: NOTIFICATION_ACTIONS.OPEN,
+    label: 'Open mail',
+    description: 'Open conversation in reading pane',
+    icon: ExternalLink,
+  },
+  {
+    id: NOTIFICATION_ACTIONS.READ,
+    label: 'Mark as read',
+    description: 'Mark message as read instantly',
+    icon: Mail,
+  },
+  {
+    id: NOTIFICATION_ACTIONS.DELETE,
+    label: 'Delete',
+    description: 'Move email to Deleted items',
+    icon: Trash2,
+  },
+  {
+    id: NOTIFICATION_ACTIONS.ARCHIVE,
+    label: 'Archive',
+    description: 'Move email to Archive folder',
+    icon: Archive,
+  },
+  {
+    id: NOTIFICATION_ACTIONS.FLAG,
+    label: 'Flag',
+    description: 'Mark with follow-up flag',
+    icon: Flag,
+  },
+];
+
 export function CustomizeActionsSettingsView() {
   const settings = useGeneralSettingsStore();
   const updateSettings = useGeneralSettingsStore((s) => s.updateSettings);
@@ -66,6 +110,12 @@ export function CustomizeActionsSettingsView() {
   const [swipeLeftAction, setSwipeLeftAction] = useState<SwipeActionType>(
     settings.swipeLeftAction || 'delete'
   );
+  const [notificationInAppActions, setNotificationInAppActions] = useState<NotificationActionType[]>(
+    settings.notificationInAppActions || [NOTIFICATION_ACTIONS.OPEN, NOTIFICATION_ACTIONS.READ]
+  );
+  const [notificationPushActions, setNotificationPushActions] = useState<NotificationActionType[]>(
+    settings.notificationPushActions || [NOTIFICATION_ACTIONS.OPEN, NOTIFICATION_ACTIONS.READ]
+  );
 
   const toggleQuickAction = (actionId: QuickActionType) => {
     let updated: QuickActionType[];
@@ -79,6 +129,64 @@ export function CustomizeActionsSettingsView() {
     addToast({
       title: 'Quick actions updated',
       description: `${actionId} ${quickActions.includes(actionId) ? 'removed from' : 'added to'} hover actions.`,
+      type: 'info',
+    });
+  };
+
+  const toggleInAppAction = (actionId: NotificationActionType) => {
+    let updated: NotificationActionType[];
+    if (notificationInAppActions.includes(actionId)) {
+      if (notificationInAppActions.length <= 1) {
+        addToast({
+          title: 'Minimum 1 action required',
+          description: 'You need at least one button on in-app notifications.',
+          type: 'warning',
+        });
+        return;
+      }
+      updated = notificationInAppActions.filter((a) => a !== actionId);
+    } else {
+      if (notificationInAppActions.length >= 2) {
+        // Limit to 2 buttons: replace the oldest selected with the new one
+        updated = [notificationInAppActions[notificationInAppActions.length - 1], actionId];
+      } else {
+        updated = [...notificationInAppActions, actionId];
+      }
+    }
+    setNotificationInAppActions(updated);
+    updateSettings({ notificationInAppActions: updated });
+    addToast({
+      title: 'In-app notification buttons updated',
+      description: `Active buttons: ${updated.map((id) => NOTIFICATION_ACTIONS_CONFIG.find((c) => c.id === id)?.label || id).join(', ')}.`,
+      type: 'info',
+    });
+  };
+
+  const togglePushAction = (actionId: NotificationActionType) => {
+    let updated: NotificationActionType[];
+    if (notificationPushActions.includes(actionId)) {
+      if (notificationPushActions.length <= 1) {
+        addToast({
+          title: 'Minimum 1 action required',
+          description: 'You need at least one button on web push notifications.',
+          type: 'warning',
+        });
+        return;
+      }
+      updated = notificationPushActions.filter((a) => a !== actionId);
+    } else {
+      if (notificationPushActions.length >= 2) {
+        // Limit to 2 buttons: replace the oldest selected with the new one
+        updated = [notificationPushActions[notificationPushActions.length - 1], actionId];
+      } else {
+        updated = [...notificationPushActions, actionId];
+      }
+    }
+    setNotificationPushActions(updated);
+    updateSettings({ notificationPushActions: updated });
+    addToast({
+      title: 'Web push buttons updated',
+      description: `Active buttons: ${updated.map((id) => NOTIFICATION_ACTIONS_CONFIG.find((c) => c.id === id)?.label || id).join(', ')}.`,
       type: 'info',
     });
   };
@@ -98,10 +206,12 @@ export function CustomizeActionsSettingsView() {
       quickActions,
       swipeRightAction,
       swipeLeftAction,
+      notificationInAppActions,
+      notificationPushActions,
     });
     addToast({
       title: 'Settings saved',
-      description: 'Your quick actions and swipe preferences are updated.',
+      description: 'Your quick actions, swipe gestures, and notification buttons are updated.',
       type: 'success',
     });
   };
@@ -567,6 +677,198 @@ export function CustomizeActionsSettingsView() {
               </label>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Section 3: In-app notification buttons */}
+      <section className="space-y-4 pt-2 border-t border-neutral-200 dark:border-[#2b2b2b]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#0078d4]" />
+              <span>In-app notification buttons</span>
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Choose up to 2 action buttons to show on incoming mail notification popups inside the app.
+            </p>
+          </div>
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 shrink-0">
+            {notificationInAppActions.length} of 2 selected
+          </span>
+        </div>
+
+        {/* Live Interactive In-App Toast Preview */}
+        <div className="border border-neutral-300 dark:border-neutral-700/80 bg-neutral-100 dark:bg-[#161616] rounded-md p-4 max-w-xl shadow-xs transition-all">
+          <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+            Toast Notification Preview
+          </div>
+          <div className="bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 shadow-md relative">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/80 text-[#0078d4] flex items-center justify-center shrink-0">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
+                    Sarah Connor
+                  </span>
+                  <span className="text-[10px] text-neutral-400">Just now</span>
+                </div>
+                <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 truncate mt-0.5">
+                  Q4 Budget Review & Forecast
+                </p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                  Please review the attached updated figures before our 3 PM sync...
+                </p>
+
+                {/* Live Action Buttons */}
+                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  {notificationInAppActions.map((act) => {
+                    const cfg = NOTIFICATION_ACTIONS_CONFIG.find((c) => c.id === act);
+                    return (
+                      <span
+                        key={act}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 shadow-xs"
+                      >
+                        {cfg && <cfg.icon className="w-3 h-3 text-[#0078d4]" />}
+                        <span>{cfg?.label || act}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Checkbox Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-12 max-w-xl pt-1">
+          {NOTIFICATION_ACTIONS_CONFIG.map((cfg) => {
+            const isChecked = notificationInAppActions.includes(cfg.id);
+            const Icon = cfg.icon;
+            return (
+              <label
+                key={cfg.id}
+                className={cn(
+                  'flex items-start gap-2.5 p-2 rounded-md border cursor-pointer text-xs transition-all group',
+                  isChecked
+                    ? 'border-[#0078d4] bg-blue-50/40 dark:bg-blue-950/20'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleInAppAction(cfg.id)}
+                  className="w-4 h-4 mt-0.5 rounded border-neutral-400 dark:border-neutral-600 accent-[#0078d4] cursor-pointer shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-medium text-neutral-900 dark:text-neutral-100">
+                    <Icon className="w-3.5 h-3.5 text-[#0078d4] shrink-0" />
+                    <span>{cfg.label}</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-tight">
+                    {cfg.description}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Section 4: Web push notification buttons */}
+      <section className="space-y-4 pt-2 border-t border-neutral-200 dark:border-[#2b2b2b]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#0078d4]" />
+              <span>Web push notification buttons</span>
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Choose up to 2 action buttons to display on OS-level browser desktop push notifications.
+            </p>
+          </div>
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 shrink-0">
+            {notificationPushActions.length} of 2 selected
+          </span>
+        </div>
+
+        {/* Live Interactive Web Push Preview */}
+        <div className="border border-neutral-300 dark:border-neutral-700/80 bg-neutral-100 dark:bg-[#161616] rounded-md p-4 max-w-xl shadow-xs transition-all">
+          <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+            Desktop OS Push Preview
+          </div>
+          <div className="bg-[#1f1f1f] text-white border border-neutral-700 rounded-lg p-3.5 shadow-2xl relative">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-md bg-[#0078d4] text-white flex items-center justify-center shrink-0">
+                <Mail className="w-4.5 h-4.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-neutral-200 truncate">AirSend • Sarah Connor</span>
+                  <span className="text-[10px] text-neutral-400">Chrome • Now</span>
+                </div>
+                <p className="text-xs font-semibold text-white truncate mt-0.5">
+                  Q4 Budget Review & Forecast
+                </p>
+                <p className="text-[11px] text-neutral-300 truncate mt-0.5">
+                  Please review the attached updated figures before our 3 PM sync...
+                </p>
+
+                {/* Live Push Action Buttons */}
+                <div className="flex items-center gap-2 mt-3 pt-1">
+                  {notificationPushActions.map((act) => {
+                    const cfg = NOTIFICATION_ACTIONS_CONFIG.find((c) => c.id === act);
+                    return (
+                      <span
+                        key={act}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#2e2e2e] text-neutral-100 border border-neutral-700 text-xs font-medium shadow-xs"
+                      >
+                        {cfg && <cfg.icon className="w-3 h-3 text-blue-400" />}
+                        <span>{cfg?.label || act}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Checkbox Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-12 max-w-xl pt-1">
+          {NOTIFICATION_ACTIONS_CONFIG.map((cfg) => {
+            const isChecked = notificationPushActions.includes(cfg.id);
+            const Icon = cfg.icon;
+            return (
+              <label
+                key={cfg.id}
+                className={cn(
+                  'flex items-start gap-2.5 p-2 rounded-md border cursor-pointer text-xs transition-all group',
+                  isChecked
+                    ? 'border-[#0078d4] bg-blue-50/40 dark:bg-blue-950/20'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => togglePushAction(cfg.id)}
+                  className="w-4 h-4 mt-0.5 rounded border-neutral-400 dark:border-neutral-600 accent-[#0078d4] cursor-pointer shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-medium text-neutral-900 dark:text-neutral-100">
+                    <Icon className="w-3.5 h-3.5 text-[#0078d4] shrink-0" />
+                    <span>{cfg.label}</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-tight">
+                    {cfg.description}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </section>
     </div>

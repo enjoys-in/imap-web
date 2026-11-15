@@ -13,8 +13,10 @@ import {
   shouldNotifyNewMail,
 } from '@/lib/liveSync';
 import { alertNewMail } from '@/lib/newMailAlert';
-import { useToastStore } from '@/stores/useToastStore';
+import { useToastStore, ToastAction } from '@/stores/useToastStore';
 import { useNotificationCenterStore } from '@/stores/useNotificationCenterStore';
+import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
+import { NOTIFICATION_ACTIONS } from '@/constants';
 
 export function LiveEmailSyncBridge() {
   const { isAuthenticated } = useSession();
@@ -28,14 +30,88 @@ export function LiveEmailSyncBridge() {
       if (!isAuthenticated) return;
       void handleMailboxChange(data);
       if (shouldNotifyNewMail(data)) {
+        const inAppActions = useGeneralSettingsStore.getState().notificationInAppActions || [
+          NOTIFICATION_ACTIONS.OPEN,
+          NOTIFICATION_ACTIONS.READ,
+        ];
+        const latestMsg = data.messages?.[data.messages.length - 1];
+
+        const toastActions: ToastAction[] = inAppActions.map((act) => {
+          switch (act) {
+            case NOTIFICATION_ACTIONS.OPEN:
+              return {
+                label: 'Open',
+                onClick: () => {
+                  window.dispatchEvent(
+                    new CustomEvent('airsend:open-folder', { detail: { path: data.path } })
+                  );
+                },
+              };
+            case NOTIFICATION_ACTIONS.READ:
+              return {
+                label: 'Mark as read',
+                onClick: () => {
+                  if (latestMsg?.uid) {
+                    window.dispatchEvent(
+                      new CustomEvent('airsend:mark-read', {
+                        detail: { uid: latestMsg.uid, path: data.path },
+                      })
+                    );
+                  }
+                },
+              };
+            case NOTIFICATION_ACTIONS.DELETE:
+              return {
+                label: 'Delete',
+                variant: 'danger',
+                onClick: () => {
+                  if (latestMsg?.uid) {
+                    window.dispatchEvent(
+                      new CustomEvent('airsend:delete-mail', {
+                        detail: { uid: latestMsg.uid, path: data.path },
+                      })
+                    );
+                  }
+                },
+              };
+            case NOTIFICATION_ACTIONS.ARCHIVE:
+              return {
+                label: 'Archive',
+                onClick: () => {
+                  if (latestMsg?.uid) {
+                    window.dispatchEvent(
+                      new CustomEvent('airsend:archive-mail', {
+                        detail: { uid: latestMsg.uid, path: data.path },
+                      })
+                    );
+                  }
+                },
+              };
+            case NOTIFICATION_ACTIONS.FLAG:
+            default:
+              return {
+                label: 'Flag',
+                onClick: () => {
+                  if (latestMsg?.uid) {
+                    window.dispatchEvent(
+                      new CustomEvent('airsend:flag-mail', {
+                        detail: { uid: latestMsg.uid, path: data.path },
+                      })
+                    );
+                  }
+                },
+              };
+          }
+        });
+
         addToast({
           title: 'New Email Received',
           description: `Folder "${data.path}" updated (${data.count} messages)`,
           type: 'info',
+          actions: toastActions,
         });
         void alertNewMail(data, newMessageCount(data));
 
-        const latestMsg = data.messages?.[data.messages.length - 1];
         useNotificationCenterStore.getState().addNotification({
           title: latestMsg?.from ? `Email from ${latestMsg.from}` : 'New Email Received',
           detail: latestMsg?.subject || `Folder "${data.path}" updated with ${newMessageCount(data)} new message(s)`,
