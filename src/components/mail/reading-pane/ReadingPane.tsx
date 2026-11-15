@@ -11,6 +11,8 @@ import { format } from 'date-fns';
 import { ReadingPaneHeader } from './ReadingPaneHeader';
 import { ReadingPaneSecurityBanner } from './ReadingPaneSecurityBanner';
 import { ReadingPaneAttachments } from './ReadingPaneAttachments';
+import { ReadingPaneOtpBanner } from './ReadingPaneOtpBanner';
+import { ReadingPaneRsvpCard } from './ReadingPaneRsvpCard';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
@@ -244,6 +246,20 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       />
 
       <div className="flex-1 overflow-y-auto">
+        <ReadingPaneOtpBanner
+          emailId={email.id}
+          subject={email.subject}
+          bodyText={fetchedBody?.bodyText || inlineBodyText}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+        />
+
+        <ReadingPaneRsvpCard
+          email={email}
+          bodyText={fetchedBody?.bodyText || inlineBodyText}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+          onReply={handleReply}
+        />
+
         {isBodyLoading ? (
           <div className="p-6 space-y-3 animate-pulse">
             <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-3/4" />
