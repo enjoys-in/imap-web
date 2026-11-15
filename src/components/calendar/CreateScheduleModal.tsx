@@ -20,8 +20,13 @@ interface CreateScheduleModalProps {
 }
 
 export function CreateScheduleModal({
-  open, onClose, onSave,
-  initialDayIndex = 6, initialHour = 7, initialDate, initialEvent,
+  open,
+  onClose,
+  onSave,
+  initialDayIndex = 6,
+  initialHour = 1,
+  initialDate,
+  initialEvent,
 }: CreateScheduleModalProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [title, setTitle] = useState(initialEvent?.title || '');
@@ -31,7 +36,7 @@ export function CreateScheduleModal({
   const [categoryColor, setCategoryColor] = useState<CalendarColor>('salmon');
   const [sensitivity, setSensitivity] = useState('Normal');
 
-  const [selectedDate, setSelectedDate] = useState(() => initialDate ? new Date(initialDate) : new Date());
+  const [selectedDate, setSelectedDate] = useState(() => (initialDate ? new Date(initialDate) : new Date()));
   const [startHourDecimal, setStartHourDecimal] = useState(initialEvent?.startHour ?? initialHour);
   const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 0.5);
   const [isAllDay, setIsAllDay] = useState(false);
@@ -59,9 +64,14 @@ export function CreateScheduleModal({
         setSelectedDate(new Date(initialEvent.startUtc || initialEvent.date!));
       }
     } else {
-      setTitle(''); setStartHourDecimal(initialHour); setDurationHours(0.5);
-      setDescription(''); setAgenda(''); setAttendees([]);
-      setHasOnlineMeeting(false); setMeetUrl('');
+      setTitle('');
+      setStartHourDecimal(initialHour);
+      setDurationHours(0.5);
+      setDescription('');
+      setAgenda('');
+      setAttendees([]);
+      setHasOnlineMeeting(false);
+      setMeetUrl('');
       setSelectedDate(initialDate ? new Date(initialDate) : new Date());
     }
   }, [open, initialHour, initialEvent, initialDate]);
@@ -79,7 +89,7 @@ export function CreateScheduleModal({
     }));
 
     const finalMeet = hasOnlineMeeting
-      ? (meetUrl.trim() || `https://meet.airsend.io/join/${Math.random().toString(36).substring(2, 9)}`)
+      ? meetUrl.trim() || `https://teams.microsoft.com/l/meetup-join/airsend-${Math.random().toString(36).substring(2, 9)}`
       : undefined;
 
     const startH = Math.floor(startHourDecimal);
@@ -91,69 +101,101 @@ export function CreateScheduleModal({
     const calculatedDay = jsDay === 0 ? 6 : jsDay - 1;
 
     onSave({
-      id: initialEvent?.id, uid: initialEvent?.uid,
+      id: initialEvent?.id,
+      uid: initialEvent?.uid,
       originalStart: initialEvent?.originalStart,
       isOccurrenceOnly: initialEvent?.isOccurrenceOnly,
-      title: finalTitle, dayIndex: calculatedDay,
+      title: finalTitle,
+      dayIndex: calculatedDay,
       startTime: formatTimeDisplay(startHourDecimal),
       endTime: formatTimeDisplay(endHourDecimal),
-      startHour: startHourDecimal, durationHours,
+      startHour: startHourDecimal,
+      durationHours,
       color: categoryColor,
       category: location || (hasOnlineMeeting ? 'Online Meeting' : 'General'),
       description: agenda ? `${description}\n\nAgenda:\n${agenda}`.trim() : description,
-      meetUrl: finalMeet, participants, isAllDay, isRecurring: isSeries,
-      startUtc: evStart.toISOString(), endUtc: evEnd.toISOString(), selectedDate: evStart,
+      meetUrl: finalMeet,
+      participants,
+      isAllDay,
+      isRecurring: isSeries,
+      startUtc: evStart.toISOString(),
+      endUtc: evEnd.toISOString(),
+      selectedDate: evStart,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className={cn(
-        'bg-[#181818] text-neutral-100 shadow-2xl border border-neutral-800 flex flex-col transition-all',
-        isMaximized ? 'fixed inset-0 w-full h-full rounded-none' : 'w-full max-w-5xl rounded-xl max-h-[92vh] overflow-hidden'
-      )}>
+      <div
+        className={cn(
+          'bg-[#1e1e1e] text-neutral-100 shadow-2xl border border-neutral-800 flex flex-col transition-all',
+          isMaximized ? 'fixed inset-0 w-full h-full rounded-none' : 'w-full max-w-5xl rounded-lg max-h-[92vh] overflow-hidden'
+        )}
+      >
         <div className="relative z-30 shrink-0">
           <ScheduleTopBar
-            isEdit={!!initialEvent} onClose={onClose}
-            isSeries={isSeries} setIsSeries={setIsSeries}
-            busyStatus={busyStatus} setBusyStatus={setBusyStatus}
-            reminder={reminder} setReminder={setReminder}
-            categoryColor={categoryColor} setCategoryColor={setCategoryColor}
-            sensitivity={sensitivity} setSensitivity={setSensitivity}
-            onSave={handleSave} isMaximized={isMaximized}
+            isEdit={!!initialEvent}
+            onClose={onClose}
+            isSeries={isSeries}
+            setIsSeries={setIsSeries}
+            busyStatus={busyStatus}
+            setBusyStatus={setBusyStatus}
+            reminder={reminder}
+            setReminder={setReminder}
+            categoryColor={categoryColor}
+            setCategoryColor={setCategoryColor}
+            sensitivity={sensitivity}
+            setSensitivity={setSensitivity}
+            onSave={handleSave}
+            isMaximized={isMaximized}
             onToggleMaximize={() => setIsMaximized((p) => !p)}
           />
         </div>
 
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#181818] relative z-10">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#1e1e1e] relative z-10">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
             <ScheduleFormFields
-              title={title} setTitle={setTitle}
-              selectedCharm={selectedCharm} setSelectedCharm={setSelectedCharm}
+              title={title}
+              setTitle={setTitle}
+              selectedCharm={selectedCharm}
+              setSelectedCharm={setSelectedCharm}
               attendees={attendees}
               onAddAttendee={(e) => !attendees.includes(e) && setAttendees([...attendees, e])}
               onRemoveAttendee={(e) => setAttendees(attendees.filter((a) => a !== e))}
-              location={location} setLocation={setLocation}
-              hasOnlineMeeting={hasOnlineMeeting} setHasOnlineMeeting={setHasOnlineMeeting}
-              meetUrl={meetUrl} setMeetUrl={setMeetUrl}
-              description={description} setDescription={setDescription}
-              agenda={agenda} setAgenda={setAgenda}
-            />
-
-            <ScheduleTimeRow
-              selectedDate={selectedDate} onDateChange={setSelectedDate}
-              startHourDecimal={startHourDecimal} onStartHourChange={setStartHourDecimal}
-              durationHours={durationHours} onDurationChange={setDurationHours}
-              isAllDay={isAllDay} onAllDayChange={setIsAllDay}
-              onScrollToScheduler={() => setSchedulerTrigger((p) => p + 1)}
+              timeRowNode={
+                <ScheduleTimeRow
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                  startHourDecimal={startHourDecimal}
+                  onStartHourChange={setStartHourDecimal}
+                  durationHours={durationHours}
+                  onDurationChange={setDurationHours}
+                  isAllDay={isAllDay}
+                  onAllDayChange={setIsAllDay}
+                  onScrollToScheduler={() => setSchedulerTrigger((p) => p + 1)}
+                />
+              }
+              location={location}
+              setLocation={setLocation}
+              hasOnlineMeeting={hasOnlineMeeting}
+              setHasOnlineMeeting={setHasOnlineMeeting}
+              meetUrl={meetUrl}
+              setMeetUrl={setMeetUrl}
+              description={description}
+              setDescription={setDescription}
+              agenda={agenda}
+              setAgenda={setAgenda}
             />
           </div>
 
           <ScheduleMiniCanvas
-            selectedDate={selectedDate} onDateChange={setSelectedDate}
-            startHourDecimal={startHourDecimal} onStartHourChange={setStartHourDecimal}
-            durationHours={durationHours} onDurationChange={setDurationHours}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            startHourDecimal={startHourDecimal}
+            onStartHourChange={setStartHourDecimal}
+            durationHours={durationHours}
+            onDurationChange={setDurationHours}
             scrollTrigger={schedulerTrigger}
           />
         </div>

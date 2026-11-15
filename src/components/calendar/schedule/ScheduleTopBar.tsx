@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  X, Maximize2, Minimize2, Calendar, RotateCcw, ChevronDown, Clock,
+  X, ExternalLink, Calendar, RotateCcw, ChevronDown, AlarmClock,
   Tag, Lock, Printer, Save, Grid,
 } from 'lucide-react';
 import { CalendarColor } from '../types';
@@ -51,8 +51,8 @@ export function ScheduleTopBar({
         <div className="text-xs font-normal text-neutral-300">{isEdit ? 'Edit event' : 'New event'}</div>
         <div className="flex items-center gap-1 text-neutral-400">
           {onToggleMaximize && (
-            <button type="button" onClick={onToggleMaximize} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-800 hover:text-white cursor-pointer" title={isMaximized ? "Restore" : "Maximize"}>
-              {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <button type="button" onClick={onToggleMaximize} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-800 hover:text-white cursor-pointer" title={isMaximized ? "Restore" : "Open in new window"}>
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
           )}
           <button type="button" onClick={onClose} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-800 hover:text-white cursor-pointer" title="Close">
@@ -102,7 +102,7 @@ export function ScheduleTopBar({
           {/* Reminder Dropdown */}
           <div className="relative">
             <button type="button" onClick={() => toggle('reminder')} className="p-1.5 rounded flex items-center gap-1 text-neutral-300 hover:text-white hover:bg-neutral-800 cursor-pointer" title="Reminder">
-              <Clock className="w-3.5 h-3.5 text-neutral-400" /><ChevronDown className="w-3 h-3 text-neutral-400" />
+              <AlarmClock className="w-3.5 h-3.5 text-neutral-400" /><ChevronDown className="w-3 h-3 text-neutral-400" />
             </button>
             {activeMenu === 'reminder' && (
               <div className="absolute left-0 top-full mt-1 w-48 bg-[#252525] border border-neutral-700 rounded-md shadow-2xl py-1 z-50">
@@ -160,7 +160,7 @@ export function ScheduleTopBar({
         <button
           type="button"
           onClick={onSave}
-          className="h-7 px-3.5 bg-[#0078d4] hover:bg-[#106ebe] active:bg-[#005a9e] text-white font-semibold text-xs rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer shrink-0"
+          className="h-7 px-3.5 bg-[#4461f2] hover:bg-[#3953d6] active:bg-[#2e45bc] text-white font-medium text-xs rounded flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer shrink-0"
         >
           <Save className="w-3.5 h-3.5" /><span>Save</span>
         </button>

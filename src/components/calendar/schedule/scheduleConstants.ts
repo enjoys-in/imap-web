@@ -79,3 +79,41 @@ export const DURATION_OPTIONS = [
   { value: 2.0, label: '2 hours' },
   { value: 3.0, label: '3 hours' },
 ];
+
+const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function formatOutlookEventDate(
+  date: Date,
+  startHourDecimal: number,
+  durationHours: number,
+  isAllDay = false
+): string {
+  const dayName = DAYS_SHORT[date.getDay()];
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+
+  if (isAllDay) {
+    return `${dayName} ${dd}-${mm}-${yyyy} (All day)`;
+  }
+
+  const startTime = format24hTime(startHourDecimal);
+  const endTime = format24hTime(startHourDecimal + durationHours);
+  return `${dayName} ${dd}-${mm}-${yyyy} ${startTime} - ${endTime}`;
+}
+
+export function formatSchedulerHeaderDate(date: Date): string {
+  const dayName = DAYS_SHORT[date.getDay()];
+  const dd = date.getDate();
+  const monthName = MONTHS_SHORT[date.getMonth()];
+  const yyyy = date.getFullYear();
+  return `${dayName}, ${dd} ${monthName}, ${yyyy}`;
+}
+
+export function formatEventBlockDisplay(startHourDecimal: number, durationHours: number): string {
+  const startStr = formatTimeDisplay(startHourDecimal);
+  const endStr = formatTimeDisplay(startHourDecimal + durationHours);
+  return `${startStr} - ${endStr}`;
+}
+

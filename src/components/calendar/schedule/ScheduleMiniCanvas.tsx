@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, Maximize2, Minimize2, ChevronDown } from 'lucide-react';
-import { HOURS, format24hTime } from './scheduleConstants';
+import { ChevronLeft, ChevronRight, Calendar, Maximize2, Minimize2, ChevronDown } from 'lucide-react';
+import { HOURS, formatSchedulerHeaderDate, formatEventBlockDisplay } from './scheduleConstants';
 import { cn } from '@/lib/utils';
 
 interface ScheduleMiniCanvasProps {
@@ -18,9 +18,12 @@ interface ScheduleMiniCanvasProps {
 const ROW_HEIGHT = 44;
 
 export function ScheduleMiniCanvas({
-  selectedDate, onDateChange,
-  startHourDecimal, onStartHourChange,
-  durationHours, onDurationChange,
+  selectedDate,
+  onDateChange,
+  startHourDecimal,
+  onStartHourChange,
+  durationHours,
+  onDurationChange,
   scrollTrigger,
 }: ScheduleMiniCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,10 +55,8 @@ export function ScheduleMiniCanvas({
     }
   }, [scrollTrigger]);
 
-  const endHourDecimal = startHourDecimal + durationHours;
-  const startTimeStr = format24hTime(startHourDecimal);
-  const endTimeStr = format24hTime(endHourDecimal);
-  const headerDateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const headerDateStr = formatSchedulerHeaderDate(selectedDate);
+  const eventBlockText = formatEventBlockDisplay(startHourDecimal, durationHours);
 
   const yyyy = selectedDate.getFullYear();
   const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -71,12 +72,13 @@ export function ScheduleMiniCanvas({
   const handleSlotClick = (e: React.MouseEvent<HTMLDivElement>, hourIdx: number) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const relY = Math.max(0, Math.min(rect.height - 1, e.clientY - rect.top));
-    const quarter = Math.floor((relY / rect.height) * 4);
-    const newStart = Math.min(23.75, hourIdx + quarter * 0.25);
+    const half = relY >= rect.height / 2 ? 0.5 : 0;
+    const newStart = Math.min(23.5, hourIdx + half);
     onStartHourChange(newStart);
   };
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // Resize duration from bottom-left dot
+  const handleDurationResize = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     isDraggingRef.current = true;
@@ -84,8 +86,8 @@ export function ScheduleMiniCanvas({
     const initialDur = durationHours;
     const maxDur = Math.max(0.25, 24 - startHourDecimal);
     const onMove = (me: MouseEvent) => {
-      const delta = Math.round((me.clientY - startY) / (ROW_HEIGHT / 4));
-      onDurationChange(Math.max(0.25, Math.min(maxDur, Math.min(12, initialDur + delta * 0.25))));
+      const delta = Math.round((me.clientY - startY) / (ROW_HEIGHT / 2)) * 0.5;
+      onDurationChange(Math.max(0.5, Math.min(maxDur, initialDur + delta)));
     };
     const onUp = () => {
       isDraggingRef.current = false;
@@ -96,7 +98,8 @@ export function ScheduleMiniCanvas({
     window.addEventListener('mouseup', onUp);
   };
 
-  const handleStartResizeStart = (e: React.MouseEvent) => {
+  // Resize start time from top-right dot
+  const handleStartResize = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     isDraggingRef.current = true;
@@ -104,8 +107,8 @@ export function ScheduleMiniCanvas({
     const initialStart = startHourDecimal;
     const initialEnd = initialStart + durationHours;
     const onMove = (me: MouseEvent) => {
-      const delta = Math.round((me.clientY - startY) / (ROW_HEIGHT / 4));
-      const newStart = Math.max(0, Math.min(initialEnd - 0.25, initialStart + delta * 0.25));
+      const delta = Math.round((me.clientY - startY) / (ROW_HEIGHT / 2)) * 0.5;
+      const newStart = Math.max(0, Math.min(initialEnd - 0.5, initialStart + delta));
       onStartHourChange(newStart);
       onDurationChange(initialEnd - newStart);
     };
@@ -118,6 +121,7 @@ export function ScheduleMiniCanvas({
     window.addEventListener('mouseup', onUp);
   };
 
+  // Move entire block
   const handleBlockDrag = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -126,9 +130,8 @@ export function ScheduleMiniCanvas({
     const initialStart = startHourDecimal;
     const maxStart = Math.max(0, 24 - durationHours);
     const onMove = (me: MouseEvent) => {
-      const delta = (me.clientY - startY) / ROW_HEIGHT;
-      const quarterSteps = Math.round(delta * 4) * 0.25;
-      const newStart = Math.max(0, Math.min(maxStart, Math.round((initialStart + quarterSteps) * 100) / 100));
+      const delta = Math.round((me.clientY - startY) / (ROW_HEIGHT / 2)) * 0.5;
+      const newStart = Math.max(0, Math.min(maxStart, initialStart + delta));
       onStartHourChange(newStart);
     };
     const onUp = () => {
@@ -141,16 +144,39 @@ export function ScheduleMiniCanvas({
   };
 
   return (
-    <div ref={containerRef} className={cn(
-      'border-t md:border-t-0 md:border-l border-neutral-800 bg-[#161616] flex flex-col shrink-0 transition-all duration-200',
-      expanded ? 'w-full md:w-[480px] lg:w-[540px]' : 'w-full md:w-[340px] lg:w-[380px]'
-    )}>
-      <div className="h-10 px-3.5 border-b border-neutral-800 flex items-center justify-between shrink-0 select-none">
-        <div className="flex items-center gap-1 text-neutral-400">
-          <button type="button" onClick={() => shiftDay(-1)} className="p-1 rounded hover:bg-neutral-800 hover:text-white cursor-pointer" title="Previous day">
+    <div
+      ref={containerRef}
+      className={cn(
+        'border-t md:border-t-0 md:border-l border-neutral-800 bg-[#181818] flex flex-col shrink-0 transition-all duration-200 select-none',
+        expanded ? 'w-full md:w-[480px] lg:w-[520px]' : 'w-full md:w-[330px] lg:w-[360px]'
+      )}
+    >
+      {/* Top Header of Right Column */}
+      <div className="h-10 px-3.5 border-b border-neutral-800 flex items-center justify-between shrink-0 select-none bg-[#181818]">
+        <div className="flex items-center gap-1.5 text-neutral-400">
+          <button
+            type="button"
+            onClick={() => shiftDay(-1)}
+            className="p-1 rounded hover:bg-neutral-800 hover:text-white cursor-pointer"
+            title="Previous day"
+          >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <div className="relative flex items-center">
+
+          <div className="p-0.5 text-neutral-400">
+            <Calendar className="w-3.5 h-3.5" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => shiftDay(1)}
+            className="p-1 rounded hover:bg-neutral-800 hover:text-white cursor-pointer"
+            title="Next day"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="relative flex items-center ml-1">
             <input
               type="date"
               value={dateStr}
@@ -164,16 +190,13 @@ export function ScheduleMiniCanvas({
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
               title="Click to pick date"
             />
-            <div className="flex items-center gap-1 text-xs text-neutral-200 hover:text-white font-medium p-1 rounded hover:bg-neutral-800 cursor-pointer">
-              <CalendarDays className="w-3.5 h-3.5 text-neutral-400" />
+            <div className="flex items-center gap-1 text-xs text-neutral-200 hover:text-white font-normal p-1 rounded hover:bg-neutral-800/80 cursor-pointer">
               <span>{headerDateStr}</span>
               <ChevronDown className="w-3 h-3 text-neutral-400" />
             </div>
           </div>
-          <button type="button" onClick={() => shiftDay(1)} className="p-1 rounded hover:bg-neutral-800 hover:text-white cursor-pointer" title="Next day">
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
         </div>
+
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
@@ -184,29 +207,62 @@ export function ScheduleMiniCanvas({
         </button>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto relative custom-scrollbar divide-y divide-neutral-800/60" style={{ maxHeight: 'calc(92vh - 120px)' }}>
+      {/* Grid Canvas */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto relative custom-scrollbar divide-y divide-neutral-800/60"
+        style={{ maxHeight: 'calc(92vh - 120px)' }}
+      >
         <div className="relative">
           {HOURS.map((hourLabel, hourIdx) => (
-            <div key={hourLabel} onClick={(e) => handleSlotClick(e, hourIdx)} className="h-11 flex relative hover:bg-neutral-800/30 cursor-pointer group transition-colors">
-              <div className="w-14 shrink-0 text-right pr-3 pt-1 text-[11px] text-neutral-400 font-normal select-none">{hourLabel}</div>
+            <div
+              key={hourLabel}
+              onClick={(e) => handleSlotClick(e, hourIdx)}
+              className="h-11 flex relative hover:bg-neutral-800/20 cursor-pointer group transition-colors"
+            >
+              {/* Hour Label */}
+              <div className="w-14 shrink-0 text-left pl-3.5 pt-0.5 text-[11px] text-neutral-400 font-normal select-none">
+                {hourLabel}
+              </div>
+
+              {/* Hour Slot Grid Area */}
               <div className="flex-1 border-l border-neutral-800 relative">
-                <div className="absolute inset-x-0 top-1/4 border-t border-neutral-800/20 pointer-events-none" />
-                <div className="absolute inset-x-0 top-2/4 border-t border-neutral-800/40 pointer-events-none" />
-                <div className="absolute inset-x-0 top-3/4 border-t border-neutral-800/20 pointer-events-none" />
+                {/* Half hour dashed divider line */}
+                <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-neutral-800/60 pointer-events-none" />
               </div>
             </div>
           ))}
+
+          {/* Draggable & Resizable Coral Red Event Block */}
           <div
             onMouseDown={handleBlockDrag}
             className={cn(
-              'absolute left-14 right-2 z-20 rounded-xs bg-[#e05151] hover:bg-[#ea5d5d] shadow-md cursor-move flex items-center justify-between px-1.5 select-none',
-              pulse && 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-[1.03] shadow-2xl transition-all'
+              'absolute left-14 right-2 z-20 rounded-xs bg-[#ea5252] hover:bg-[#ee5d5d] shadow-md cursor-move flex items-center px-2 select-none transition-all',
+              pulse && 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-[1.02] shadow-2xl'
             )}
-            style={{ top: `${startHourDecimal * ROW_HEIGHT}px`, height: `${Math.max(22, durationHours * ROW_HEIGHT)}px` }}
+            style={{
+              top: `${startHourDecimal * ROW_HEIGHT}px`,
+              height: `${Math.max(22, durationHours * ROW_HEIGHT)}px`,
+            }}
           >
-            <div onMouseDown={handleStartResizeStart} className="w-2.5 h-2.5 rounded-full bg-white border border-neutral-900 shadow-xs cursor-ns-resize hover:scale-125 transition-transform shrink-0" title="Drag start time" />
-            <span className="text-[11px] font-semibold text-white tracking-tight truncate pointer-events-none mx-1">{startTimeStr} – {endTimeStr}</span>
-            <div onMouseDown={handleResizeStart} className="w-2.5 h-2.5 rounded-full bg-white border border-neutral-900 shadow-xs cursor-ns-resize hover:scale-125 transition-transform shrink-0" title="Drag duration" />
+            {/* Handle 1: Bottom-left dot for duration */}
+            <div
+              onMouseDown={handleDurationResize}
+              className="absolute -bottom-1 left-2.5 w-2 h-2 rounded-full bg-white border border-neutral-900 shadow-sm cursor-ns-resize hover:scale-125 transition-transform z-30"
+              title="Drag duration"
+            />
+
+            {/* Event Time Text */}
+            <span className="text-[11px] font-semibold text-white tracking-tight truncate pointer-events-none">
+              {eventBlockText}
+            </span>
+
+            {/* Handle 2: Top-right dot for start time */}
+            <div
+              onMouseDown={handleStartResize}
+              className="absolute -top-1 right-2.5 w-2 h-2 rounded-full bg-white border border-neutral-900 shadow-sm cursor-ns-resize hover:scale-125 transition-transform z-30"
+              title="Drag start time"
+            />
           </div>
         </div>
       </div>
