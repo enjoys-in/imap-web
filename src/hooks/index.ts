@@ -4,3 +4,4 @@ export * from './useCalendarNotifications';
 export * from './useNetworkStatus';
 export * from './usePaneResize';
 export * from './useAnchoredPosition';
+export * from './useUserTimeInfo';

@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    resolveAlias: {
+      "dexie-observable": "./src/lib/idb/dexieObservableStub.ts",
+    },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

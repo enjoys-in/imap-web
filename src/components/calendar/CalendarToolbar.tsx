@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe, X } from 'lucide-react';
 import { CalendarViewMode } from './types';
-import { getUserTimeInfo } from '@/lib/timezoneUtils';
+import { useUserTimeInfo } from '@/hooks/useUserTimeInfo';
 import { cn } from '@/lib/utils';
 
 interface CalendarToolbarProps {
@@ -33,12 +33,8 @@ export function CalendarToolbar({
   onNewSchedule,
   isViewOnly = false,
 }: CalendarToolbarProps) {
-  const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
+  const timeInfo = useUserTimeInfo();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  useEffect(() => {
-    setTimeInfo(getUserTimeInfo());
-  }, []);
 
   if (mobileSearchOpen) {
     return (
@@ -126,11 +122,13 @@ export function CalendarToolbar({
         </h2>
 
         {/* User Timezone indicator - hidden on smaller screens */}
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300 shrink-0">
-          <Globe className="w-3.5 h-3.5 text-[#0078d4]" />
-          <span>{timeInfo.timeZone}</span>
-          <span className="text-[10px] font-mono text-neutral-400">({timeInfo.tzAbbr})</span>
-        </div>
+        {timeInfo && (
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300 shrink-0">
+            <Globe className="w-3.5 h-3.5 text-[#0078d4]" />
+            <span>{timeInfo.timeZone}</span>
+            <span className="text-[10px] font-mono text-neutral-400">({timeInfo.tzAbbr})</span>
+          </div>
+        )}
 
         {isViewOnly && (
           <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">

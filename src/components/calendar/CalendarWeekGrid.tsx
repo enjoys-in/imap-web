@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CalendarEvent } from './types';
 import { CalendarEventCard } from './CalendarEventCard';
+import { useUserTimeInfo } from '@/hooks/useUserTimeInfo';
 import { getUserTimeInfo } from '@/lib/timezoneUtils';
 import { cn } from '@/lib/utils';
 
@@ -56,35 +57,29 @@ export function CalendarWeekGrid({
   pendingSlot,
 }: CalendarWeekGridProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [timeInfo, setTimeInfo] = useState(() => getUserTimeInfo());
+  const timeInfo = useUserTimeInfo();
   const days = React.useMemo(() => getWeekDays(currentDate), [currentDate]);
 
-  useEffect(() => {
-    const update = () => setTimeInfo(getUserTimeInfo());
-    update();
-    const timer = setInterval(update, 10000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const nowLineTop = timeInfo.decimalHour * 80;
+  const nowLineTop = (timeInfo?.decimalHour ?? 0) * 80;
 
   useEffect(() => {
+    const targetScroll = Math.max(0, getUserTimeInfo().decimalHour * 80 - 180);
     const scroll = () => {
       if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = Math.max(0, nowLineTop - 180);
+        scrollContainerRef.current.scrollTop = targetScroll;
       }
     };
     scroll();
     const raf = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(raf);
-  }, [nowLineTop]);
+  }, []);
 
   return (
     <div ref={scrollContainerRef} className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#0e0e0e] scroll-smooth">
       {/* Day Headers */}
       <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 flex shrink-0 sticky top-0 bg-white/95 dark:bg-[#0e0e0e]/95 backdrop-blur-xs z-30">
         <div className="w-20 sm:w-24 border-r border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">
-          {timeInfo.tzAbbr}
+          {timeInfo?.tzAbbr}
         </div>
         <div className="flex-1 grid grid-cols-7">
           {days.map((day) => (
@@ -114,23 +109,27 @@ export function CalendarWeekGrid({
             </div>
           ))}
           {/* Current Time Floating Pill Badge */}
-          <div className="absolute right-2 -translate-y-1/2 z-30 pointer-events-none" style={{ top: `${nowLineTop}px` }}>
-            <div className="px-2 py-0.5 rounded-md bg-[#2563eb] text-white font-mono text-[11px] font-bold shadow-md flex items-center gap-1.5">
-              <span>{timeInfo.formattedTime}</span>
+          {timeInfo && (
+            <div className="absolute right-2 -translate-y-1/2 z-30 pointer-events-none" style={{ top: `${nowLineTop}px` }}>
+              <div className="px-2 py-0.5 rounded-md bg-[#2563eb] text-white font-mono text-[11px] font-bold shadow-md flex items-center gap-1.5">
+                <span>{timeInfo.formattedTime}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 7 Day Columns Canvas */}
         <div className="flex-1 grid grid-cols-7 relative">
           {/* Current Live Time Indicator Across the 7 Days (Blue dashed line) */}
-          <div className="absolute left-0 right-0 z-20 pointer-events-none grid grid-cols-7" style={{ top: `${nowLineTop}px` }}>
-            {days.map((day) => (
-              <div key={day.dayIndex} className="relative flex items-center h-0">
-                <div className="w-full border-b-2 border-dashed border-[#2563eb]/90 dark:border-blue-400/90" />
-              </div>
-            ))}
-          </div>
+          {timeInfo && (
+            <div className="absolute left-0 right-0 z-20 pointer-events-none grid grid-cols-7" style={{ top: `${nowLineTop}px` }}>
+              {days.map((day) => (
+                <div key={day.dayIndex} className="relative flex items-center h-0">
+                  <div className="w-full border-b-2 border-dashed border-[#2563eb]/90 dark:border-blue-400/90" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {days.map((day) => {
             const dayEvents = events.filter((e) => {

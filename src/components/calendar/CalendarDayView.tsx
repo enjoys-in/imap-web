@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CalendarEvent } from './types';
 import { CalendarEventCard } from './CalendarEventCard';
-import { getUserTimeInfo, UserTimeInfo } from '@/lib/timezoneUtils';
+import { useUserTimeInfo } from '@/hooks/useUserTimeInfo';
+import { getUserTimeInfo } from '@/lib/timezoneUtils';
 import { Globe } from 'lucide-react';
 
 interface CalendarDayViewProps {
@@ -75,25 +76,18 @@ export function CalendarDayView({
   });
 
   // Live time info resolved from the user's system timezone (e.g. Asia/Kolkata / GMT+5:30)
-  const [timeInfo, setTimeInfo] = useState<UserTimeInfo>(() => getUserTimeInfo());
-
-  useEffect(() => {
-    const update = () => setTimeInfo(getUserTimeInfo());
-    update();
-    const timer = setInterval(update, 10000); // refresh every 10s
-    return () => clearInterval(timer);
-  }, []);
+  const timeInfo = useUserTimeInfo();
 
   // Exact vertical position: 80px per hour starting at 0:00 (12:00 AM)
-  const nowLineTop = timeInfo.decimalHour * 80;
+  const nowLineTop = (timeInfo?.decimalHour ?? 0) * 80;
 
   // Auto-scroll to current time position on mount or day switch
   useEffect(() => {
+    const targetScroll = isToday
+      ? Math.max(0, getUserTimeInfo().decimalHour * 80 - 180)
+      : 8 * 80 - 60;
     const scroll = () => {
       if (scrollContainerRef.current) {
-        const targetScroll = isToday
-          ? Math.max(0, nowLineTop - 180)
-          : 8 * 80 - 60;
         scrollContainerRef.current.scrollTop = targetScroll;
       }
     };
@@ -110,7 +104,7 @@ export function CalendarDayView({
       {/* Day Header Banner with Timezone Display */}
       <div className="h-12 border-b border-neutral-200 dark:border-neutral-800 flex items-center shrink-0 bg-white/95 dark:bg-[#0e0e0e]/95 sticky top-0 z-40 backdrop-blur-md">
         <div className="w-20 sm:w-24 border-r border-neutral-200 dark:border-neutral-800 shrink-0 h-full flex items-center justify-center text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">
-          {timeInfo.tzAbbr}
+          {timeInfo?.tzAbbr}
         </div>
 
         <div className="flex-1 px-4 sm:px-6 flex items-center justify-between">
@@ -123,15 +117,17 @@ export function CalendarDayView({
 
           <div className="flex items-center gap-3">
             {/* User Timezone indicator */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
-              <Globe className="w-3.5 h-3.5 text-[#0078d4]" />
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                {timeInfo.timeZone}
-              </span>
-              <span className="font-mono text-[10px] text-neutral-400">
-                ({timeInfo.tzAbbr})
-              </span>
-            </div>
+            {timeInfo && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+                <Globe className="w-3.5 h-3.5 text-[#0078d4]" />
+                <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                  {timeInfo.timeZone}
+                </span>
+                <span className="font-mono text-[10px] text-neutral-400">
+                  ({timeInfo.tzAbbr})
+                </span>
+              </div>
+            )}
 
             <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">|</span>
 
@@ -156,7 +152,7 @@ export function CalendarDayView({
           ))}
 
           {/* Current Time Floating Pill Badge in Gutter */}
-          {isToday && (
+          {isToday && timeInfo && (
             <div
               className="absolute right-2 -translate-y-1/2 z-30 pointer-events-none"
               style={{ top: `${nowLineTop}px` }}
@@ -171,7 +167,7 @@ export function CalendarDayView({
         {/* Day Column (Full Width) */}
         <div className="flex-1 relative w-full">
           {/* Current Time Dotted Line with Live Glowing Dot */}
-          {isToday && (
+          {isToday && timeInfo && (
             <div
               className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
               style={{ top: `${nowLineTop}px` }}
