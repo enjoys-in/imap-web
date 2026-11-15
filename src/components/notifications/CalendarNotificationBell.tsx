@@ -147,6 +147,17 @@ export function CalendarNotificationBell() {
                     )}
 
                     <div className="flex items-center gap-1.5 mt-2.5">
+                      {(rem.meetUrl || (rem.location && /https?:\/\//i.test(rem.location))) && (
+                        <button
+                          onClick={() => {
+                            const url = rem.meetUrl || (rem.location && /https?:\/\//i.test(rem.location) ? rem.location : undefined);
+                            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="px-2 py-0.5 text-[11px] rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors cursor-pointer"
+                        >
+                          Join
+                        </button>
+                      )}
                       <button
                         onClick={() => snoozeReminder(rem.id, 5)}
                         className="px-2 py-0.5 text-[11px] rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"

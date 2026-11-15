@@ -30,9 +30,20 @@ export function useCalendarNotifications() {
 
         // If starting within next 15 minutes or started up to 5 minutes ago
         if (diff >= -thresholdPast && diff <= thresholdAhead) {
+          const existingRem = useCalendarNotificationStore
+            .getState()
+            .reminders.find((r) => r.appointmentId === apt.id);
           const lastNotified = notifiedAptsRef.current.get(apt.id);
-          // Don't re-trigger within 15 minutes for the same appointment
-          if (lastNotified && now - lastNotified < 15 * 60 * 1000) {
+
+          // If reminder was snoozed, respect snooze timer
+          if (existingRem?.snoozedUntil) {
+            if (now < existingRem.snoozedUntil) {
+              continue; // Still snoozed
+            }
+            // Snooze expired, allow re-trigger
+            existingRem.snoozedUntil = null;
+          } else if (lastNotified && now - lastNotified < 15 * 60 * 1000) {
+            // Don't re-trigger within 15 minutes for the same non-snoozed appointment
             continue;
           }
 
@@ -47,11 +58,19 @@ export function useCalendarNotifications() {
           }
 
           const title = apt.title || 'Untitled Meeting';
+          const meetUrl =
+            apt.location && /https?:\/\//i.test(apt.location)
+              ? apt.location
+              : apt.notes && /https?:\/\/[^\s]+/i.test(apt.notes)
+              ? apt.notes.match(/https?:\/\/[^\s]+/i)?.[0]
+              : undefined;
+
           triggerReminder({
             appointmentId: apt.id,
             title,
             timeStr,
             location: apt.location,
+            meetUrl,
           });
 
           useNotificationCenterStore.getState().addNotification({

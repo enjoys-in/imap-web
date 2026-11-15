@@ -25,12 +25,19 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-16 md:bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-16 md:bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
       {toasts.map((toast: ToastItem) => (
         <div
           key={toast.id}
+          onClick={() => {
+            if (toast.onClick) {
+              toast.onClick();
+              removeToast(toast.id);
+            }
+          }}
           className={cn(
-            'pointer-events-auto p-3.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg flex items-start gap-3 transition-all duration-200 animate-in slide-in-from-bottom-2'
+            'pointer-events-auto p-3.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-2xl flex items-start gap-3 transition-all duration-200 animate-in slide-in-from-bottom-2',
+            toast.onClick && 'cursor-pointer hover:border-[#0078d4]/60'
           )}
         >
           {getToastIcon(toast.type)}
@@ -72,8 +79,12 @@ export function ToastContainer() {
           </div>
 
           <button
-            onClick={() => removeToast(toast.id)}
-            className="p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeToast(toast.id);
+            }}
+            className="p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer shrink-0"
+            title="Dismiss"
           >
             <X className="w-3.5 h-3.5" />
           </button>

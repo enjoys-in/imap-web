@@ -14,6 +14,8 @@ export interface ToastItem {
   description?: string;
   type?: ToastType;
   actions?: ToastAction[];
+  duration?: number;
+  onClick?: () => void;
 }
 
 interface ToastState {
@@ -27,9 +29,12 @@ export const useToastStore = create<ToastState>((set) => ({
   addToast: (toast) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
-    setTimeout(() => {
-      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-    }, 4500);
+    const duration = toast.duration ?? 4500;
+    if (duration > 0) {
+      setTimeout(() => {
+        set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+      }, duration);
+    }
     return id;
   },
   removeToast: (id) =>

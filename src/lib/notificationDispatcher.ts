@@ -1,5 +1,5 @@
 import { showWebPushNotification, requestWebPushPermission } from './webPush';
-import { useToastStore, ToastType } from '@/stores/useToastStore';
+import { useToastStore, ToastType, ToastAction } from '@/stores/useToastStore';
 import { useGeneralSettingsStore } from '@/stores/useGeneralSettingsStore';
 
 export interface DispatchNotificationOptions {
@@ -11,6 +11,9 @@ export interface DispatchNotificationOptions {
   isDirect?: boolean;
   isVip?: boolean;
   isHighPriority?: boolean;
+  actions?: ToastAction[];
+  duration?: number;
+  alwaysShowToast?: boolean;
 }
 
 /**
@@ -25,8 +28,8 @@ export function isUserOnWindow(): boolean {
 
 /**
  * Dispatches notification according to window visibility & focus and user notification preferences:
- * - If user is on window: In-App notification (Toast) if enabled and matches audience rule.
- * - If user is NOT on window: Web Push (Browser Desktop Notification) if enabled and matches audience rule.
+ * - If user is on window or alwaysShowToast is set: In-App notification (Toast) is rendered with actions & sound.
+ * - If user is NOT on window: Web Push (Browser Desktop Notification) is triggered if enabled.
  */
 export function dispatchNotification({
   title,
@@ -37,6 +40,9 @@ export function dispatchNotification({
   isDirect = true,
   isVip = false,
   isHighPriority = false,
+  actions,
+  duration,
+  alwaysShowToast = false,
 }: DispatchNotificationOptions) {
   const onWindow = isUserOnWindow();
   const settings = useGeneralSettingsStore.getState();
@@ -56,21 +62,7 @@ export function dispatchNotification({
     }
   };
 
-  if (onWindow) {
-    if (!settings.inAppNotificationsEnabled) {
-      return null;
-    }
-    if (!passesAudience(settings.inAppNotificationAudience)) {
-      return null;
-    }
-
-    // User is active on window -> Show in-app notification
-    useToastStore.getState().addToast({
-      title,
-      description: body,
-      type,
-    });
-
+  const playNotificationSound = () => {
     if (settings.inAppSoundEnabled) {
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -84,23 +76,37 @@ export function dispatchNotification({
         osc.stop(ctx.currentTime + 0.2);
       } catch {}
     }
+  };
 
+  // If user is on window or this alert explicitly requires an on-screen toast (e.g. meeting reminders)
+  if (onWindow || alwaysShowToast) {
+    const allowToast = alwaysShowToast || (settings.inAppNotificationsEnabled && passesAudience(settings.inAppNotificationAudience));
+    if (allowToast) {
+      useToastStore.getState().addToast({
+        title,
+        description: body,
+        type,
+        actions,
+        duration,
+        onClick,
+      });
+      playNotificationSound();
+    }
+    if (onWindow && !alwaysShowToast) {
+      return allowToast ? 'in-app' : null;
+    }
+  }
+
+  // User is not on window (or alwaysShowToast requested both toast + desktop push)
+  if (!settings.pushNotificationsEnabled || !passesAudience(settings.pushNotificationAudience)) {
     return 'in-app';
-  }
-
-  // User is not on window (tab hidden / minimized / window blurred) -> Show Web Push
-  if (!settings.pushNotificationsEnabled) {
-    return null;
-  }
-  if (!passesAudience(settings.pushNotificationAudience)) {
-    return null;
   }
 
   if (typeof window !== 'undefined' && 'Notification' in window) {
     if (Notification.permission === 'granted') {
       try {
         const notif = new Notification(title, {
-          body: settings.pushIncludePreview ? body : 'New message arrived in AirSend',
+          body: settings.pushIncludePreview ? body : 'New alert in AirSend',
           tag: tag || `notif-${Date.now()}`,
           icon: '/favicon.ico',
           badge: '/favicon.ico',
@@ -116,12 +122,17 @@ export function dispatchNotification({
     }
   }
 
-  // Also queue in toast store so it appears upon returning to the tab
-  useToastStore.getState().addToast({
-    title,
-    description: body,
-    type,
-  });
+  // If user was not on window and alwaysShowToast wasn't already triggered, queue the toast for their return
+  if (!onWindow && !alwaysShowToast) {
+    useToastStore.getState().addToast({
+      title,
+      description: body,
+      type,
+      actions,
+      duration,
+      onClick,
+    });
+  }
 
   return 'push';
 }
