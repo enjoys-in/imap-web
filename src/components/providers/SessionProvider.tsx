@@ -22,18 +22,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const isLoginPage = pathname === ROUTES.LOGIN;
 
-  const [isLoading, setIsLoading] = useState(!isLoginPage);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [user, setUser] = useState<any | null>(null);
-  const [statusText, setStatusText] = useState('Fetching user session...');
+  const [statusText, setStatusText] = useState('Verifying session...');
 
   const sessionLoadedRef = useRef(false);
 
   const loadSession = useCallback(
     async (options: { force?: boolean; onProfile?: () => void } = {}) => {
-      const profile = await accountsApi.getProfile();
+      const profile = await accountsApi.getProfile({ force: options.force });
       if (!(profile && (profile.email || profile.mid))) {
         throw new Error('Not authenticated');
       }
@@ -99,9 +99,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEventListener<AppEventMap, typeof APP_EVENTS.UNAUTHORIZED>(
     APP_EVENTS.UNAUTHORIZED,
     () => {
+      clearAuthToken();
+      clearSession();
       if (!isLoginPage) {
-        clearAuthToken();
-        clearSession();
         router.replace(ROUTES.LOGIN);
       }
     }
@@ -120,30 +120,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const isExplicitlyLoggedOut =
-        typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEYS.LOGGED_OUT) === 'true';
-      const hasToken = typeof window !== 'undefined' && Boolean(getAuthToken());
-
       // If user is on the login page: check if they are already logged in
       if (isLoginPage) {
-        if (isExplicitlyLoggedOut || !hasToken) {
-          // Definitely not logged in: stay on login page
+        const token = getAuthToken();
+        const isExplicitlyLoggedOut =
+          typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEYS.LOGGED_OUT) === 'true';
+
+        // Only skip if explicitly logged out and no token exists in cookies or localStorage
+        if (isExplicitlyLoggedOut && !token) {
           setIsLoading(false);
           setIsAuthenticated(false);
           return;
         }
 
-        // Has a saved token and not explicitly logged out: verify existing session
+        // Validate session via /me while splash screen is rendered
         try {
           setIsLoading(true);
           setStatusText('Verifying session...');
-          const { profile, list } = await loadSession();
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem(STORAGE_KEYS.LOGGED_OUT);
+          }
+          const { profile, list } = await loadSession({ force: true });
           if (isMounted) {
             applySession(profile, list);
             router.replace(ROUTES.INBOX);
           }
         } catch {
-          // Token expired or invalid session: clear and remain on login page
+          // me 401 or invalid session: clear the token cookie and storage, show login
           if (isMounted) {
             clearAuthToken();
             clearSession();
@@ -165,11 +168,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           applySession(profile, list);
         }
       } catch {
-        // Not authenticated: redirect to login
+        // Not authenticated: clear token and redirect to login
         if (isMounted) {
-          setIsAuthenticated(false);
-          setUser(null);
-          setAccount(null);
+          clearAuthToken();
+          clearSession();
           router.replace(ROUTES.LOGIN);
         }
       } finally {

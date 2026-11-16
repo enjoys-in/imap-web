@@ -1,4 +1,4 @@
-import { apiClient, clearAuthToken, setAuthToken } from '../client';
+import { apiClient, clearAuthToken, setAuthToken, getAuthToken } from '../client';
 import { Account } from '@/types';
 import { clearCachedEmails, getCachedAccounts, replaceCachedAccounts } from '@/lib/idb/mailCacheDb';
 import { getClientConfig } from '@/config/clientConfig';
@@ -291,9 +291,25 @@ function hasIdentity(value: any): boolean {
   return Boolean(value && (value.email || value.mid));
 }
 
-export async function getProfile(): Promise<any> {
-  if (typeof window !== 'undefined' && sessionStorage.getItem(STORAGE_KEYS.LOGGED_OUT) === 'true') {
+export interface GetProfileOptions {
+  force?: boolean;
+}
+
+export async function getProfile(options?: GetProfileOptions): Promise<any> {
+  const token = getAuthToken();
+  if (
+    !options?.force &&
+    !token &&
+    typeof window !== 'undefined' &&
+    sessionStorage.getItem(STORAGE_KEYS.LOGGED_OUT) === 'true'
+  ) {
     return null;
+  }
+
+  if (token && typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.LOGGED_OUT);
+    } catch {}
   }
 
   const data = await apiClient.get<any>('/me');

@@ -4,7 +4,16 @@ import { moldApiResponse } from './moldResponse';
 import { resolveEndpointUrl, isDirectBaseUrlRoute } from './directBaseRoutes';
 import { APP_EVENTS, dispatchAppEvent } from '@/constants';
 
-export { getAuthToken, setAuthToken, clearAuthToken } from './tokenStorage';
+export {
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+  hasAuthToken,
+  getCookie,
+  setCookie,
+  clearCookie,
+  TOKEN_COOKIE_NAMES,
+} from './tokenStorage';
 export { moldApiResponse, type ApiResponse } from './moldResponse';
 export { DIRECT_BASE_URL_ROUTES, isDirectBaseUrlRoute, resolveEndpointUrl } from './directBaseRoutes';
 
