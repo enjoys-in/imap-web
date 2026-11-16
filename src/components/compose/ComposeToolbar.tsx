@@ -8,13 +8,16 @@ import { ComposeAttachMenu } from './ComposeAttachMenu';
 import { ComposeSignatureMenu } from './ComposeSignatureMenu';
 import { ComposeScheduleSendMenu } from './ComposeScheduleSendMenu';
 import { ComposeSuggestTimesMenu } from './ComposeSuggestTimesMenu';
+import { ComposeTemplatesMenu } from './ComposeTemplatesMenu';
+import { ComposeVoiceDictationButton } from './ComposeVoiceDictationButton';
 
 interface ComposeToolbarProps {
   onSend: () => void;
   onScheduleSend?: (scheduledTime: Date) => void;
+  onSendAndArchive?: () => void;
 }
 
-export function ComposeToolbar({ onSend, onScheduleSend }: ComposeToolbarProps) {
+export function ComposeToolbar({ onSend, onScheduleSend, onSendAndArchive }: ComposeToolbarProps) {
   const close = useComposeStore((s) => s.close);
   const draftId = useComposeStore((s) => s.draftId);
   const deleteEmail = useMailStore((s) => s.deleteEmail);
@@ -33,11 +36,14 @@ export function ComposeToolbar({ onSend, onScheduleSend }: ComposeToolbarProps) 
         <ComposeScheduleSendMenu
           onSend={onSend}
           onScheduleSend={onScheduleSend || (() => onSend())}
+          onSendAndArchive={onSendAndArchive}
         />
 
         <ComposeAttachMenu variant="button" />
         <ComposeSignatureMenu />
         <ComposeSuggestTimesMenu />
+        <ComposeTemplatesMenu />
+        <ComposeVoiceDictationButton />
       </div>
 
       <button

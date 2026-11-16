@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarWorkspaceTabs } from './CalendarWorkspaceTabs';
 import { CalendarWorkspaceMenu } from './CalendarWorkspaceMenu';
@@ -13,6 +13,7 @@ import { CalendarWeekGrid } from './CalendarWeekGrid';
 import { CalendarDayView } from './CalendarDayView';
 import { CalendarMonthView } from './CalendarMonthView';
 import { CalendarModals } from './CalendarModals';
+import { CalendarBookingModal } from './CalendarBookingModal';
 import { useCalendarState } from './useCalendarState';
 import { useCalendarActionHandlers } from './useCalendarActionHandlers';
 import { useAlertStore } from '@/stores';
@@ -21,6 +22,7 @@ export function CalendarView() {
   const s = useCalendarState();
   const router = useRouter();
   const showAlert = useAlertStore((st) => st.showAlert);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   const {
     filteredEvents,
@@ -161,6 +163,7 @@ export function CalendarView() {
             searchQuery={s.searchQuery}
             onSearchChange={s.setSearchQuery}
             onNewSchedule={handleNewSchedule}
+            onOpenBooking={() => setIsBookingOpen(true)}
             isViewOnly={s.isViewOnly}
             isHealthy={s.isHealthy}
             healthMessage={s.healthMessage}
@@ -208,6 +211,7 @@ export function CalendarView() {
       </div>
 
       <CalendarModals s={s} />
+      <CalendarBookingModal open={isBookingOpen} onClose={() => setIsBookingOpen(false)} />
     </div>
   );
 }

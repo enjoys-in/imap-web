@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   CornerUpLeft, ReplyAll, CornerUpRight, LayoutGrid,
-  MoreHorizontal, ChevronDown, ChevronUp, Printer, Flag, Trash2, Download, CalendarPlus
+  MoreHorizontal, ChevronDown, ChevronUp, Printer, Flag, Trash2, Download, CalendarPlus,
+  FileText, Sun
 } from 'lucide-react';
 import { MailMessage, MailMessageMetadata } from '@/types';
 import { BimiAvatar } from '@/components/ui/BimiAvatar';
@@ -15,6 +16,7 @@ import { CalendarEvent } from '@/components/calendar/types';
 import { createAppointment } from '@/lib/api/handlers/calendar';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { useRightAppsStore } from '@/stores/useRightAppsStore';
 import { ReadingPaneHeaderDetails } from './ReadingPaneHeaderDetails';
 import { exportEmailToEml } from '@/lib/emlExport';
 import { SnoozeMenu } from '../SnoozeMenu';
@@ -36,7 +38,7 @@ interface ReadingPaneHeaderProps {
 }
 
 export function ReadingPaneHeader({
-  email, onReply, onReplyAll, onForward, onDelete, onToggleFlag
+  email, onReply, onReplyAll, onForward, onDelete, onToggleFlag, onToggleCanvas
 }: ReadingPaneHeaderProps) {
   const { account, accounts } = useSession();
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
@@ -77,6 +79,18 @@ export function ReadingPaneHeader({
         type: 'error',
       });
     }
+  };
+
+  const handleTakeNotes = () => {
+    const noteTitle = `Notes: ${email.subject || 'Meeting'}`;
+    const noteContent = `📅 Date: ${formattedDate}\n👥 Sender: ${email.fromName || email.fromAddress} <${email.fromAddress}>\n\n--- Discussion & Summary ---\n${email.preview || ''}\n\n--- Action Items ---\n- [ ] Review deliverables\n- [ ] Follow up with ${email.fromName || 'team'}\n`;
+
+    useRightAppsStore.getState().addNote(noteTitle, noteContent, 'blue');
+    addToast({
+      title: 'Meeting Notes Created',
+      description: `Saved note for "${email.subject}". Viewable in the Notes tab.`,
+      type: 'success',
+    });
   };
 
   const formattedDate = format(new Date(email.date), 'EEE M/d/yyyy h:mm a');
@@ -138,6 +152,9 @@ export function ReadingPaneHeader({
             <button onClick={onForward} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer text-cyan-400 dark:text-cyan-300" title="Forward"><CornerUpRight className="w-4 h-4" /></button>
             <Link href={`/mail/view/${email.id}#${openInWindowSlug}`} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-blue-500 dark:text-blue-400" title="Open in new window"><LayoutGrid className="w-4 h-4" /></Link>
             <button onClick={() => setIsConvertEventOpen(true)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-amber-500 dark:text-amber-400" title="Convert email to calendar event"><CalendarPlus className="w-4 h-4" /></button>
+            {onToggleCanvas && (
+              <button onClick={onToggleCanvas} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-500 hover:text-amber-500 dark:text-neutral-400 dark:hover:text-amber-400" title="Toggle email canvas background (Light / Dark)"><Sun className="w-4 h-4" /></button>
+            )}
 
             <div className="relative">
               <button onClick={() => setIsMoreOpen((v) => !v)} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors cursor-pointer" title="More actions"><MoreHorizontal className="w-4 h-4" /></button>
@@ -147,6 +164,9 @@ export function ReadingPaneHeader({
                   <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#252525] border border-neutral-200 dark:border-[#383838] rounded-md shadow-2xl py-1 z-40 text-xs">
                     <button onClick={() => { setIsConvertEventOpen(true); setIsMoreOpen(false); }} className="w-full px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-[#333333] flex items-center gap-2 cursor-pointer text-blue-600 dark:text-blue-400 font-medium">
                       <CalendarPlus className="w-3.5 h-3.5" /><span>Create Event from Email</span>
+                    </button>
+                    <button onClick={() => { handleTakeNotes(); setIsMoreOpen(false); }} className="w-full px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-[#333333] flex items-center gap-2 cursor-pointer text-sky-600 dark:text-sky-400 font-medium">
+                      <FileText className="w-3.5 h-3.5" /><span>Take Meeting Notes</span>
                     </button>
                     <button onClick={() => { exportEmailToEml(email); setIsMoreOpen(false); }} className="w-full px-3 py-1.5 text-left hover:bg-neutral-100 dark:hover:bg-[#333333] flex items-center gap-2 cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium">
                       <Download className="w-3.5 h-3.5" /><span>Download (.eml)</span>

@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Clock, Calendar, Sun, Sunrise, Send } from 'lucide-react';
+import { ChevronDown, Clock, Calendar, Sun, Sunrise, Send, Archive } from 'lucide-react';
 import { format, addDays, nextMonday, setHours, setMinutes, setSeconds } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ComposeScheduleSendMenuProps {
   onSend: () => void;
   onScheduleSend: (scheduledTime: Date) => void;
+  onSendAndArchive?: () => void;
   disabled?: boolean;
 }
 
 export function ComposeScheduleSendMenu({
   onSend,
   onScheduleSend,
+  onSendAndArchive,
   disabled = false,
 }: ComposeScheduleSendMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,6 +111,25 @@ export function ComposeScheduleSendMenu({
 
           {!showCustomPicker ? (
             <>
+              {onSendAndArchive && (
+                <div className="border-b border-neutral-100 dark:border-neutral-800 pb-1 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      onSendAndArchive();
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800/80 flex items-center justify-between cursor-pointer transition-colors text-purple-600 dark:text-purple-400 font-semibold"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Archive className="w-3.5 h-3.5" />
+                      <span>Send &amp; Archive</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400">Ctrl+Shift+Enter</span>
+                  </button>
+                </div>
+              )}
+
               {presets.map((p) => {
                 const Icon = p.icon;
                 return (

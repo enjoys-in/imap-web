@@ -8,6 +8,8 @@ import { BottomNavigationRail } from '@/components/layout/BottomNavigationRail';
 import { ComposeModal } from '@/components/compose/ComposeModal';
 import { UndoSendToast } from '@/components/compose/UndoSendToast';
 import { CommandPaletteModal } from '@/components/palette/CommandPaletteModal';
+import { KeyboardShortcutsModal } from '@/components/shortcuts/KeyboardShortcutsModal';
+import { useGlobalKeyboardShortcuts } from '@/hooks/useGlobalKeyboardShortcuts';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { ToastContainer } from '@/components/notifications/ToastContainer';
 import { GlobalAlertDialog } from '@/components/ui/AlertDialog';
@@ -18,6 +20,7 @@ import { ROUTES } from '@/constants';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === ROUTES.LOGIN;
+  const { isHelpOpen, setIsHelpOpen } = useGlobalKeyboardShortcuts();
 
   if (isLoginPage) {
     return (
@@ -43,6 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <ComposeModal />
       <UndoSendToast />
       <CommandPaletteModal />
+      <KeyboardShortcutsModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       <ToastContainer />
       <GlobalAlertDialog />
     </>

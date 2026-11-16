@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useComposeStore, useMailStore, useToastStore } from '@/stores';
 import { useUndoSendStore } from '@/stores/useUndoSendStore';
 import { invalidateFolderSync } from '@/lib/idb/mailCacheDb';
 import { emailsApi } from '@/lib/api';
 import { findRegisteredSpecialFolder } from '@/lib/folders';
 import { toOutgoingAttachments } from '@/lib/attachmentFiles';
+import { shouldWarnMissingAttachment } from '@/lib/attachmentDetector';
+import { dispatchMailAction } from '@/lib/events/mailActionEvents';
+import { AlertTriangle, Paperclip } from 'lucide-react';
 import { ComposeHeader } from './ComposeHeader';
 import { ComposeToolbar } from './ComposeToolbar';
 import { ComposeFields } from './ComposeFields';
@@ -38,6 +41,9 @@ export function ComposeModal() {
   const { user, account } = useSession();
   const { handleFocusCapture, handleBlurCapture } = useComposeDraftSync(containerRef);
 
+  const [showMissingAttachmentAlert, setShowMissingAttachmentAlert] = useState(false);
+  const [pendingArchiveSend, setPendingArchiveSend] = useState(false);
+
   if (!isOpen) return null;
 
   const title =
@@ -51,7 +57,18 @@ export function ComposeModal() {
       ? `RE: ${subject}`
       : `FW: ${subject}`;
 
-  const handleSend = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const addAttachment = useComposeStore((s) => s.addAttachment);
+
+  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      Array.from(e.target.files).forEach((file) => addAttachment(file));
+      e.target.value = '';
+    }
+    setShowMissingAttachmentAlert(false);
+  };
+
+  const executeSend = (archive = false) => {
     const isReplyOrForward = mode === 'reply' || mode === 'replyAll' || mode === 'forward';
     const resolvedThreadId = isReplyOrForward && threadId ? threadId : `thread-${Date.now()}`;
 
@@ -92,6 +109,10 @@ export function ComposeModal() {
     };
 
     close();
+
+    if (archive && originalMessageId) {
+      dispatchMailAction({ action: 'archive', targetEmailId: originalMessageId });
+    }
 
     startPendingSend(
       { id: newMsg.id, to, cc, bcc, subject, body, message: newMsg },
@@ -141,6 +162,40 @@ export function ComposeModal() {
     );
   };
 
+  const handleSend = () => {
+    if (shouldWarnMissingAttachment(subject, body, attachments.length)) {
+      setPendingArchiveSend(false);
+      setShowMissingAttachmentAlert(true);
+      return;
+    }
+    executeSend(false);
+  };
+
+  const handleSendAndArchive = () => {
+    if (shouldWarnMissingAttachment(subject, body, attachments.length)) {
+      setPendingArchiveSend(true);
+      setShowMissingAttachmentAlert(true);
+      return;
+    }
+    executeSend(true);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleSendAndArchive();
+        } else {
+          handleSend();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, subject, body, attachments.length]);
+
   const handleScheduleSend = (scheduledTime: Date) => {
     const accountId = useMailStore.getState().selectedAccountId;
     if (draftId) {
@@ -174,10 +229,69 @@ export function ComposeModal() {
 
       {!isMinimized && (
         <>
-          <ComposeToolbar onSend={handleSend} onScheduleSend={handleScheduleSend} />
+          <ComposeToolbar
+            onSend={handleSend}
+            onScheduleSend={handleScheduleSend}
+            onSendAndArchive={
+              mode === 'reply' || mode === 'replyAll' || mode === 'forward'
+                ? handleSendAndArchive
+                : undefined
+            }
+          />
           <ComposeFields />
           <ComposeEditor />
         </>
+      )}
+
+      {/* Hidden file input for missing attachment trigger */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFilePicked}
+      />
+
+      {/* Missing Attachment Warning Dialog */}
+      {showMissingAttachmentAlert && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  Did you forget to attach a file?
+                </h4>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  You mentioned an attachment in your message, but haven&apos;t attached any files yet.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMissingAttachmentAlert(false);
+                  executeSend(pendingArchiveSend);
+                }}
+                className="px-3 h-8 rounded-lg text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                Send Anyway
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3.5 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Paperclip className="w-3.5 h-3.5" />
+                <span>Attach File</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

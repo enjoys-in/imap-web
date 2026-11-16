@@ -15,6 +15,9 @@ import { ReadingPaneOtpBanner } from './ReadingPaneOtpBanner';
 import { ReadingPaneRsvpCard } from './ReadingPaneRsvpCard';
 import { ReadingPaneUnsubscribeBanner } from './ReadingPaneUnsubscribeBanner';
 import { ReadingPanePackageTracker } from './ReadingPanePackageTracker';
+import { ReadingPanePhishingBanner } from './ReadingPanePhishingBanner';
+import { ReadingPaneFollowUpBanner } from './ReadingPaneFollowUpBanner';
+import { ReadingPaneThreadSummary } from './ReadingPaneThreadSummary';
 import { SandboxedEmailBody } from './SandboxedEmailBody';
 import { MultiSelectReadingPane } from './MultiSelectReadingPane';
 import { QuickReplyChips } from './QuickReplyChips';
@@ -248,6 +251,24 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
       />
 
       <div className="flex-1 overflow-y-auto">
+        <ReadingPanePhishingBanner
+          emailId={email.id}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+        />
+
+        <ReadingPaneFollowUpBanner
+          email={email}
+          myEmails={myEmails}
+        />
+
+        <ReadingPaneThreadSummary
+          emailId={email.id}
+          subject={email.subject}
+          bodyText={fetchedBody?.bodyText || inlineBodyText}
+          bodyHtml={fetchedBody?.bodyHtml || inlineBodyHtml}
+          threadCount={email.threadCount}
+        />
+
         <ReadingPaneUnsubscribeBanner
           emailId={email.id}
           fromAddress={email.fromAddress}
@@ -288,6 +309,7 @@ export function ReadingPane({ activeMailId, onBack }: ReadingPaneProps) {
             bodyHtml={fetchedBody?.bodyHtml || ''}
             bodyText={fetchedBody?.bodyText || ''}
             allowExternalImages={allowExternalImages}
+            canvasLight={canvasLight}
           />
         )}
 

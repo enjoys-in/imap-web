@@ -9,16 +9,22 @@ interface SandboxedEmailBodyProps {
   bodyHtml?: string;
   bodyText?: string;
   allowExternalImages?: boolean;
+  canvasLight?: boolean;
 }
 
 export function SandboxedEmailBody({
   bodyHtml,
   bodyText,
   allowExternalImages = false,
+  canvasLight = false,
 }: SandboxedEmailBodyProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const theme = useUiStore((s) => s.theme);
-  const [invertLight, setInvertLight] = useState(false);
+  const [invertLight, setInvertLight] = useState(canvasLight);
+
+  useEffect(() => {
+    setInvertLight(canvasLight);
+  }, [canvasLight]);
 
   // Sync properly with store theme
   const isDark = theme === 'dark' ? !invertLight : invertLight;

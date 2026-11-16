@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe, X, Link2 } from 'lucide-react';
 import { CalendarViewMode } from './types';
 import { useUserTimeInfo } from '@/hooks/useUserTimeInfo';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ interface CalendarToolbarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onNewSchedule: () => void;
+  onOpenBooking?: () => void;
   isViewOnly?: boolean;
   isHealthy?: boolean;
   healthMessage?: string | null;
@@ -31,6 +32,7 @@ export function CalendarToolbar({
   searchQuery,
   onSearchChange,
   onNewSchedule,
+  onOpenBooking,
   isViewOnly = false,
 }: CalendarToolbarProps) {
   const timeInfo = useUserTimeInfo();
@@ -163,6 +165,18 @@ export function CalendarToolbar({
             <Command className="w-2.5 h-2.5 mr-0.5" />F
           </span>
         </div>
+
+        {onOpenBooking && (
+          <button
+            type="button"
+            onClick={onOpenBooking}
+            className="h-7 sm:h-8 px-2 sm:px-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer shrink-0"
+            title="Personal booking page link"
+          >
+            <Link2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span className="hidden md:inline">Booking Page</span>
+          </button>
+        )}
 
         <button
           onClick={onNewSchedule}
