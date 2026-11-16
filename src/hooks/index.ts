@@ -5,3 +5,4 @@ export * from './useNetworkStatus';
 export * from './usePaneResize';
 export * from './useAnchoredPosition';
 export * from './useUserTimeInfo';
+export * from './useCrossTabBroadcast';

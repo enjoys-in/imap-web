@@ -12,6 +12,7 @@ export interface SessionContextType {
   statusText: string;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
+  clearSession: () => void;
 }
 
 export const SessionContext = createContext<SessionContextType>({
@@ -23,6 +24,7 @@ export const SessionContext = createContext<SessionContextType>({
   statusText: '',
   refreshSession: async () => {},
   logout: async () => {},
+  clearSession: () => {},
 });
 
 export function useSession() {

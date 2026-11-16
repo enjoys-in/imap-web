@@ -12,6 +12,7 @@ import { useFolderStore } from '@/stores/useFolderStore';
 import { useMailStore } from '@/stores/useMailStore';
 import { Account } from '@/types';
 import { ROUTES, STORAGE_KEYS, APP_EVENTS, type AppEventMap } from '@/constants';
+import { broadcastCrossTab, CROSSTAB_EVENTS } from '@/lib/broadcast/crossTabChannel';
 import { SessionContext, SessionContextType, useSession } from './sessionContext';
 
 export { useSession };
@@ -76,6 +77,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       applySession(profile, list);
 
       if (isLoginPage) {
+        broadcastCrossTab(CROSSTAB_EVENTS.SESSION_RESTORED);
         router.replace(ROUTES.INBOX);
       }
     } catch {
@@ -99,6 +101,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEventListener<AppEventMap, typeof APP_EVENTS.UNAUTHORIZED>(
     APP_EVENTS.UNAUTHORIZED,
     () => {
+      broadcastCrossTab(CROSSTAB_EVENTS.UNAUTHORIZED);
       clearAuthToken();
       clearSession();
       if (!isLoginPage) {
@@ -143,6 +146,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           const { profile, list } = await loadSession({ force: true });
           if (isMounted) {
             applySession(profile, list);
+            broadcastCrossTab(CROSSTAB_EVENTS.SESSION_RESTORED);
             router.replace(ROUTES.INBOX);
           }
         } catch {
@@ -192,6 +196,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       await accountsApi.logout();
     } finally {
+      broadcastCrossTab(CROSSTAB_EVENTS.LOGOUT);
       clearAuthToken();
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(STORAGE_KEYS.LOGGED_OUT, 'true');
@@ -223,8 +228,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       statusText,
       refreshSession,
       logout,
+      clearSession,
     }),
-    [account, accounts, user, isAuthenticated, isLoading, statusText, refreshSession, logout]
+    [account, accounts, user, isAuthenticated, isLoading, statusText, refreshSession, logout, clearSession]
   );
 
   return (

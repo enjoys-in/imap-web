@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { CrossTabSyncProvider } from "@/components/providers/CrossTabSyncProvider";
 import { ConfigProvider } from "@/components/providers/ConfigProvider";
 import { getClientSafeConfig } from "@/config/env";
 import { AppShell } from "@/components/layout/AppShell";
@@ -49,7 +50,9 @@ export default function RootLayout({
           <QueryProvider>
             <Suspense fallback={null}>
               <SessionProvider>
-                <AppShell>{children}</AppShell>
+                <CrossTabSyncProvider>
+                  <AppShell>{children}</AppShell>
+                </CrossTabSyncProvider>
               </SessionProvider>
             </Suspense>
           </QueryProvider>

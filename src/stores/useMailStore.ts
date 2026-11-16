@@ -19,6 +19,7 @@ import { getRegisteredFolder } from '@/lib/folders';
 import { useGeneralSettingsStore } from './useGeneralSettingsStore';
 import { useFolderStore } from './useFolderStore';
 import { useToastStore } from './useToastStore';
+import { broadcastCrossTab, CROSSTAB_EVENTS } from '@/lib/broadcast/crossTabChannel';
 
 export type MailFilterTab = 'all' | 'unread' | 'flagged' | 'attachments' | 'pinned';
 export type MailSortField = 'date' | 'from' | 'subject' | 'size';
@@ -321,6 +322,11 @@ export const useMailStore = create<MailState>((set, get) => ({
     if (email && email.isRead !== nextRead) {
       useFolderStore.getState().bumpUnread(email.folderId, nextRead ? -1 : 1);
     }
+    broadcastCrossTab(CROSSTAB_EVENTS.EMAIL_MUTATED, {
+      action: nextRead ? 'read' : 'unread',
+      emailId: id,
+      folderId: folder,
+    });
   },
   markFolderAsRead: (folderId) => {
     set((s) => ({
@@ -377,6 +383,11 @@ export const useMailStore = create<MailState>((set, get) => ({
         localEmails: nextEmails,
         selectedMailId: nextSelected,
       };
+    });
+    broadcastCrossTab(CROSSTAB_EVENTS.EMAIL_MUTATED, {
+      action: 'delete',
+      emailId: id,
+      folderId: folder,
     });
     void runRemoval({
       items: [{ folderId: folder, id }],
