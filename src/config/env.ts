@@ -18,7 +18,7 @@ export interface AppConfig {
 
 export const env: AppConfig = {
   baseUrl: (process.env.BASE_URL || 'http://localhost:9503').replace(/\/+$/, ''),
-  apiUrl: (process.env.API_URL || 'http://localhost:9503/api/v1/imap').replace(/\/+$/, ''),
+  apiUrl: (process.env.API_URL || `${(process.env.BASE_URL || 'http://localhost:9503').replace(/\/+$/, '')}/api/v1/imap`).replace(/\/+$/, ''),
   calendarApiUrl: (process.env.CALENDAR_API_URL || process.env.CALENDAR_URL || 'http://localhost:8443').replace(/\/+$/, ''),
   calendarUrl: (process.env.CALENDAR_URL || process.env.CALENDAR_API_URL || 'http://localhost:8443').replace(/\/+$/, ''),
   apiVersion: process.env.API_VERSION || 'v1',

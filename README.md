@@ -102,6 +102,30 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Environment Configuration and Vercel
+
+The `dev` and `build` scripts generate `public/config.js` from environment
+variables. For local development, copy `.env.example` to `.env.local` and edit
+the backend URLs. The generated config is public, so only put non-secret values
+such as service URLs and display settings in it.
+
+On Vercel, add the same variables under **Project Settings > Environment
+Variables** (for example `BASE_URL`, `API_URL`, `CALENDAR_API_URL`,
+`APP_NAME`, `APP_VERSION`, and `ENABLE_WEBPUSH`). Set values for the required
+deployment environments, then deploy or redeploy; Vercel supplies these values
+to the build, which generates `public/config.js`. Changes to these variables
+take effect on the next deployment. Ensure the Vercel Build Command runs
+`pnpm build` so the generator runs before Next.js builds the app.
+
+For example:
+
+```env
+BASE_URL=https://api.example.com
+API_URL=https://api.example.com/api/v1/imap
+CALENDAR_API_URL=https://calendar.example.com
+ENABLE_WEBPUSH=true
+```
+
 ---
 
 ## Project Structure
