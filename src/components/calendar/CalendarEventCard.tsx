@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Video } from 'lucide-react';
 import { CalendarEvent } from './types';
 import { cn } from '@/lib/utils';
 
@@ -85,9 +86,14 @@ export function CalendarEventCard({ event, onClick, startHourOffset = 8 }: Calen
     >
       {/* Title & Time */}
       <div>
-        <h4 className="text-xs font-bold leading-snug line-clamp-2">
-          {event.title}
-        </h4>
+        <div className="flex items-start justify-between gap-1">
+          <h4 className="text-xs font-bold leading-snug line-clamp-2">
+            {event.title}
+          </h4>
+          {event.meetUrl && (
+            <Video className="w-3 h-3 shrink-0 opacity-80 mt-0.5" />
+          )}
+        </div>
         <span className="text-[11px] font-medium opacity-80 block mt-0.5">
           {event.startTime} - {event.endTime}
         </span>

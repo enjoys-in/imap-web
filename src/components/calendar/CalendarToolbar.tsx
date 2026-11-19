@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe, X, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Command, Globe, X, Link2, Video, Loader2 } from 'lucide-react';
 import { CalendarViewMode } from './types';
 import { useUserTimeInfo } from '@/hooks/useUserTimeInfo';
 import { cn } from '@/lib/utils';
+import { createInstantMeeting } from './airsendMeet';
+import { useToastStore } from '@/stores/useToastStore';
 
 interface CalendarToolbarProps {
   viewMode: CalendarViewMode;
@@ -37,6 +39,38 @@ export function CalendarToolbar({
 }: CalendarToolbarProps) {
   const timeInfo = useUserTimeInfo();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isStartingMeet, setIsStartingMeet] = useState(false);
+  const addToast = useToastStore((s) => s.addToast);
+
+  const handleInstantMeet = async () => {
+    setIsStartingMeet(true);
+    try {
+      const meetUrl = await createInstantMeeting({ title: 'Instant Meeting' });
+      try {
+        await navigator.clipboard.writeText(meetUrl);
+        addToast({
+          title: 'AirSend Meet Started',
+          description: `Meeting link copied to clipboard: ${meetUrl}`,
+          type: 'success',
+        });
+      } catch {
+        addToast({
+          title: 'AirSend Meet Started',
+          description: meetUrl,
+          type: 'success',
+        });
+      }
+      window.open(meetUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      addToast({
+        title: 'AirSend Meet Error',
+        description: err?.message || 'Could not start instant meeting from meet.airsend.in',
+        type: 'error',
+      });
+    } finally {
+      setIsStartingMeet(false);
+    }
+  };
 
   if (mobileSearchOpen) {
     return (
@@ -177,6 +211,23 @@ export function CalendarToolbar({
             <span className="hidden md:inline">Booking Page</span>
           </button>
         )}
+
+        {/* meet.airsend.in Instant Meeting CTA */}
+        <button
+          type="button"
+          onClick={handleInstantMeet}
+          disabled={isStartingMeet}
+          className="h-7 sm:h-8 px-2 sm:px-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer shrink-0 disabled:opacity-50"
+          title="Instant meeting on meet.airsend.in"
+        >
+          {isStartingMeet ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+          ) : (
+            <Video className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          )}
+          <span className="hidden md:inline">meet.airsend.in</span>
+          <span className="md:hidden">Meet</span>
+        </button>
 
         <button
           onClick={onNewSchedule}

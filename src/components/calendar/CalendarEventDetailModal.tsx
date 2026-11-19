@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { CalendarEvent } from './types';
+import { isAirSendMeetUrl } from './airsendMeet';
+import { cn } from '@/lib/utils';
 import {
   Clock,
   Trash2,
@@ -167,17 +169,28 @@ export function CalendarEventDetailModal({
         )}
 
         {/* Meeting Link CTA */}
-        {Boolean(event.meetUrl || (event.location && /https?:\/\//i.test(event.location))) && (
-          <a
-            href={event.meetUrl || event.location?.match(/https?:\/\/[^\s]+/i)?.[0]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
-          >
-            <Video className="w-4 h-4" />
-            <span>Join Meeting</span>
-          </a>
-        )}
+        {(() => {
+          const rawLink = event.meetUrl || event.location?.match(/https?:\/\/[^\s]+/i)?.[0];
+          if (!rawLink) return null;
+          const isAirSend = isAirSendMeetUrl(rawLink);
+
+          return (
+            <a
+              href={rawLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'w-full h-9 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors',
+                isAirSend
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600 shadow-xs'
+                  : 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60'
+              )}
+            >
+              <Video className="w-4 h-4" />
+              <span>{isAirSend ? 'Join AirSend Meet (meet.airsend.in)' : 'Join Meeting'}</span>
+            </a>
+          );
+        })()}
 
         {/* Actions Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 relative">

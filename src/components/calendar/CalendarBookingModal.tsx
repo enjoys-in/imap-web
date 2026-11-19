@@ -7,6 +7,7 @@ import { useToastStore } from '@/stores/useToastStore';
 import { useCalendarsStore } from '@/stores/useCalendarsStore';
 import { createAppointment } from '@/lib/api/handlers/calendar';
 import { format, addDays } from 'date-fns';
+import { createInstantMeeting } from './airsendMeet';
 
 interface CalendarBookingModalProps {
   open: boolean;
@@ -68,12 +69,21 @@ export function CalendarBookingModal({ open, onClose }: CalendarBookingModalProp
       const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), hours, minutes);
       const endDate = new Date(startDate.getTime() + duration * 60000);
 
+      const meetingTitle = `${duration}m Meeting: ${guestName || 'Guest'} & ${user?.display_name || 'Me'}`;
+      let meetLocation = 'AirSend Meet (meet.airsend.in)';
+      try {
+        const generatedLink = await createInstantMeeting({ title: meetingTitle });
+        if (generatedLink) {
+          meetLocation = generatedLink;
+        }
+      } catch {}
+
       await createAppointment({
-        title: `${duration}m Meeting: ${guestName || 'Guest'} & ${user?.display_name || 'Me'}`,
+        title: meetingTitle,
         startUtc: startDate.toISOString(),
         endUtc: endDate.toISOString(),
-        location: 'Microsoft Teams / Webex',
-        notes: `Booked via AirSend Personal Booking Link.\nGuest: ${guestName} (${guestEmail})\nDuration: ${duration} minutes.`,
+        location: meetLocation,
+        notes: `Booked via AirSend Personal Booking Link.\nGuest: ${guestName} (${guestEmail})\nMeeting Link: ${meetLocation}\nDuration: ${duration} minutes.`,
         attendees: guestEmail ? [guestEmail] : undefined,
       });
 
